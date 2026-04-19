@@ -1,0 +1,58 @@
+"""뉴런(hidden dimension) 단위 활성화 분석 유틸."""
+from __future__ import annotations
+
+import torch
+import numpy as np
+
+
+def per_neuron_stats(hidden: torch.Tensor) -> dict[str, np.ndarray]:
+    """hidden: (tokens, d_model) → 뉴런별 통계.
+
+    Returns: mean, std, max_abs, activation_rate (> 0 비율)
+    """
+    h = hidden.float()
+    return {
+        "mean": h.mean(dim=0).numpy(),
+        "std": h.std(dim=0).numpy(),
+        "max_abs": h.abs().max(dim=0).values.numpy(),
+        "activation_rate": (h > 0).float().mean(dim=0).numpy(),
+    }
+
+
+def top_k_neurons(hidden: torch.Tensor, k: int = 30, metric: str = "mean_abs") -> list[int]:
+    """가장 활성화가 큰 뉴런 인덱스 k개."""
+    h = hidden.float()
+    if metric == "mean_abs":
+        scores = h.abs().mean(dim=0)
+    elif metric == "max_abs":
+        scores = h.abs().max(dim=0).values
+    elif metric == "std":
+        scores = h.std(dim=0)
+    else:
+        raise ValueError(metric)
+    return scores.topk(k).indices.tolist()
+
+
+def differential_neurons(
+    hidden_a: torch.Tensor,
+    hidden_b: torch.Tensor,
+    k: int = 30,
+) -> tuple[list[int], np.ndarray]:
+    """두 조건 간 평균 활성화 차이가 가장 큰 뉴런 인덱스."""
+    mean_a = hidden_a.float().mean(dim=0)
+    mean_b = hidden_b.float().mean(dim=0)
+    diff = (mean_a - mean_b).abs().numpy()
+    top_idx = np.argsort(diff)[::-1][:k].tolist()
+    return top_idx, diff
+
+
+def cosine_similarity_matrix(
+    hiddens: dict[str, torch.Tensor],
+) -> tuple[list[str], np.ndarray]:
+    """조건별 평균 hidden 벡터 간 코사인 유사도 행렬."""
+    keys = list(hiddens.keys())
+    means = [hiddens[k].float().mean(dim=0) for k in keys]
+    stacked = torch.stack(means)  # (n, d)
+    normed = stacked / stacked.norm(dim=-1, keepdim=True)
+    sim = (normed @ normed.T).numpy()
+    return keys, sim

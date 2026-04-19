@@ -1,0 +1,45 @@
+# @package _global_
+name: qwen_neuron_compare
+
+model:
+  name: Qwen/Qwen2.5-0.5B-Instruct
+  device: cpu
+  dtype: float32
+  trust_remote_code: true
+
+prompts:
+  shared_task: ""
+  personas:
+    - id: intuitive
+      label: 직관적 질문
+      prefix: "하늘은 왜 파란색인가요?"
+    - id: logical
+      label: 논리적 추론 질문
+      prefix: |
+        A는 B보다 크고, B는 C보다 큽니다.
+        A, B, C를 큰 순서대로 나열하고, 그 이유를 단계별로 설명하세요.
+
+capture:
+  block_path_template: model.layers.{i}
+  token_index: last
+  reduce: l2_norm_mean
+  save_raw_tensors: false
+
+patching:
+  enabled: false
+  donor_persona_id: intuitive
+  receiver_persona_id: logical
+  target_layer: 12
+
+sae:
+  enabled: false
+  release: null
+  hook_layer: null
+
+artifacts:
+  save_metrics_json: true
+  save_arrays_npz: true
+  figures:
+    layer_profile_plotly: true
+    layer_heatmap_plotly: true
+  export_png: false

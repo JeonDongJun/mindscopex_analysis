@@ -1,0 +1,14 @@
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+outputs/
+multirun/
+wandb/
+*.egg-info/
+dist/
+build/
+.DS_Store
+*.npy
+!**/fixtures/**/*.npy

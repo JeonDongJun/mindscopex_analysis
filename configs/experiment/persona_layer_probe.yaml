@@ -1,0 +1,46 @@
+# @package _global_
+name: persona_layer_probe
+
+model:
+  name: openai-community/gpt2
+  device: cpu
+  dtype: float32
+  trust_remote_code: false
+
+prompts:
+  shared_task: "Describe what rain means to you in one sentence."
+  personas:
+    - id: logical_engineer
+      label: 논리적인 엔지니어
+      prefix: |
+        You are a logical engineer. Use precise, technical language. Avoid metaphor.
+    - id: emotional_poet
+      label: 감성적인 시인
+      prefix: |
+        You are an emotional poet. Use vivid imagery and feeling; avoid dry analysis.
+
+capture:
+  # GPT-2: 블록 출력 잔차 스트림 (hidden states). 다른 아키텍처는 pipeline에서 경로 조정.
+  block_path_template: transformer.h.{i}
+  token_index: last
+  reduce: l2_norm_mean
+  save_raw_tensors: false
+
+patching:
+  enabled: false
+  donor_persona_id: logical_engineer
+  receiver_persona_id: emotional_poet
+  target_layer: 6
+
+sae:
+  enabled: false
+  release: null
+  hook_layer: null
+
+artifacts:
+  save_metrics_json: true
+  save_arrays_npz: true
+  figures:
+    layer_profile_plotly: true
+    layer_heatmap_plotly: true
+  export_png: false

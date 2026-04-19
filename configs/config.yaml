@@ -1,0 +1,15 @@
+# Hydra 진입점 — `uv run mindscopex-run` 또는 `uv run python scripts/run_experiment.py`
+defaults:
+  - experiment: persona_layer_probe
+  - _self_
+
+hydra:
+  job:
+    chdir: true
+  run:
+    dir: outputs/${now:%Y-%m-%d}/${now:%H-%M-%S}_${name}
+  sweep:
+    dir: multirun/${now:%Y-%m-%d}/${now:%H-%M-%S}
+    subdir: ${hydra.job.num}
+
+seed: 42
