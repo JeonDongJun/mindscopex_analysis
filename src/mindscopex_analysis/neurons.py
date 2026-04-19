@@ -48,11 +48,23 @@ def differential_neurons(
 
 def cosine_similarity_matrix(
     hiddens: dict[str, torch.Tensor],
-) -> tuple[list[str], np.ndarray]:
-    """조건별 평균 hidden 벡터 간 코사인 유사도 행렬."""
-    keys = list(hiddens.keys())
-    means = [hiddens[k].float().mean(dim=0) for k in keys]
-    stacked = torch.stack(means)  # (n, d)
-    normed = stacked / stacked.norm(dim=-1, keepdim=True)
-    sim = (normed @ normed.T).numpy()
-    return keys, sim
+) -> dict[int, tuple[list[str], np.ndarray]]:
+    """조건별 평균 hidden 벡터 간 코사인 유사도 행렬.
+
+    모델마다 ``d_model`` 이 다르면 같은 차원끼리만 비교할 수 있으므로,
+    ``d_model`` 별로 (레이블 순서, N×N 유사도 행렬) 딕셔너리를 반환한다.
+    """
+    by_d: dict[int, list[str]] = {}
+    for k, t in hiddens.items():
+        d = int(t.shape[-1])
+        by_d.setdefault(d, []).append(k)
+
+    out: dict[int, tuple[list[str], np.ndarray]] = {}
+    for d, keys in by_d.items():
+        means = [hiddens[k].float().mean(dim=0) for k in keys]
+        stacked = torch.stack(means)  # (n, d)
+        norms = stacked.norm(dim=-1, keepdim=True).clamp_min(1e-12)
+        normed = stacked / norms
+        sim = (normed @ normed.T).numpy()
+        out[d] = (keys, sim)
+    return out
