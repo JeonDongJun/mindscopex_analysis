@@ -2,8 +2,8 @@
 experiment_name: neuron_compare_qwen_pair
 
 models:
-  non_reasoning: Qwen/Qwen2.5-0.5B-Instruct
-  reasoning: Qwen/Qwen3-0.6B
+  non_reasoning: Qwen/Qwen2.5-7B-Instruct
+  reasoning: deepseek-ai/DeepSeek-R1-Distill-Qwen-7B
 
 prompt_groups:
   intuitive:
@@ -29,11 +29,14 @@ analysis:
   differential_top_k: 30
   sae_top_features: 50
   max_prompts_per_group: null
-  sae_train:
-    epochs: 3
-    k: 32
-    lr: 0.0003
-    l1_coeff: 0.0
+  # SAELens 사전학습 SAE (노트북 §9–10). Qwen 은 registry 에 없을 수 있음 → manual 또는 gpt2 등 프리셋
+  pretrained_sae:
+    mode: auto # auto | manual | off
+    release: null
+    sae_id: null
+    hook_substring: hook_resid_pre
+    # 예: gpt2-small-res-jb + blocks.6.hook_resid_pre (d_in=768, GPT-2 small 전용)
+    extra_layers: [] # 비어 있지 않으면 추가 레이어별 SAE 자동 탐색(다운로드 많음)
 
 tags_for_sae_plot:
   primary: reasoning
