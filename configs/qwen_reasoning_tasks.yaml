@@ -1,0 +1,110 @@
+# Qwen 추론 평가 노트북(`02_qwen_reasoning_eval.ipynb`)용 설정
+# 추론/비추론 비교: `preset: qwen_reasoning_pair` + `model_tags` 아래 두 태그
+
+preset: qwen_reasoning_pair
+
+# 순서대로 각 모델을 로드해 같은 문제를 풉니다 (VRAM 절약을 위해 한 번에 하나만 유지).
+# 단일 모델만 쓰려면 `model_tags: [non_reasoning]` 처럼 한 개만 두거나,
+# `preset: qwen_single_instruct` 로 바꾸세요.
+model_tags:
+  - non_reasoning
+  - reasoning
+
+# 구조화된 문제 목록 (있으면 노트북은 이 목록을 우선 사용)
+problems:
+  - id: intuitive_sky
+    category: intuitive
+    prompt: 하늘은 왜 파란색으로 보이나요? 짧게 단계적으로 설명해 주세요.
+    verification:
+      expect_contains_any:
+        - 산란
+        - 파장
+        - Rayleigh
+      notes: "산란·파장 등 물리 키워드 포함 여부(느슨한 자동 검사)"
+
+  - id: intuitive_water
+    category: intuitive
+    prompt: 물은 왜 높은 곳에서 낮은 곳으로 흐르나요?
+    verification:
+      expect_contains_any:
+        - 중력
+        - 높
+        - 잠재
+      notes: "중력·에너지 관련 표현 포함 여부"
+
+  - id: logical_ordering
+    category: logical
+    prompt: "A는 B보다 크고, B는 C보다 큽니다. A와 C 중 더 큰 것은 무엇인가요? 한 문장으로 답하고 이유를 한 줄로 적으세요."
+    verification:
+      expect_contains_any:
+        - A
+        - 크
+      expect_regex: "(?i)A\\s*(이|가|은|는)?\\s*더\\s*크"
+      notes: "정답 A 및 비교 표현(정규식은 모델 표현에 따라 실패할 수 있음)"
+
+  - id: logical_syllogism
+    category: logical
+    prompt: "모든 고양이는 동물입니다. 일부 동물은 날 수 있습니다. 따라서 일부 고양이는 날 수 있을까요? 예 또는 아니오로 시작하고 논리를 설명하세요."
+    verification:
+      expect_contains_any:
+        - 아니
+        - 불확실
+        - 알 수
+        - 단정
+      notes: "단순 삼단논법 함정 — '일부' 전파가 성립하지 않음을 인지했는지(키워드는 참고용)"
+
+  # --- CRT(중국 나머지 정리)로 유명한 전통 문제들 ---
+  - id: crt_sunzi_357
+    category: crt
+    prompt: |
+      어떤 자연수 N은 3으로 나누면 나머지가 2이고, 5로 나누면 나머지가 3이며, 7로 나누면 나머지가 2입니다.
+      이런 조건을 만족하는 가장 작은 양의 정수 N을 구하세요.
+      (《孫子算經》의 「물不知數」/ 한신 점병 문제로 널리 알려진 형태입니다. 풀이 과정을 간단히 적어도 좋습니다.)
+    verification:
+      expect_regex: "(?<![0-9])(23|이십삼)(?![0-9])"
+      notes: "정답 23. 숫자 또는 한글 수사."
+
+  - id: crt_two_coprime_moduli
+    category: crt
+    prompt: |
+      7로 나누면 나머지가 3이고, 11로 나누면 나머지가 4인 가장 작은 양의 정수 x를 구하세요.
+      (7과 11은 서로소이므로 중국 나머지 정리로 해가 존재합니다.)
+    verification:
+      expect_regex: "(?<![0-9])(59|오십구)(?![0-9])"
+      notes: "정답 59."
+
+  - id: crt_three_moduli_17
+    category: crt
+    prompt: |
+      양의 정수 N은 4로 나누면 나머지가 1이고, 5로 나누면 나머지가 2이며, 7로 나누면 나머지가 3입니다.
+      이런 N 중 가장 작은 값을 구하세요.
+    verification:
+      expect_regex: "(?<![0-9])(17|십칠)(?![0-9])"
+      notes: "정답 17."
+
+  - id: crt_shift_lcm
+    category: crt
+    prompt: |
+      어떤 자연수 x는 3으로 나누면 나머지가 2이고, 5로 나누면 나머지가 4이며, 7로 나누면 나머지가 6입니다.
+      즉 x+1은 3, 5, 7의 공배수입니다. 가장 작은 그런 x를 구하세요.
+    verification:
+      expect_regex: "(?<![0-9])(104|백사)(?![0-9])"
+      notes: "정답 104 (x+1=lcm(3,5,7)=105)."
+
+# problems 가 비어 있거나 생략되면 프리셋의 prompt_groups 문자열 목록을 사용합니다.
+
+generation:
+  max_new_tokens: 768
+  temperature: 0.7
+  top_p: 0.9
+  do_sample: true
+  system_prompt: 당신은 친절하고 정확한 한국어 조수입니다. 질문에 단계적으로 추론한 뒤 답하세요.
+
+output:
+  subdir: qwen_reasoning_runs
+
+runtime:
+  device: null
+  dtype: bfloat16
+  max_length: 2048
+  trust_remote_code: true

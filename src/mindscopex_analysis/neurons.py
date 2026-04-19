@@ -4,6 +4,9 @@ from __future__ import annotations
 import torch
 import numpy as np
 
+# §8 코사인 유사도: 서로 다른 d_model 은 그룹별 행렬로 계산 (구버전은 단일 stack 이라 오류)
+COSINE_SIM_IMPL_VERSION = 2
+
 
 def per_neuron_stats(hidden: torch.Tensor) -> dict[str, np.ndarray]:
     """hidden: (tokens, d_model) → 뉴런별 통계.
