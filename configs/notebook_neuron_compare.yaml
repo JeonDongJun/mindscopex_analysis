@@ -1,18 +1,21 @@
-# 노트북 `01_qwen_neuron_comparison.ipynb` 에서 선택적으로 로드 (YAML_OVERRIDE 경로로 지정)
-# 전부 생략 가능 — 노트북 내 EXP 기본값과 병합됩니다.
+# 노트북 `01_qwen_neuron_comparison.ipynb` — 코드 프리셋 없이 전부 YAML
+experiment_name: neuron_compare_qwen_pair
 
-preset: qwen_reasoning_pair
-
-# models / prompt_groups 를 비우면 프리셋 값 유지. 덮어쓰려면 아래 주석 해제.
-# models:
-#   non_reasoning: Qwen/Qwen2.5-0.5B-Instruct
-#   reasoning: Qwen/Qwen3-0.6B
+models:
+  non_reasoning: Qwen/Qwen2.5-0.5B-Instruct
+  reasoning: Qwen/Qwen3-0.6B
 
 prompt_groups:
   intuitive:
     - 하늘은 왜 파란색인가요?
+    - 봄에는 어떤 꽃이 피나요?
+    - 물은 높은 곳에서 낮은 곳으로 흐른다. 맞나요?
+    - 사과의 색깔은 보통 무엇인가요?
   logical:
-    - A는 B보다 크고, B는 C보다 큽니다. A와 C 중 어느 것이 더 큰가요?
+    - A는 B보다 크고, B는 C보다 큽니다. A와 C 중 어느 것이 더 큰가요? 단계별로 추론하세요.
+    - 모든 고양이는 동물입니다. 일부 동물은 날 수 있습니다. 따라서 일부 고양이는 날 수 있을까요? 논리적으로 설명하세요.
+    - 5명이 원형 테이블에 앉아있습니다. A는 B 옆에, C는 D 맞은편에 앉아있습니다. E는 어디에 앉아있나요?
+    - 한 농부가 늑대, 양, 양배추를 강 건너편으로 옮기려 합니다. 보트에는 한 번에 하나만 실을 수 있습니다. 어떻게 해야 할까요?
 
 runtime:
   device: null

@@ -1,17 +1,16 @@
-# Qwen 추론 평가 노트북(`02_qwen_reasoning_eval.ipynb`)용 설정
-# `configs/notebook_defaults.yaml` 위에 병합됩니다. 프리셋 코드 없음 — 모델은 아래만 수정.
+# Qwen2.5-7B-Instruct vs DeepSeek-R1-Distill-Qwen-7B 비교
+# 노트북 `02_qwen_reasoning_eval.ipynb` 에서 YAML 경로만 이 파일로 바꿔 실행.
+# 7B × 2 이므로 GPU VRAM 여유가 필요합니다.
 
-experiment_name: qwen_reasoning_tasks_default
+experiment_name: qwen7_vs_deepseek_r1_distill
 
 models:
-  non_reasoning: Qwen/Qwen2.5-0.5B-Instruct
-  reasoning: Qwen/Qwen3-0.6B
+  qwen25_7b_instruct: Qwen/Qwen2.5-7B-Instruct
+  deepseek_r1_distill_7b: deepseek-ai/DeepSeek-R1-Distill-Qwen-7B
 
-# 순서대로 각 모델을 로드합니다 (VRAM 절약을 위해 한 번에 하나만 유지).
-# 단일 모델: `model_tags: [non_reasoning]` 처럼 한 개만 두면 됩니다.
 model_tags:
-  - non_reasoning
-  - reasoning
+  - qwen25_7b_instruct
+  - deepseek_r1_distill_7b
 
 # 구조화된 문제 목록 (있으면 노트북은 이 목록을 우선 사용)
 problems:
@@ -141,10 +140,10 @@ generation:
   system_prompt: 당신은 친절하고 정확한 한국어 조수입니다. 질문에 단계적으로 추론한 뒤 답하세요.
 
 output:
-  subdir: qwen_reasoning_runs
+  subdir: qwen7_deepseek_compare
 
 runtime:
   device: null
   dtype: bfloat16
-  max_length: 2048
+  max_length: 4096
   trust_remote_code: true

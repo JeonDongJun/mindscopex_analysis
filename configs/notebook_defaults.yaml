@@ -1,0 +1,34 @@
+# 노트북 실험용 공통 기본값. 각 실험 YAML이 이 위에 덮어씁니다.
+# `models`, `prompt_groups` / `problems` 는 실험 YAML에서 반드시 정의하세요.
+
+runtime:
+  device: null
+  dtype: float32
+  max_length: 512
+  trust_remote_code: true
+
+analysis:
+  target_layer: mid
+  heatmap_top_neurons: 200
+  differential_top_k: 30
+  sae_top_features: 50
+  max_prompts_per_group: null
+  sae_train:
+    epochs: 3
+    k: 32
+    lr: 0.0003
+    l1_coeff: 0.0
+
+tags_for_sae_plot:
+  primary: primary
+  baseline: baseline
+
+generation:
+  max_new_tokens: 512
+  temperature: 0.7
+  top_p: 0.9
+  do_sample: true
+  system_prompt: ""
+
+output:
+  subdir: outputs

@@ -53,6 +53,23 @@ def load_yaml_merged(path: Path, base: dict[str, Any]) -> dict[str, Any]:
     return deep_merge(base, y)
 
 
+def load_notebook_experiment_config(repo_root: Path, experiment_yaml: Path) -> dict[str, Any]:
+    """`configs/notebook_defaults.yaml` 과 실험 YAML을 ``deep_merge`` 한다.
+
+    실험 YAML에 ``models`` 등 전체 설정을 둔다 (코드 프리셋 없음).
+    """
+    defaults_path = repo_root / "configs" / "notebook_defaults.yaml"
+    base: dict[str, Any] = {}
+    if defaults_path.is_file():
+        with defaults_path.open(encoding="utf-8") as f:
+            base = yaml.safe_load(f) or {}
+    if not experiment_yaml.is_file():
+        raise FileNotFoundError(f"실험 YAML이 없습니다: {experiment_yaml}")
+    with experiment_yaml.open(encoding="utf-8") as f:
+        user = yaml.safe_load(f) or {}
+    return deep_merge(base, user)
+
+
 def deep_merge(a: dict[str, Any], b: dict[str, Any]) -> dict[str, Any]:
     out = deepcopy(a)
     for k, v in b.items():
