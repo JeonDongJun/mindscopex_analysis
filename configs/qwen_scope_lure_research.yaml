@@ -1,0 +1,116 @@
+# Qwen-Scope 기반 직관 함정(lure) feature 연구 노트북(`03_qwen_scope_lure_research.ipynb`)용 설정
+
+experiment_name: qwen_scope_lure_research_qwen3_1p7b
+
+models:
+  # Qwen-Scope SAE는 Base 모델 residual stream에 맞춰 공개되어 있습니다.
+  base: Qwen/Qwen3-1.7B-Base
+  # Qwen3 chat 모델은 tokenizer.apply_chat_template(enable_thinking=...)로 reasoning on/off 비교가 가능합니다.
+  chat: Qwen/Qwen3-1.7B
+
+runtime:
+  device: null
+  dtype: bfloat16
+  max_length: 2048
+  trust_remote_code: true
+
+qwen_scope:
+  repo_id: Qwen/SAE-Res-Qwen3-1.7B-Base-W32K-L0_50
+  top_k: 50
+  # 1.7B는 0-27 레이어. 먼저 4개 대표 레이어만 실행한 뒤 필요하면 촘촘히 늘립니다.
+  layers: [6, 14, 21, 27]
+  token_position: last
+  batch_size: 64
+
+generation:
+  system_prompt: 당신은 정확하게 답하는 한국어 조수입니다.
+  max_new_tokens: 1024
+  # Qwen3 공식 가이드는 thinking mode에서 greedy decoding을 피하라고 권장합니다.
+  do_sample: true
+  temperature: 0.7
+  top_p: 0.8
+  modes:
+    - think_off
+    - think_on
+
+analysis:
+  candidate_top_n: 50
+  report_top_n: 25
+  steering_coefficients: [-4.0, 4.0]
+  rq3_default_feature_count: 8
+
+tasks:
+  - id: crt_bat_ball
+    family: cognitive_reflection
+    is_lure: true
+    lure_type: fast_arithmetic
+    prompt: |
+      A bat and a ball cost $1.10 in total. The bat costs $1.00 more than the ball.
+      How much does the ball cost? Answer in cents.
+    expected_regex: "(?i)(?<![0-9])5(?![0-9])\\s*cents?|\\$\\s*0\\.05\\b|0\\.05\\s*dollars?"
+    lure_regex: "(?i)(?<![0-9])10(?![0-9])\\s*cents?|\\$\\s*0\\.10\\b|0\\.10\\s*dollars?"
+
+  - id: crt_machines_widgets
+    family: cognitive_reflection
+    is_lure: true
+    lure_type: proportionality_trap
+    prompt: |
+      If it takes 5 machines 5 minutes to make 5 widgets,
+      how long would it take 100 machines to make 100 widgets? Answer in minutes.
+    expected_regex: "(?i)(?<![0-9])5(?![0-9])\\s*minutes?"
+    lure_regex: "(?i)(?<![0-9])100(?![0-9])\\s*minutes?"
+
+  - id: crt_lily_pads
+    family: cognitive_reflection
+    is_lure: true
+    lure_type: exponential_growth_trap
+    prompt: |
+      In a lake, a patch of lily pads doubles in size every day.
+      If it takes 48 days to cover the whole lake, how long to cover half the lake?
+    expected_regex: "(?<![0-9])47(?![0-9])"
+    lure_regex: "(?<![0-9])24(?![0-9])"
+
+  - id: syllogism_some_animals
+    family: logic
+    is_lure: true
+    lure_type: quantifier_trap
+    prompt: |
+      모든 고양이는 동물입니다. 일부 동물은 날 수 있습니다.
+      따라서 일부 고양이는 날 수 있을까요? 예/아니오로 시작하고 한 문장으로 이유를 쓰세요.
+    expected_regex: "아니|알 수|단정|불확실"
+    lure_regex: "예|날 수"
+
+  - id: ordering_abc
+    family: logic
+    is_lure: false
+    lure_type: control_logic
+    prompt: |
+      A는 B보다 크고, B는 C보다 큽니다. A와 C 중 더 큰 것은 무엇인가요?
+    expected_regex: "(?i)A\\s*(이|가|은|는)?\\s*더\\s*크"
+    lure_regex: ""
+
+  - id: crt_shift_lcm
+    family: modular_arithmetic
+    is_lure: false
+    lure_type: control_crt
+    prompt: |
+      어떤 자연수 x는 3으로 나누면 나머지가 2이고, 5로 나누면 나머지가 4이며, 7로 나누면 나머지가 6입니다.
+      가장 작은 x를 구하세요.
+    expected_regex: "(?<![0-9])(104|백사)(?![0-9])"
+    lure_regex: ""
+
+  - id: sky_blue
+    family: intuitive_fact
+    is_lure: false
+    lure_type: control_intuitive
+    prompt: 하늘은 왜 파란색으로 보이나요? 산란과 파장을 포함해 짧게 답하세요.
+    expected_regex: "산란|파장|Rayleigh"
+    lure_regex: ""
+
+  - id: gravity_water
+    family: intuitive_fact
+    is_lure: false
+    lure_type: control_intuitive
+    prompt: 물은 왜 높은 곳에서 낮은 곳으로 흐르나요? 한 문장으로 답하세요.
+    expected_regex: "중력|위치|에너지|낮"
+    lure_regex: ""

@@ -8,6 +8,7 @@ dependencies = [
     "omegaconf>=2.3.0",
     "torch>=2.2.0",
     "transformers>=4.40.0",
+    "huggingface-hub>=0.24.0",
     "accelerate>=0.30.0",
     "nnsight>=0.3.0",
     "numpy>=1.26.0",
