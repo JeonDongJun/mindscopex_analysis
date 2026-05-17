@@ -23,7 +23,7 @@ qwen_scope:
   batch_size: 64
 
 generation:
-  system_prompt: 당신은 정확하게 답하는 한국어 조수입니다.
+  system_prompt: You are a careful assistant. Answer exactly and briefly.
   max_new_tokens: 1024
   # Qwen3 공식 가이드는 thinking mode에서 greedy decoding을 피하라고 권장합니다.
   do_sample: true
@@ -42,6 +42,8 @@ analysis:
 tasks:
   - id: crt_bat_ball
     family: cognitive_reflection
+    matched_pair: bat_ball
+    language: en
     is_lure: true
     lure_type: fast_arithmetic
     prompt: |
@@ -50,8 +52,46 @@ tasks:
     expected_regex: "(?i)(?<![0-9])5(?![0-9])\\s*cents?|\\$\\s*0\\.05\\b|0\\.05\\s*dollars?"
     lure_regex: "(?i)(?<![0-9])10(?![0-9])\\s*cents?|\\$\\s*0\\.10\\b|0\\.10\\s*dollars?"
 
+  - id: ctrl_bat_ball_subtraction
+    family: cognitive_reflection
+    matched_pair: bat_ball
+    language: en
+    is_lure: false
+    lure_type: matched_control
+    prompt: |
+      A bat and a ball cost $1.10 in total. The bat costs $1.05.
+      How much does the ball cost? Answer in cents.
+    expected_regex: "(?i)(?<![0-9])5(?![0-9])\\s*cents?|\\$\\s*0\\.05\\b|0\\.05\\s*dollars?"
+    lure_regex: ""
+
+  - id: crt_book_toy
+    family: cognitive_reflection
+    matched_pair: book_toy
+    language: en
+    is_lure: true
+    lure_type: fast_arithmetic
+    prompt: |
+      A book and a toy cost $2.30 in total. The book costs $2.00 more than the toy.
+      How much does the toy cost? Answer in cents.
+    expected_regex: "(?i)(?<![0-9])15(?![0-9])\\s*cents?|\\$\\s*0\\.15\\b|0\\.15\\s*dollars?"
+    lure_regex: "(?i)(?<![0-9])30(?![0-9])\\s*cents?|\\$\\s*0\\.30\\b|0\\.30\\s*dollars?"
+
+  - id: ctrl_book_toy_subtraction
+    family: cognitive_reflection
+    matched_pair: book_toy
+    language: en
+    is_lure: false
+    lure_type: matched_control
+    prompt: |
+      A book and a toy cost $2.30 in total. The book costs $2.15.
+      How much does the toy cost? Answer in cents.
+    expected_regex: "(?i)(?<![0-9])15(?![0-9])\\s*cents?|\\$\\s*0\\.15\\b|0\\.15\\s*dollars?"
+    lure_regex: ""
+
   - id: crt_machines_widgets
     family: cognitive_reflection
+    matched_pair: machines_widgets
+    language: en
     is_lure: true
     lure_type: proportionality_trap
     prompt: |
@@ -60,8 +100,46 @@ tasks:
     expected_regex: "(?i)(?<![0-9])5(?![0-9])\\s*minutes?"
     lure_regex: "(?i)(?<![0-9])100(?![0-9])\\s*minutes?"
 
+  - id: ctrl_machines_widgets_rate
+    family: cognitive_reflection
+    matched_pair: machines_widgets
+    language: en
+    is_lure: false
+    lure_type: matched_control
+    prompt: |
+      Each machine makes 1 widget in 5 minutes.
+      How long would it take 100 machines to make 100 widgets? Answer in minutes.
+    expected_regex: "(?i)(?<![0-9])5(?![0-9])\\s*minutes?"
+    lure_regex: ""
+
+  - id: crt_printers_pages
+    family: cognitive_reflection
+    matched_pair: printers_pages
+    language: en
+    is_lure: true
+    lure_type: proportionality_trap
+    prompt: |
+      If 3 printers print 3 pages in 3 minutes,
+      how long would it take 9 printers to print 9 pages? Answer in minutes.
+    expected_regex: "(?i)(?<![0-9])3(?![0-9])\\s*minutes?"
+    lure_regex: "(?i)(?<![0-9])9(?![0-9])\\s*minutes?"
+
+  - id: ctrl_printers_pages_rate
+    family: cognitive_reflection
+    matched_pair: printers_pages
+    language: en
+    is_lure: false
+    lure_type: matched_control
+    prompt: |
+      Each printer prints 1 page in 3 minutes.
+      How long would it take 9 printers to print 9 pages? Answer in minutes.
+    expected_regex: "(?i)(?<![0-9])3(?![0-9])\\s*minutes?"
+    lure_regex: ""
+
   - id: crt_lily_pads
     family: cognitive_reflection
+    matched_pair: lily_pads
+    language: en
     is_lure: true
     lure_type: exponential_growth_trap
     prompt: |
@@ -70,47 +148,181 @@ tasks:
     expected_regex: "(?<![0-9])47(?![0-9])"
     lure_regex: "(?<![0-9])24(?![0-9])"
 
-  - id: syllogism_some_animals
+  - id: ctrl_lily_pads_explicit
+    family: cognitive_reflection
+    matched_pair: lily_pads
+    language: en
+    is_lure: false
+    lure_type: matched_control
+    prompt: |
+      In a lake, a patch of lily pads doubles in size every day.
+      It covers half the lake on day 47 and the whole lake on day 48.
+      On what day does it cover half the lake?
+    expected_regex: "(?<![0-9])47(?![0-9])"
+    lure_regex: ""
+
+  - id: illusion_moses_ark
+    family: semantic_illusion
+    matched_pair: moses_ark
+    language: en
+    is_lure: true
+    lure_type: presupposition_trap
+    prompt: |
+      How many animals of each kind did Moses take on the ark?
+      Answer with a number or a short correction.
+    expected_regex: "(?i)noah|moses\\s+(did not|didn't|never)|none|zero|(?<![0-9])0(?![0-9])"
+    lure_regex: "(?i)(?<![0-9])2(?![0-9])|two"
+
+  - id: ctrl_noah_ark
+    family: semantic_illusion
+    matched_pair: moses_ark
+    language: en
+    is_lure: false
+    lure_type: matched_control
+    prompt: |
+      How many animals of each kind did Noah take on the ark?
+      Answer with a number.
+    expected_regex: "(?i)(?<![0-9])2(?![0-9])|two"
+    lure_regex: ""
+
+  - id: illusion_widow_sister
+    family: semantic_illusion
+    matched_pair: widow_sister
+    language: en
+    is_lure: true
+    lure_type: presupposition_trap
+    prompt: |
+      Can a man marry his widow's sister? Answer yes or no.
+    expected_regex: "(?i)\\bno\\b|dead|cannot|can't"
+    lure_regex: "(?i)\\byes\\b"
+
+  - id: ctrl_widower_sister
+    family: semantic_illusion
+    matched_pair: widow_sister
+    language: en
+    is_lure: false
+    lure_type: matched_control
+    prompt: |
+      Can a widower marry his late wife's sister? Answer yes or no.
+    expected_regex: "(?i)\\byes\\b"
+    lure_regex: ""
+
+  - id: illusion_rooster_egg
+    family: semantic_illusion
+    matched_pair: rooster_egg
+    language: en
+    is_lure: true
+    lure_type: category_violation
+    prompt: |
+      A rooster lays an egg on the peak of a roof. Which side does the egg roll down?
+      Answer briefly.
+    expected_regex: "(?i)rooster.*(does not|doesn't|cannot|can't)|roosters.*(do not|don't)|no egg|hen"
+    lure_regex: "(?i)left|right|side|down"
+
+  - id: ctrl_hen_egg
+    family: semantic_illusion
+    matched_pair: rooster_egg
+    language: en
+    is_lure: false
+    lure_type: matched_control
+    prompt: |
+      A hen lays an egg on the peak of a roof sloping to the left. Which side does the egg roll down?
+      Answer briefly.
+    expected_regex: "(?i)left"
+    lure_regex: ""
+
+  - id: illusion_bury_survivors
+    family: semantic_illusion
+    matched_pair: bury_survivors
+    language: en
+    is_lure: true
+    lure_type: presupposition_trap
+    prompt: |
+      A plane crashes on the border between France and Spain. Where do they bury the survivors?
+      Answer briefly.
+    expected_regex: "(?i)(do not|don't|cannot|can't|not)\\s+bury|survivors.*(alive|not dead)"
+    lure_regex: "(?i)france|spain|border"
+
+  - id: ctrl_bury_victims
+    family: semantic_illusion
+    matched_pair: bury_survivors
+    language: en
+    is_lure: false
+    lure_type: matched_control
+    prompt: |
+      A plane crashes on the border between France and Spain. Where do they bury the victims?
+      Answer briefly.
+    expected_regex: "(?i)france|spain|home|country|cemetery|where.*found"
+    lure_regex: ""
+
+  - id: logic_some_animals
     family: logic
+    matched_pair: some_animals
+    language: en
     is_lure: true
     lure_type: quantifier_trap
     prompt: |
-      모든 고양이는 동물입니다. 일부 동물은 날 수 있습니다.
-      따라서 일부 고양이는 날 수 있을까요? 예/아니오로 시작하고 한 문장으로 이유를 쓰세요.
-    expected_regex: "아니|알 수|단정|불확실"
-    lure_regex: "예|날 수"
+      All cats are animals. Some animals can fly.
+      Therefore, can we conclude that some cats can fly? Answer yes or no.
+    expected_regex: "(?i)\\bno\\b|cannot|can't|not necessarily|unknown|cannot conclude"
+    lure_regex: "(?i)\\byes\\b"
 
-  - id: ordering_abc
+  - id: ctrl_some_cats_black
     family: logic
+    matched_pair: some_animals
+    language: en
     is_lure: false
-    lure_type: control_logic
+    lure_type: matched_control
     prompt: |
-      A는 B보다 크고, B는 C보다 큽니다. A와 C 중 더 큰 것은 무엇인가요?
-    expected_regex: "(?i)A\\s*(이|가|은|는)?\\s*더\\s*크"
+      All cats are animals. Some cats are black.
+      Therefore, can we conclude that some animals are black? Answer yes or no.
+    expected_regex: "(?i)\\byes\\b"
     lure_regex: ""
 
-  - id: crt_shift_lcm
-    family: modular_arithmetic
-    is_lure: false
-    lure_type: control_crt
+  - id: logic_affirming_consequent
+    family: logic
+    matched_pair: wet_street
+    language: en
+    is_lure: true
+    lure_type: conditional_trap
     prompt: |
-      어떤 자연수 x는 3으로 나누면 나머지가 2이고, 5로 나누면 나머지가 4이며, 7로 나누면 나머지가 6입니다.
-      가장 작은 x를 구하세요.
-    expected_regex: "(?<![0-9])(104|백사)(?![0-9])"
+      If it rains, the street gets wet. The street is wet.
+      Therefore, did it rain? Answer yes or no.
+    expected_regex: "(?i)\\bno\\b|cannot|can't|not necessarily|unknown|not enough"
+    lure_regex: "(?i)\\byes\\b"
+
+  - id: ctrl_modus_ponens_wet_street
+    family: logic
+    matched_pair: wet_street
+    language: en
+    is_lure: false
+    lure_type: matched_control
+    prompt: |
+      If it rains, the street gets wet. It is raining.
+      Therefore, is the street wet? Answer yes or no.
+    expected_regex: "(?i)\\byes\\b"
     lure_regex: ""
 
-  - id: sky_blue
-    family: intuitive_fact
-    is_lure: false
-    lure_type: control_intuitive
-    prompt: 하늘은 왜 파란색으로 보이나요? 산란과 파장을 포함해 짧게 답하세요.
-    expected_regex: "산란|파장|Rayleigh"
-    lure_regex: ""
+  - id: logic_roses_flowers
+    family: logic
+    matched_pair: roses_flowers
+    language: en
+    is_lure: true
+    lure_type: quantifier_trap
+    prompt: |
+      All roses are flowers. Some flowers fade quickly.
+      Therefore, can we conclude that some roses fade quickly? Answer yes or no.
+    expected_regex: "(?i)\\bno\\b|cannot|can't|not necessarily|unknown|cannot conclude"
+    lure_regex: "(?i)\\byes\\b"
 
-  - id: gravity_water
-    family: intuitive_fact
+  - id: ctrl_roses_flowers_valid
+    family: logic
+    matched_pair: roses_flowers
+    language: en
     is_lure: false
-    lure_type: control_intuitive
-    prompt: 물은 왜 높은 곳에서 낮은 곳으로 흐르나요? 한 문장으로 답하세요.
-    expected_regex: "중력|위치|에너지|낮"
+    lure_type: matched_control
+    prompt: |
+      All roses are flowers. Some roses fade quickly.
+      Therefore, can we conclude that some flowers fade quickly? Answer yes or no.
+    expected_regex: "(?i)\\byes\\b"
     lure_regex: ""
