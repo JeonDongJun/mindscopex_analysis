@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Literal
@@ -51,6 +52,15 @@ class QwenScopeSAE:
             b_dec=self.b_dec.to(**kwargs),
             top_k=self.top_k,
         )
+
+
+@dataclass(frozen=True)
+class GenerationParts:
+    """Visible generation split into optional reasoning and final answer text."""
+
+    thinking: str
+    answer: str
+    split_method: str
 
 
 def get_transformer_layers(model: Any) -> Any:
@@ -272,26 +282,100 @@ def format_qwen_chat(
     return f"User: {prompt}\nAssistant:"
 
 
+_SPECIAL_GENERATION_TOKENS = (
+    "<|im_start|>",
+    "<|im_end|>",
+    "<|endoftext|>",
+    "<|end_of_text|>",
+)
+_THINK_TAG_RE = re.compile(r"(?is)<\s*(think(?:ing)?)\s*>\s*(.*?)\s*<\s*/\s*\1\s*>")
+_OPEN_THINK_TAG_RE = re.compile(r"(?is)<\s*think(?:ing)?\s*>")
+_CLOSE_THINK_TAG_RE = re.compile(r"(?is)<\s*/\s*think(?:ing)?\s*>")
+_ANSWER_MARKER_RE = re.compile(
+    r"(?im)^\s*(?:final\s+answer|answer|final|최종\s*답변|답변|정답)\s*[:：]\s*"
+)
+_REASONING_MARKER_RE = re.compile(
+    r"(?im)^\s*(?:thinking|reasoning|analysis|thoughts?|추론|생각|사고\s*과정)\s*[:：]\s*"
+)
+
+
+def _clean_generation_part(part: str) -> str:
+    for tok in _SPECIAL_GENERATION_TOKENS:
+        part = part.replace(tok, "")
+    part = re.sub(r"\n{3,}", "\n\n", part)
+    return part.strip()
+
+
+def _strip_leading_marker(part: str, marker_re: re.Pattern[str]) -> str:
+    return _clean_generation_part(marker_re.sub("", part, count=1))
+
+
+def split_generation_parts(text: str) -> GenerationParts:
+    """Split model output into visible thinking and final answer sections.
+
+    The splitter handles Qwen-style ``<think>...</think>`` blocks first, then
+    falls back to simple section markers such as ``Thinking:`` and ``Answer:``.
+    If no explicit reasoning marker is present, the full generation is treated
+    as the final answer.
+    """
+
+    cleaned = _clean_generation_part(text)
+    if not cleaned:
+        return GenerationParts(thinking="", answer="", split_method="empty")
+
+    think_matches = list(_THINK_TAG_RE.finditer(cleaned))
+    if think_matches:
+        thinking = "\n\n".join(_clean_generation_part(match.group(2)) for match in think_matches)
+        answer = _strip_leading_marker(cleaned[think_matches[-1].end() :], _ANSWER_MARKER_RE)
+        return GenerationParts(thinking=thinking, answer=answer, split_method="think_tag")
+
+    close_match = _CLOSE_THINK_TAG_RE.search(cleaned)
+    if close_match:
+        thinking = _clean_generation_part(cleaned[: close_match.start()])
+        answer = _strip_leading_marker(cleaned[close_match.end() :], _ANSWER_MARKER_RE)
+        return GenerationParts(thinking=thinking, answer=answer, split_method="closing_think_tag")
+
+    open_match = _OPEN_THINK_TAG_RE.search(cleaned)
+    if open_match:
+        after_open = cleaned[open_match.end() :]
+        answer_markers = list(_ANSWER_MARKER_RE.finditer(after_open))
+        if answer_markers:
+            marker = answer_markers[-1]
+            thinking = _clean_generation_part(after_open[: marker.start()])
+            answer = _clean_generation_part(after_open[marker.end() :])
+            return GenerationParts(
+                thinking=thinking,
+                answer=answer,
+                split_method="open_think_tag_with_answer_marker",
+            )
+        return GenerationParts(
+            thinking=_clean_generation_part(after_open),
+            answer="",
+            split_method="open_think_tag",
+        )
+
+    answer_markers = list(_ANSWER_MARKER_RE.finditer(cleaned))
+    if answer_markers:
+        marker = answer_markers[-1]
+        before = _clean_generation_part(cleaned[: marker.start()])
+        answer = _clean_generation_part(cleaned[marker.end() :])
+        if before and _REASONING_MARKER_RE.search(before):
+            thinking = _strip_leading_marker(before, _REASONING_MARKER_RE)
+            return GenerationParts(
+                thinking=thinking,
+                answer=answer,
+                split_method="reasoning_answer_markers",
+            )
+        return GenerationParts(thinking="", answer=answer, split_method="answer_marker")
+
+    return GenerationParts(thinking="", answer=cleaned, split_method="none")
+
+
 def split_qwen_thinking(text: str) -> tuple[str, str]:
-    """Split Qwen-style ``<think>...</think>`` text into thinking and final answer."""
+    """Split Qwen-style thinking text into thinking and final answer."""
 
-    def clean(part: str) -> str:
-        for tok in (
-            "<|im_start|>",
-            "<|im_end|>",
-            "<|endoftext|>",
-            "<|end_of_text|>",
-        ):
-            part = part.replace(tok, "")
-        return part.strip()
-
-    start = text.find("<think>")
-    end = text.find("</think>")
-    if start == -1 or end == -1 or end < start:
-        return "", clean(text)
-    thinking = clean(text[start + len("<think>") : end])
-    answer = clean(text[end + len("</think>") :])
-    return thinking, answer
+    parts = split_generation_parts(text)
+    return parts.thinking, parts.answer
 
 
 def sae_decoder_direction(
