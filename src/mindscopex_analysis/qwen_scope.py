@@ -1,7 +1,8 @@
-"""Qwen-Scope SAE loading, feature extraction, and lightweight steering utilities."""
+"""Qwen-Scope SAE loading and feature-analysis helpers."""
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Literal
@@ -9,7 +10,16 @@ from typing import Any, Literal
 import torch
 from huggingface_hub import hf_hub_download
 
-TokenPosition = Literal["all", "last", "mean"]
+from mindscopex_analysis.activations import TokenPosition, capture_residual_stream
+from mindscopex_analysis.models import (
+    DEFAULT_BLOCK_PATH_TEMPLATE,
+    DEFAULT_QWEN_SCOPE_REPO_ID,
+    DEFAULT_SCAN_LAYERS,
+    default_sae_device,
+    dtype_from_name,
+)
+
+FeatureMetric = Literal["mean", "mean_abs", "max", "activation_rate"]
 
 
 @dataclass
@@ -53,18 +63,67 @@ class QwenScopeSAE:
         )
 
 
-def get_transformer_layers(model: Any) -> Any:
-    """Return the transformer block list for common causal LM architectures."""
+@dataclass(frozen=True)
+class FeatureSummary:
+    """Compact report for one active Qwen-Scope feature."""
 
-    for path in ("model.layers", "transformer.h", "gpt_neox.layers"):
-        obj = model
-        try:
-            for attr in path.split("."):
-                obj = getattr(obj, attr)
-            return obj
-        except AttributeError:
-            continue
-    raise ValueError("지원하지 않는 모델 아키텍처: transformer 블록을 찾을 수 없습니다.")
+    feature_id: int
+    mean: float
+    mean_abs: float
+    max: float
+    activation_rate: float
+
+
+@dataclass(frozen=True)
+class LayerFeatureReport:
+    """Layer-level summary used to pick a first layer to inspect."""
+
+    layer: int
+    score: float
+    n_tokens: int
+    top_features: tuple[FeatureSummary, ...]
+
+    def as_row(self) -> dict[str, Any]:
+        best = self.top_features[0] if self.top_features else None
+        return {
+            "layer": self.layer,
+            "score": self.score,
+            "n_tokens": self.n_tokens,
+            "best_feature_id": None if best is None else best.feature_id,
+            "best_feature_mean_abs": None if best is None else best.mean_abs,
+            "best_feature_rate": None if best is None else best.activation_rate,
+        }
+
+    def feature_rows(self) -> list[dict[str, Any]]:
+        return [
+            {
+                "rank": rank,
+                "layer": self.layer,
+                "feature_id": item.feature_id,
+                "mean": item.mean,
+                "mean_abs": item.mean_abs,
+                "max": item.max,
+                "activation_rate": item.activation_rate,
+            }
+            for rank, item in enumerate(self.top_features, start=1)
+        ]
+
+
+@dataclass
+class LayerScanResult:
+    """Result returned by ``scan_qwen_scope_layers``."""
+
+    reports: list[LayerFeatureReport]
+    residuals: dict[int, torch.Tensor]
+
+    @property
+    def best(self) -> LayerFeatureReport:
+        if not self.reports:
+            raise ValueError("No layer reports are available")
+        return self.reports[0]
+
+    def layer_rows(self) -> list[dict[str, Any]]:
+        return [report.as_row() for report in self.reports]
 
 
 def infer_top_k_from_repo(repo_id: str, default: int = 50) -> int:
@@ -88,11 +147,7 @@ def load_qwen_scope_sae(
     dtype: torch.dtype | None = None,
     top_k: int | None = None,
 ) -> QwenScopeSAE:
-    """Download and load one Qwen-Scope SAE checkpoint from Hugging Face.
-
-    Qwen-Scope repositories store one ``layer{n}.sae.pt`` file per layer. The
-    file is a dict with ``W_enc``, ``W_dec``, ``b_enc``, and ``b_dec`` tensors.
-    """
+    """Download and load one Qwen-Scope SAE checkpoint from Hugging Face."""
 
     filename = f"layer{int(layer)}.sae.pt"
     path = hf_hub_download(repo_id=repo_id, filename=filename, cache_dir=cache_dir)
@@ -124,8 +179,8 @@ def encode_qwen_scope_topk(
 ) -> tuple[torch.Tensor, torch.Tensor]:
     """Encode residual vectors and return TopK feature values and indices.
 
-    The implementation follows Qwen-Scope model cards: ``residual @ W_enc.T +
-    b_enc`` followed by TopK, without adding a ReLU clamp.
+    The implementation follows the Qwen-Scope model cards: ``residual @
+    W_enc.T + b_enc`` followed by TopK, without adding a ReLU clamp.
     """
 
     if residual.shape[-1] != sae.d_model:
@@ -141,13 +196,14 @@ def summarize_qwen_scope_features(
     *,
     batch_size: int = 128,
 ) -> dict[str, torch.Tensor | int]:
-    """Summarize SAE feature activations without storing the dense token x feature matrix."""
+    """Summarize SAE feature activations without storing a dense token x feature matrix."""
 
     if residuals.dim() != 2:
         residuals = residuals.reshape(-1, residuals.shape[-1])
     n_tokens = int(residuals.shape[0])
     device = sae.W_enc.device
     sums = torch.zeros(sae.d_sae, device=device, dtype=torch.float32)
+    abs_sums = torch.zeros(sae.d_sae, device=device, dtype=torch.float32)
     counts = torch.zeros(sae.d_sae, device=device, dtype=torch.float32)
     maxima = torch.full((sae.d_sae,), float("-inf"), device=device, dtype=torch.float32)
 
@@ -155,8 +211,10 @@ def summarize_qwen_scope_features(
         batch = residuals[start : start + batch_size]
         vals, idx = encode_qwen_scope_topk(batch, sae)
         vals_f = vals.float().reshape(-1)
+        abs_vals_f = vals_f.abs()
         idx_f = idx.reshape(-1)
         sums.scatter_add_(0, idx_f, vals_f)
+        abs_sums.scatter_add_(0, idx_f, abs_vals_f)
         counts.scatter_add_(0, idx_f, torch.ones_like(vals_f))
         maxima.scatter_reduce_(0, idx_f, vals_f, reduce="amax", include_self=True)
 
@@ -164,77 +222,140 @@ def summarize_qwen_scope_features(
     denom = max(n_tokens, 1)
     return {
         "mean": (sums / denom).cpu(),
+        "mean_abs": (abs_sums / denom).cpu(),
         "max": maxima.cpu(),
         "activation_rate": (counts / denom).cpu(),
         "n_tokens": n_tokens,
     }
 
 
-def capture_residuals(
-    model: Any,
-    tokenizer: Any,
-    texts: list[str],
-    layers: list[int],
+def top_qwen_scope_features(
+    summary: dict[str, torch.Tensor | int],
     *,
-    device: str | torch.device,
-    max_length: int = 1024,
+    top_n: int = 20,
+    metric: FeatureMetric = "mean_abs",
+) -> tuple[FeatureSummary, ...]:
+    """Return top feature summaries sorted by a summary metric."""
+
+    if metric not in {"mean", "mean_abs", "max", "activation_rate"}:
+        raise ValueError(f"Unknown metric={metric!r}")
+    scores = summary[metric]
+    if not isinstance(scores, torch.Tensor):
+        raise TypeError(f"summary[{metric!r}] must be a tensor")
+
+    n = min(int(top_n), int(scores.numel()))
+    _, indices = scores.topk(n)
+    means = summary["mean"]
+    mean_abs = summary["mean_abs"]
+    maxima = summary["max"]
+    rates = summary["activation_rate"]
+    assert isinstance(means, torch.Tensor)
+    assert isinstance(mean_abs, torch.Tensor)
+    assert isinstance(maxima, torch.Tensor)
+    assert isinstance(rates, torch.Tensor)
+
+    items = []
+    for idx in indices.tolist():
+        items.append(
+            FeatureSummary(
+                feature_id=int(idx),
+                mean=float(means[idx]),
+                mean_abs=float(mean_abs[idx]),
+                max=float(maxima[idx]),
+                activation_rate=float(rates[idx]),
+            )
+        )
+    return tuple(items)
+
+
+def make_layer_feature_report(
+    layer: int,
+    summary: dict[str, torch.Tensor | int],
+    *,
+    top_n: int = 20,
+    metric: FeatureMetric = "mean_abs",
+) -> LayerFeatureReport:
+    """Create a layer report with a simple first-pass interpretability score."""
+
+    top_features = top_qwen_scope_features(summary, top_n=top_n, metric=metric)
+    if top_features:
+        mean_abs = sum(item.mean_abs for item in top_features) / len(top_features)
+        rate = sum(item.activation_rate for item in top_features) / len(top_features)
+        score = mean_abs * (1.0 + rate)
+    else:
+        score = 0.0
+    return LayerFeatureReport(
+        layer=int(layer),
+        score=float(score),
+        n_tokens=int(summary["n_tokens"]),
+        top_features=top_features,
+    )
+
+
+def scan_qwen_scope_layers(
+    lm: Any,
+    prompts: Sequence[str],
+    layers: Sequence[int] = DEFAULT_SCAN_LAYERS,
+    *,
+    repo_id: str = DEFAULT_QWEN_SCOPE_REPO_ID,
+    block_path_template: str = DEFAULT_BLOCK_PATH_TEMPLATE,
     token_position: TokenPosition = "last",
-) -> dict[int, torch.Tensor]:
-    """Capture residual stream tensors from selected layers for a list of formatted texts."""
+    output_index: int | None = 0,
+    sae_device: str | torch.device | None = None,
+    sae_dtype: str | torch.dtype | None = None,
+    cache_dir: str | Path | None = None,
+    batch_size: int = 128,
+    top_n: int = 20,
+    metric: FeatureMetric = "mean_abs",
+) -> LayerScanResult:
+    """Capture residuals and rank candidate layers by Qwen-Scope feature strength.
 
-    blocks = get_transformer_layers(model)
-    storage: dict[int, torch.Tensor] = {}
-    handles = []
+    The ranking is only a triage heuristic for choosing a layer to inspect
+    first. Semantic interpretation still requires looking at prompts, tokens,
+    and downstream effects.
+    """
 
-    def hook_for(layer_idx: int):
-        def hook(_module: Any, _inputs: Any, output: Any) -> None:
-            hidden = output[0] if isinstance(output, tuple) else output
-            storage[layer_idx] = hidden.detach().cpu()
+    residuals = capture_residual_stream(
+        lm,
+        prompts,
+        layers,
+        block_path_template=block_path_template,
+        token_position=token_position,
+        output_index=output_index,
+    )
 
-        return hook
+    device = sae_device or default_sae_device()
+    dtype = dtype_from_name(sae_dtype)
+    reports: list[LayerFeatureReport] = []
 
     for layer in layers:
-        handles.append(blocks[layer].register_forward_hook(hook_for(layer)))
+        layer = int(layer)
+        sae = load_qwen_scope_sae(
+            repo_id,
+            layer,
+            cache_dir=cache_dir,
+            device=device,
+            dtype=dtype,
+        )
+        summary = summarize_qwen_scope_features(
+            residuals[layer],
+            sae,
+            batch_size=batch_size,
+        )
+        reports.append(
+            make_layer_feature_report(
+                layer,
+                summary,
+                top_n=top_n,
+                metric=metric,
+            )
+        )
+        del sae
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
 
-    collected: dict[int, list[torch.Tensor]] = {layer: [] for layer in layers}
-    model.eval()
-    try:
-        with torch.no_grad():
-            for text in texts:
-                inputs = tokenizer(
-                    text,
-                    return_tensors="pt",
-                    truncation=True,
-                    max_length=max_length,
-                )
-                inputs = {k: v.to(device) for k, v in inputs.items()}
-                model(**inputs)
-                attention_mask = inputs.get("attention_mask")
-                for layer in layers:
-                    h = storage[layer][0]
-                    if token_position == "last":
-                        collected[layer].append(h[-1:].cpu())
-                    elif token_position == "mean":
-                        if attention_mask is None:
-                            collected[layer].append(h.mean(dim=0, keepdim=True).cpu())
-                        else:
-                            mask = attention_mask[0].detach().cpu().float().unsqueeze(-1)
-                            collected[layer].append(
-                                (h * mask).sum(dim=0, keepdim=True) / mask.sum().clamp_min(1.0)
-                            )
-                    elif token_position == "all":
-                        if attention_mask is None:
-                            collected[layer].append(h.cpu())
-                        else:
-                            mask = attention_mask[0].detach().cpu().bool()
-                            collected[layer].append(h[mask].cpu())
-                    else:
-                        raise ValueError(f"Unknown token_position={token_position!r}")
-    finally:
-        for handle in handles:
-            handle.remove()
-
-    return {layer: torch.cat(parts, dim=0) for layer, parts in collected.items()}
+    reports.sort(key=lambda report: report.score, reverse=True)
+    return LayerScanResult(reports=reports, residuals=residuals)
 
 
 def format_qwen_chat(

@@ -6,6 +6,7 @@ __pycache__/
 outputs/
 multirun/
 wandb/
+paper/
 *.egg-info/
 dist/
 build/
