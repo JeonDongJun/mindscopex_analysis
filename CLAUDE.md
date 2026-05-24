@@ -6,7 +6,7 @@
 
 - `nnsight.LanguageModel` 로 Qwen residual stream activation 캡처
 - Hugging Face의 Qwen-Scope SAE checkpoint 로 feature activation 추출
-- 노트북은 목적별 최소 흐름만 유지: `01_qwen_scope_activation_mvp.ipynb`, `02_bat_ball_lure_feature_ablation.ipynb`
+- 노트북은 목적별 최소 흐름만 유지: `01`부터 `13`까지 activation, feature search, steering, control, transfer 실험으로 분리
 
 ## 핵심 경로
 
@@ -18,6 +18,16 @@
 | `src/mindscopex_analysis/effects.py` | 답변 logprob margin과 feature decoder-direction ablation |
 | `notebooks/01_qwen_scope_activation_mvp.ipynb` | activation 캡처부터 layer 후보 선정까지의 MVP |
 | `notebooks/02_bat_ball_lure_feature_ablation.ipynb` | bat-and-ball 함정 답 feature ablation 실험 |
+
+## 실험 지도
+
+1. `01` / `02`: 기본 activation 캡처와 bat-and-ball feature ablation.
+2. `03` / `04`: layer sweep과 coefficient dose response.
+3. `05`: 제거, 억제, 증폭, projection removal 비교.
+4. `06` / `07` / `08` / `09`: control, paraphrase, answer format, token position 강건성.
+5. `10` / `13`: CRT 및 semantic/logic lure 전이성.
+6. `11`: matched-control residual delta로 우회 가능성 확인.
+7. `12`: decoder geometry로 feature family 후보 확인.
 
 ## 로컬 실행
 

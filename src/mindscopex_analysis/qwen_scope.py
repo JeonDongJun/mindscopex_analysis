@@ -428,7 +428,11 @@ def sae_decoder_direction(
         raise ValueError("feature_ids 와 coefficients 길이가 다릅니다.")
     idx = torch.as_tensor(feature_ids, device=sae.W_dec.device, dtype=torch.long)
     coeff = torch.as_tensor(coefficients, device=sae.W_dec.device, dtype=sae.W_dec.dtype)
-    return (sae.W_dec[:, idx] * coeff.unsqueeze(0)).sum(dim=1)
+    if sae.W_dec.shape[0] == sae.d_model:
+        return (sae.W_dec[:, idx] * coeff.unsqueeze(0)).sum(dim=1)
+    if sae.W_dec.shape[1] == sae.d_model:
+        return (sae.W_dec[idx, :] * coeff.unsqueeze(1)).sum(dim=0)
+    raise ValueError(f"Unexpected W_dec shape={tuple(sae.W_dec.shape)} for d_model={sae.d_model}")
 
 
 def make_feature_steering_hook(

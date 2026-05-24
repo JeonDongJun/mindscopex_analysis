@@ -184,6 +184,7 @@ def _direction_edit(
     coefficient: float,
     intervention_mode: InterventionMode,
 ) -> Any:
+    direction = direction.to(device=hidden_vector.device, dtype=hidden_vector.dtype)
     unit = direction / torch.linalg.norm(direction.float()).clamp_min(1e-12).to(direction.dtype)
     if intervention_mode == "remove_activation":
         return hidden_vector - float(coefficient) * float(feature_value) * direction
