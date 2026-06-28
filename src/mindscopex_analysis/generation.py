@@ -14,16 +14,12 @@ from typing import Any, Literal
 import torch
 
 from mindscopex_analysis.cases import LureCase
+from mindscopex_analysis.prompts import (
+    CRT_FINAL_ANSWER_SYSTEM_PROMPT as CRT_FINAL_ANSWER_SYSTEM_PROMPT,
+)
 from mindscopex_analysis.qwen_scope import split_qwen_thinking
 
 AnswerLabel = Literal["correct", "lure", "both", "other"]
-
-CRT_FINAL_ANSWER_SYSTEM_PROMPT = (
-    "Your visible final answer must contain only the requested short answer, including units "
-    "when requested. Do not include explanations, calculations, an 'Answer:' label, or a "
-    "restatement of the problem in the final answer. Any reasoning must appear exclusively "
-    "inside <think>...</think>. If thinking is disabled, output no reasoning or explanation."
-)
 
 
 @dataclass(frozen=True)

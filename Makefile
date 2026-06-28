@@ -1,10 +1,14 @@
-.PHONY: install notebook lab lint format smoke clean help
+.PHONY: install git-filters notebook lab lint format smoke clean help
 
 help:  ## 도움말
 	@grep -E '^[a-zA-Z_-]+:.*##' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*##"}; {printf "  \033[36m%-18s\033[0m %s\n", $$1, $$2}'
 
 install:  ## 기본 + 노트북 의존성 설치
 	uv sync --extra dev
+	uv run nbstripout --install --attributes .gitattributes
+
+git-filters:  ## Git 커밋에서 노트북 출력 제외
+	uv run nbstripout --install --attributes .gitattributes
 
 notebook:  ## Jupyter Notebook 열기
 	uv run jupyter notebook notebooks/

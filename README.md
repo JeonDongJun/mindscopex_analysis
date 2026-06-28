@@ -6,13 +6,23 @@ Focused Qwen interpretability experiments with NNsight and Qwen-Scope.
 
 ```powershell
 uv sync --extra dev
+uv run nbstripout --install --attributes .gitattributes
 uv run jupyter lab notebooks/
 ```
+
+The `nbstripout` Git filter keeps notebook outputs and execution counts in the local working
+copy while removing them from staged and committed notebook blobs. Run the filter-install
+command once after each fresh clone; `make install` performs both setup steps as well.
 
 Start with `notebooks/00_qwen_crt_text_responses.ipynb` to inspect model behavior,
 then use `notebooks/01_qwen_scope_activation_mvp.ipynb` and
 `notebooks/02_bat_ball_lure_feature_ablation.ipynb` for the bat-and-ball
 feature ablation workflow.
+
+All experiments use the same concise final-answer instruction. Notebook 00 passes it as a
+chat system message; notebooks 01-13 prepend the same text to Base-model prompts so the
+Qwen-Scope model/SAE pairing remains unchanged. Instructed feature handles use a separate
+cache file to avoid mixing them with earlier unprompted discoveries.
 
 ## Experiment Notebooks
 
@@ -34,6 +44,7 @@ feature ablation workflow.
 ## What Is Included
 
 - `src/mindscopex_analysis/models.py`: Qwen + NNsight model loading helpers.
+- `src/mindscopex_analysis/prompts.py`: shared final-answer instruction and Base-prompt helpers.
 - `src/mindscopex_analysis/generation.py`: Qwen CRT generation, response parsing, and JSON persistence.
 - `src/mindscopex_analysis/activations.py`: residual stream capture with `lm.trace(...).save()`.
 - `src/mindscopex_analysis/qwen_scope.py`: Qwen-Scope SAE loading, TopK feature extraction, and a first-pass layer ranking helper.

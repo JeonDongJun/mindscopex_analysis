@@ -25,7 +25,6 @@ from mindscopex_analysis.effects import (
     score_answer_logprob,
 )
 from mindscopex_analysis.generation import (
-    CRT_FINAL_ANSWER_SYSTEM_PROMPT,
     QwenTextResponse,
     classify_lure_answer,
     generate_crt_response_suite,
@@ -46,6 +45,12 @@ from mindscopex_analysis.models import (
     load_qwen_language_model,
     load_qwen_text_generation_model,
     recommended_dtype_name,
+)
+from mindscopex_analysis.prompts import (
+    CRT_FINAL_ANSWER_SYSTEM_PROMPT,
+    instruct_lure_case,
+    instruct_lure_cases,
+    prepend_final_answer_instruction,
 )
 from mindscopex_analysis.qwen_scope import (
     LayerFeatureReport,
@@ -121,6 +126,8 @@ __all__ = [
     "dtype_from_name",
     "encode_qwen_scope_topk",
     "intervention_mode_rows",
+    "instruct_lure_case",
+    "instruct_lure_cases",
     "layer_feature_search_rows",
     "load_qwen_language_model",
     "load_qwen_text_generation_model",
@@ -129,6 +136,7 @@ __all__ = [
     "load_or_discover_feature_handle",
     "load_qwen_scope_sae",
     "prompt_token_window_rows",
+    "prepend_final_answer_instruction",
     "qwen_recommended_sampling_kwargs",
     "recommended_dtype_name",
     "rank_lure_feature_effects",
