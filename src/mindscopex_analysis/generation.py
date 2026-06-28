@@ -18,6 +18,13 @@ from mindscopex_analysis.qwen_scope import split_qwen_thinking
 
 AnswerLabel = Literal["correct", "lure", "both", "other"]
 
+CRT_FINAL_ANSWER_SYSTEM_PROMPT = (
+    "Your visible final answer must contain only the requested short answer, including units "
+    "when requested. Do not include explanations, calculations, an 'Answer:' label, or a "
+    "restatement of the problem in the final answer. Any reasoning must appear exclusively "
+    "inside <think>...</think>. If thinking is disabled, output no reasoning or explanation."
+)
+
 
 @dataclass(frozen=True)
 class QwenTextResponse:
@@ -46,9 +53,36 @@ class QwenTextResponse:
             return "base_completion"
         return "thinking" if self.enable_thinking else "non_thinking"
 
+    @property
+    def has_thinking_block(self) -> bool:
+        """Whether the generated tokens contain a complete Qwen thinking block."""
+
+        start = self.raw_text.find("<think>")
+        end = self.raw_text.find("</think>")
+        return start >= 0 and end > start
+
+    @property
+    def reasoning_detected(self) -> bool:
+        """Whether non-empty reasoning was parsed from generated tokens."""
+
+        return bool(self.thinking.strip())
+
+    @property
+    def thinking_protocol_ok(self) -> bool | None:
+        """Check generated-token use of Qwen's thinking protocol."""
+
+        if self.enable_thinking is None:
+            return None
+        if self.enable_thinking:
+            return self.has_thinking_block and self.reasoning_detected
+        return not self.has_thinking_block and not self.reasoning_detected
+
     def as_dict(self) -> dict[str, Any]:
         row = asdict(self)
         row["mode"] = self.mode
+        row["has_thinking_block"] = self.has_thinking_block
+        row["reasoning_detected"] = self.reasoning_detected
+        row["thinking_protocol_ok"] = self.thinking_protocol_ok
         return row
 
     def summary_row(self) -> dict[str, Any]:
@@ -58,6 +92,9 @@ class QwenTextResponse:
             "model": self.model_id.rsplit("/", 1)[-1],
             "case": self.case_id,
             "mode": self.mode,
+            "think_block": self.has_thinking_block,
+            "reasoning_chars": len(self.thinking),
+            "think_protocol_ok": self.thinking_protocol_ok,
             "label": self.answer_label,
             "final_answer": self.answer,
             "output_tokens": self.output_tokens,

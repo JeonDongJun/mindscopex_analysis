@@ -25,6 +25,7 @@ from mindscopex_analysis.effects import (
     score_answer_logprob,
 )
 from mindscopex_analysis.generation import (
+    CRT_FINAL_ANSWER_SYSTEM_PROMPT,
     QwenTextResponse,
     classify_lure_answer,
     generate_crt_response_suite,
@@ -85,6 +86,7 @@ __all__ = [
     "DEFAULT_QWEN_SCOPE_REPO_ID",
     "DEFAULT_SCAN_LAYERS",
     "BAT_BALL_CASE",
+    "CRT_FINAL_ANSWER_SYSTEM_PROMPT",
     "LayerFeatureReport",
     "LayerScanResult",
     "LureCase",

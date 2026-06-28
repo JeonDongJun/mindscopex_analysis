@@ -16,6 +16,11 @@ class _FakeTokenizer:
     pad_token_id = 0
     eos_token_id = 9
 
+    def __init__(self, decoded_text=None) -> None:
+        self.decoded_text = decoded_text or (
+            "<think>check the algebra</think>The answer is 5 cents.<|im_end|>"
+        )
+
     def apply_chat_template(self, _messages, **_kwargs):
         return {
             "input_ids": torch.tensor([[1, 2]]),
@@ -23,7 +28,7 @@ class _FakeTokenizer:
         }
 
     def decode(self, _token_ids, **_kwargs):
-        return "<think>check the algebra</think>The answer is 5 cents.<|im_end|>"
+        return self.decoded_text
 
 
 class _FakeModel(torch.nn.Module):
@@ -62,6 +67,7 @@ class AnswerClassificationTests(unittest.TestCase):
             _FakeTokenizer(),
             BAT_BALL_CASE,
             model_id="Qwen/fake",
+            enable_thinking=True,
             max_new_tokens=4,
             do_sample=False,
         )
@@ -71,6 +77,25 @@ class AnswerClassificationTests(unittest.TestCase):
         self.assertEqual(response.answer_label, "correct")
         self.assertEqual(response.output_tokens, 2)
         self.assertFalse(response.hit_max_tokens)
+        self.assertTrue(response.has_thinking_block)
+        self.assertTrue(response.reasoning_detected)
+        self.assertTrue(response.thinking_protocol_ok)
+
+    def test_non_thinking_response_has_no_generated_thinking_block(self) -> None:
+        response = generate_qwen_text_response(
+            _FakeModel(),
+            _FakeTokenizer("5 cents<|im_end|>"),
+            BAT_BALL_CASE,
+            model_id="Qwen/fake",
+            enable_thinking=False,
+            max_new_tokens=4,
+            do_sample=False,
+        )
+
+        self.assertEqual(response.answer, "5 cents")
+        self.assertFalse(response.has_thinking_block)
+        self.assertFalse(response.reasoning_detected)
+        self.assertTrue(response.thinking_protocol_ok)
 
 
 if __name__ == "__main__":
