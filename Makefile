@@ -1,4 +1,4 @@
-.PHONY: install git-filters notebook lab lint format smoke clean help
+.PHONY: install git-filters notebook lab lint format test smoke clean help
 
 help:  ## 도움말
 	@grep -E '^[a-zA-Z_-]+:.*##' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*##"}; {printf "  \033[36m%-18s\033[0m %s\n", $$1, $$2}'
@@ -17,13 +17,17 @@ lab:  ## JupyterLab 열기
 	uv run jupyter lab notebooks/
 
 lint:  ## ruff 린트
-	uv run ruff check src/
+	uv run ruff check src/ tests/
 
 format:  ## ruff 포맷
-	uv run ruff format src/
+	uv run ruff format src/ tests/
 
-smoke:  ## import/문법 확인
-	uv run python -m compileall src
+test:  ## 단위 테스트 실행
+	uv run python -m unittest discover -s tests -v
+
+smoke:  ## import/문법 확인 + 단위 테스트
+	uv run python -m compileall src tests
+	uv run python -m unittest discover -s tests
 
 clean:  ## 캐시 삭제
 	uv run python -c "import shutil,pathlib; [shutil.rmtree(p,True) for p in map(pathlib.Path,['.ruff_cache','__pycache__'])]"

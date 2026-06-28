@@ -75,5 +75,9 @@ That is the smallest currently available Qwen3 + Qwen-Scope pairing in the publi
 
 ```powershell
 make lint
+make test
 make smoke
 ```
+
+`make test` runs the unit tests directly; `make smoke` byte-compiles `src`/`tests` and
+then runs the same suite, so it doubles as a fast pre-commit check.
