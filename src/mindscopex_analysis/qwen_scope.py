@@ -300,7 +300,7 @@ def scan_qwen_scope_layers(
     repo_id: str = DEFAULT_QWEN_SCOPE_REPO_ID,
     block_path_template: str = DEFAULT_BLOCK_PATH_TEMPLATE,
     token_position: TokenPosition = "last",
-    output_index: int | None = 0,
+    output_index: int | None = None,
     sae_device: str | torch.device | None = None,
     sae_dtype: str | torch.dtype | None = None,
     cache_dir: str | Path | None = None,

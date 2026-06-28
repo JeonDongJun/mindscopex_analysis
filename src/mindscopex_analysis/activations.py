@@ -72,9 +72,14 @@ def capture_residual_stream(
     *,
     block_path_template: str = DEFAULT_BLOCK_PATH_TEMPLATE,
     token_position: TokenPosition = "last",
-    output_index: int | None = 0,
+    output_index: int | None = None,
 ) -> dict[int, torch.Tensor]:
     """Capture residual stream tensors from Qwen layers using NNsight.
+
+    Qwen3 decoder blocks return the hidden-state tensor directly, so the
+    default captures ``block.output`` without indexing away the batch axis.
+    Pass an explicit ``output_index`` only for models whose block output is a
+    tuple.
 
     Returns a dict mapping ``layer -> tensor``. With ``token_position="last"``
     the tensor shape is ``(n_prompts, d_model)``; with ``"all"`` it is
@@ -111,7 +116,7 @@ def capture_layer_residuals(
     *,
     block_path_template: str = DEFAULT_BLOCK_PATH_TEMPLATE,
     token_position: TokenPosition = "last",
-    output_index: int | None = 0,
+    output_index: int | None = None,
 ) -> torch.Tensor:
     """Convenience wrapper for one layer."""
 

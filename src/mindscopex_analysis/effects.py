@@ -213,7 +213,7 @@ def _trace_logits_with_optional_intervention(
     intervention_mode: InterventionMode = "remove_activation",
     token_index: int = -1,
     block_path_template: str = DEFAULT_BLOCK_PATH_TEMPLATE,
-    output_index: int | None = 0,
+    output_index: int | None = None,
 ) -> torch.Tensor:
     with lm.trace(text):
         if layer is not None and direction is not None:
@@ -243,12 +243,14 @@ def score_answer_logprob(
     intervention_mode: InterventionMode = "remove_activation",
     token_index: int | None = None,
     block_path_template: str = DEFAULT_BLOCK_PATH_TEMPLATE,
-    output_index: int | None = 0,
+    output_index: int | None = None,
 ) -> AnswerLogprob:
     """Score one answer, optionally removing one feature direction during the trace.
 
     If ``token_index`` is ``None``, ablation is applied at the final prompt
-    token, not the final token of ``prompt + answer``.
+    token, not the final token of ``prompt + answer``. Qwen3 block outputs are
+    tensors, so ``output_index`` defaults to ``None`` to preserve the batch
+    dimension.
     """
 
     tokenizer = lm.tokenizer
@@ -288,7 +290,7 @@ def answer_logprob_margin(
     intervention_mode: InterventionMode = "remove_activation",
     token_index: int | None = None,
     block_path_template: str = DEFAULT_BLOCK_PATH_TEMPLATE,
-    output_index: int | None = 0,
+    output_index: int | None = None,
 ) -> AnswerMargin:
     """Return logprob margin ``lure - correct`` for two candidate answers."""
 
@@ -359,7 +361,7 @@ def rank_lure_feature_effects(
     intervention_mode: InterventionMode = "remove_activation",
     token_index: int | None = None,
     block_path_template: str = DEFAULT_BLOCK_PATH_TEMPLATE,
-    output_index: int | None = 0,
+    output_index: int | None = None,
 ) -> tuple[AnswerMargin, list[FeatureAblationResult]]:
     """Rank active SAE features by how much ablation reduces lure preference.
 
