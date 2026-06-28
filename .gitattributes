@@ -1,1 +1,4 @@
-*.ipynb text eol=lf
+*.ipynb filter=nbstripout diff=ipynb text eol=lf
+
+*.zpln filter=nbstripout
+*.ipynb diff=ipynb
