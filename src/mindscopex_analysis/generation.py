@@ -21,6 +21,11 @@ from mindscopex_analysis.qwen_scope import split_qwen_thinking
 
 AnswerLabel = Literal["correct", "lure", "both", "other"]
 
+_FINAL_EXPLANATION_PATTERN = re.compile(
+    r"(?i)(?:\b(?:answer|because|therefore|thus|hence|since|calculation|reasoning)\b|"
+    r"\b(?:costs?|takes?|equals?)\b|정답은|따라서|왜냐하면)"
+)
+
 
 @dataclass(frozen=True)
 class QwenTextResponse:
@@ -58,6 +63,36 @@ class QwenTextResponse:
         return start >= 0 and end > start
 
     @property
+    def thinking_protocol_issue(self) -> str | None:
+        """Explain why generated tokens violate the selected thinking protocol."""
+
+        if self.enable_thinking is None:
+            return None
+
+        open_count = self.raw_text.count("<think>")
+        close_count = self.raw_text.count("</think>")
+        if not self.enable_thinking:
+            if open_count or close_count or self.reasoning_detected:
+                return "unexpected_thinking_content"
+            return None
+
+        if not open_count and not close_count:
+            return "missing_thinking_block"
+        if not open_count:
+            return "missing_think_open"
+        if not close_count:
+            return "truncated_before_think_close" if self.hit_max_tokens else "missing_think_close"
+        if self.raw_text.find("</think>") < self.raw_text.find("<think>"):
+            return "invalid_thinking_tag_order"
+        if open_count != 1 or close_count != 1:
+            return "multiple_thinking_blocks"
+        if not self.reasoning_detected:
+            return "empty_thinking_block"
+        if not self.answer.strip():
+            return "missing_final_answer"
+        return None
+
+    @property
     def reasoning_detected(self) -> bool:
         """Whether non-empty reasoning was parsed from generated tokens."""
 
@@ -69,9 +104,28 @@ class QwenTextResponse:
 
         if self.enable_thinking is None:
             return None
-        if self.enable_thinking:
-            return self.has_thinking_block and self.reasoning_detected
-        return not self.has_thinking_block and not self.reasoning_detected
+        return self.thinking_protocol_issue is None
+
+    @property
+    def final_answer_format_issue(self) -> str | None:
+        """Return a conservative reason when final output is not answer-only."""
+
+        answer = self.answer.strip()
+        if not answer:
+            return "missing_final_answer"
+        if "<think>" in answer or "</think>" in answer:
+            return "thinking_tag_in_final"
+        if "\n" in answer or "\r" in answer:
+            return "multiline_final_answer"
+        if _FINAL_EXPLANATION_PATTERN.search(answer):
+            return "label_or_explanation"
+        if len(answer) > 60 or len(answer.split()) > 5:
+            return "final_answer_too_long"
+        return None
+
+    @property
+    def final_answer_format_ok(self) -> bool:
+        return self.final_answer_format_issue is None
 
     def as_dict(self) -> dict[str, Any]:
         row = asdict(self)
@@ -79,6 +133,9 @@ class QwenTextResponse:
         row["has_thinking_block"] = self.has_thinking_block
         row["reasoning_detected"] = self.reasoning_detected
         row["thinking_protocol_ok"] = self.thinking_protocol_ok
+        row["thinking_protocol_issue"] = self.thinking_protocol_issue
+        row["final_answer_format_ok"] = self.final_answer_format_ok
+        row["final_answer_format_issue"] = self.final_answer_format_issue
         return row
 
     def summary_row(self) -> dict[str, Any]:
@@ -91,6 +148,9 @@ class QwenTextResponse:
             "think_block": self.has_thinking_block,
             "reasoning_chars": len(self.thinking),
             "think_protocol_ok": self.thinking_protocol_ok,
+            "protocol_issue": self.thinking_protocol_issue,
+            "answer_only": self.final_answer_format_ok,
+            "format_issue": self.final_answer_format_issue,
             "label": self.answer_label,
             "final_answer": self.answer,
             "output_tokens": self.output_tokens,

@@ -407,8 +407,12 @@ def split_qwen_thinking(text: str) -> tuple[str, str]:
         return part.strip()
 
     start = text.find("<think>")
-    end = text.find("</think>")
-    if start == -1 or end == -1 or end < start:
+    end = text.rfind("</think>")
+    if start >= 0 and (end == -1 or end < start):
+        return clean(text[start + len("<think>") :]), ""
+    if start == -1 and end >= 0:
+        return clean(text[:end]), clean(text[end + len("</think>") :])
+    if start == -1:
         return "", clean(text)
     thinking = clean(text[start + len("<think>") : end])
     answer = clean(text[end + len("</think>") :])

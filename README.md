@@ -59,6 +59,18 @@ The default pair is:
 
 That is the smallest currently available Qwen3 + Qwen-Scope pairing in the public collection.
 
+## Recommended Research Target
+
+- Primary behavioral model: `Qwen/Qwen3-8B`, comparing `enable_thinking=False` and `True`
+  within the same post-trained checkpoint.
+- Primary SAE candidate: `Qwen/SAE-Res-Qwen3-8B-Base-W64K-L0_50`, transferred to the
+  post-trained 8B checkpoint only after measuring SAE reconstruction quality there.
+- Low-cost pilot: the existing Qwen3-1.7B-Base pair remains useful for validating the
+  intervention code path.
+- Format stress test: Qwen3-0.6B is optional and should not be pooled into the main result.
+- Future extension: Qwen3.5-27B has an official checkpoint-matched Qwen-Scope SAE, but its
+  current software and single-L40 requirements make it a second-stage target.
+
 ## Checks
 
 ```powershell

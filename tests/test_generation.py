@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import unittest
+from dataclasses import replace
 
 import torch
 
@@ -80,6 +81,9 @@ class AnswerClassificationTests(unittest.TestCase):
         self.assertTrue(response.has_thinking_block)
         self.assertTrue(response.reasoning_detected)
         self.assertTrue(response.thinking_protocol_ok)
+        self.assertIsNone(response.thinking_protocol_issue)
+        self.assertFalse(response.final_answer_format_ok)
+        self.assertEqual(response.final_answer_format_issue, "label_or_explanation")
 
     def test_non_thinking_response_has_no_generated_thinking_block(self) -> None:
         response = generate_qwen_text_response(
@@ -96,6 +100,38 @@ class AnswerClassificationTests(unittest.TestCase):
         self.assertFalse(response.has_thinking_block)
         self.assertFalse(response.reasoning_detected)
         self.assertTrue(response.thinking_protocol_ok)
+        self.assertTrue(response.final_answer_format_ok)
+
+    def test_thinking_protocol_reports_missing_block(self) -> None:
+        response = generate_qwen_text_response(
+            _FakeModel(),
+            _FakeTokenizer("5 cents<|im_end|>"),
+            BAT_BALL_CASE,
+            model_id="Qwen/fake",
+            enable_thinking=True,
+            max_new_tokens=4,
+            do_sample=False,
+        )
+
+        self.assertFalse(response.thinking_protocol_ok)
+        self.assertEqual(response.thinking_protocol_issue, "missing_thinking_block")
+
+    def test_thinking_protocol_distinguishes_truncated_block(self) -> None:
+        response = generate_qwen_text_response(
+            _FakeModel(),
+            _FakeTokenizer("<think>unfinished reasoning"),
+            BAT_BALL_CASE,
+            model_id="Qwen/fake",
+            enable_thinking=True,
+            max_new_tokens=4,
+            do_sample=False,
+        )
+
+        truncated = replace(response, hit_max_tokens=True)
+        self.assertEqual(truncated.thinking_protocol_issue, "truncated_before_think_close")
+        self.assertTrue(truncated.reasoning_detected)
+        self.assertEqual(truncated.answer, "")
+        self.assertEqual(truncated.answer_label, "other")
 
 
 if __name__ == "__main__":

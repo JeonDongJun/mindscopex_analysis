@@ -11,10 +11,13 @@ DEFAULT_QWEN_SCOPE_REPO_ID = "Qwen/SAE-Res-Qwen3-1.7B-Base-W32K-L0_50"
 DEFAULT_BLOCK_PATH_TEMPLATE = "model.layers.{layer}"
 DEFAULT_SCAN_LAYERS = (6, 14, 21, 27)
 DEFAULT_QWEN_CHAT_MODEL_IDS = (
-    "Qwen/Qwen3-0.6B",
     "Qwen/Qwen3-1.7B",
     "Qwen/Qwen3-4B",
+    "Qwen/Qwen3-8B",
 )
+QWEN_FORMAT_STRESS_MODEL_IDS = ("Qwen/Qwen3-0.6B",)
+RECOMMENDED_INTERPRETABILITY_MODEL_ID = "Qwen/Qwen3-8B"
+RECOMMENDED_INTERPRETABILITY_SAE_REPO_ID = "Qwen/SAE-Res-Qwen3-8B-Base-W64K-L0_50"
 
 
 def dtype_from_name(dtype: str | torch.dtype | None) -> torch.dtype | None:

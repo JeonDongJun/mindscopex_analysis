@@ -8,7 +8,8 @@ from dataclasses import replace
 from mindscopex_analysis.cases import LureCase
 
 CRT_FINAL_ANSWER_SYSTEM_PROMPT = (
-    "Give only a concise final answer, including units when appropriate."
+    "Return exactly one short final answer with the requested unit, such as `5 cents`. "
+    "Do not include an `Answer:` label or explanation in the final response."
 )
 
 
