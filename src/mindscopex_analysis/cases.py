@@ -149,6 +149,72 @@ def crt_transfer_cases() -> list[LureCase]:
     ]
 
 
+def crt_behavior_cases() -> list[LureCase]:
+    """Broader CRT suite for model-level answer accuracy comparisons."""
+
+    return [
+        *crt_transfer_cases(),
+        LureCase(
+            case_id="race_second_place",
+            family="crt_verbal",
+            prompt=_answer_prompt(
+                "You are running a race and pass the runner in second place. "
+                "What place are you in now? Answer with first place, second place, and so on."
+            ),
+            correct_answer=" second place",
+            lure_answer=" first place",
+            note="Passing second place puts the runner in second, not first.",
+        ),
+        LureCase(
+            case_id="sheep_all_but",
+            family="crt_verbal",
+            prompt=_answer_prompt(
+                "A farmer has 15 sheep. All but 8 die. How many sheep remain? "
+                "Answer as a number followed by sheep."
+            ),
+            correct_answer=" 8 sheep",
+            lure_answer=" 7 sheep",
+            note="The phrase 'all but 8' means that 8 remain.",
+        ),
+        LureCase(
+            case_id="class_rank",
+            family="crt_counting",
+            prompt=_answer_prompt(
+                "With no tied scores, a student is both the 15th highest and the 15th lowest "
+                "scorer in a class. How many students are in the class? "
+                "Answer as a number followed by students."
+            ),
+            correct_answer=" 29 students",
+            lure_answer=" 30 students",
+            note="The focal student is counted in both ranks, so 15 + 15 - 1 = 29.",
+        ),
+        LureCase(
+            case_id="clock_strikes",
+            family="crt_rate",
+            prompt=_answer_prompt(
+                "A clock takes 5 seconds from its first strike to its sixth strike. "
+                "At the same rate, how many seconds pass from its first strike to its "
+                "twelfth strike? Answer in seconds."
+            ),
+            correct_answer=" 11 seconds",
+            lure_answer=" 10 seconds",
+            note="Six strikes contain five intervals; twelve strikes contain eleven.",
+        ),
+        LureCase(
+            case_id="discount_reversal",
+            family="crt_percentage",
+            prompt=_answer_prompt(
+                "An item initially costs 100 dollars. Its price is reduced by 20 percent, "
+                "then the reduced price is increased by 20 percent. What is the final price? "
+                "Answer in dollars."
+            ),
+            correct_answer=" 96 dollars",
+            lure_answer=" 100 dollars",
+            note="Opposite percentage changes use different bases and do not cancel.",
+        ),
+    ]
+
+
 def semantic_lure_cases() -> list[LureCase]:
     """Semantic and logical lure cases for specificity checks."""
 

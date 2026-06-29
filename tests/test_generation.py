@@ -9,6 +9,7 @@ from mindscopex_analysis import (
     BAT_BALL_CASE,
     classify_lure_answer,
     generate_qwen_text_response,
+    summarize_crt_accuracy,
     text_contains_answer,
 )
 
@@ -132,6 +133,29 @@ class AnswerClassificationTests(unittest.TestCase):
         self.assertTrue(truncated.reasoning_detected)
         self.assertEqual(truncated.answer, "")
         self.assertEqual(truncated.answer_label, "other")
+
+    def test_summarizes_accuracy_by_model_and_mode(self) -> None:
+        correct = generate_qwen_text_response(
+            _FakeModel(),
+            _FakeTokenizer("5 cents<|im_end|>"),
+            BAT_BALL_CASE,
+            model_id="Qwen/fake",
+            enable_thinking=False,
+            max_new_tokens=4,
+            do_sample=False,
+        )
+        lure = replace(correct, answer="10 cents", answer_label="lure")
+
+        rows = summarize_crt_accuracy([correct, lure])
+
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0]["model"], "fake")
+        self.assertEqual(rows[0]["mode"], "non_thinking")
+        self.assertEqual(rows[0]["total"], 2)
+        self.assertEqual(rows[0]["correct"], 1)
+        self.assertEqual(rows[0]["incorrect"], 1)
+        self.assertEqual(rows[0]["lure"], 1)
+        self.assertEqual(rows[0]["accuracy"], 0.5)
 
 
 if __name__ == "__main__":

@@ -8,8 +8,10 @@ from dataclasses import replace
 from mindscopex_analysis.cases import LureCase
 
 CRT_FINAL_ANSWER_SYSTEM_PROMPT = (
-    "Return exactly one short final answer with the requested unit, such as `5 cents`. "
-    "Do not include an `Answer:` label or explanation in the final response."
+    "Solve the problem, but make the final response shown to the user exactly one line "
+    "containing only the requested answer and its requested unit. Do not include calculations, "
+    "reasoning, explanations, labels, introductory text, restatements, or Markdown. When thinking "
+    "mode is enabled, do not repeat any reasoning in the final response."
 )
 
 

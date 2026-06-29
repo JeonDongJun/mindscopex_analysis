@@ -12,6 +12,7 @@ from mindscopex_analysis.cases import (
     LureCase,
     bat_ball_answer_variants,
     bat_ball_paraphrases,
+    crt_behavior_cases,
     crt_transfer_cases,
     semantic_lure_cases,
 )
@@ -31,6 +32,7 @@ from mindscopex_analysis.generation import (
     generate_qwen_text_response,
     qwen_recommended_sampling_kwargs,
     save_qwen_text_responses,
+    summarize_crt_accuracy,
     text_contains_answer,
 )
 from mindscopex_analysis.models import (
@@ -122,6 +124,7 @@ __all__ = [
     "coefficient_sweep_rows",
     "count_layers",
     "control_delta_bypass_rows",
+    "crt_behavior_cases",
     "crt_transfer_cases",
     "default_sae_device",
     "decoder_cosine_rows",
@@ -152,6 +155,7 @@ __all__ = [
     "scan_qwen_scope_layers",
     "score_answer_logprob",
     "semantic_lure_cases",
+    "summarize_crt_accuracy",
     "summarize_qwen_scope_features",
     "token_position_sweep_rows",
     "top_qwen_scope_features",

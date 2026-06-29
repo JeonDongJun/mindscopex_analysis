@@ -388,6 +388,44 @@ def generate_crt_response_suite(
     return results
 
 
+def summarize_crt_accuracy(
+    responses: Sequence[QwenTextResponse],
+) -> list[dict[str, Any]]:
+    """Aggregate correct and incorrect CRT generations by model and mode."""
+
+    grouped: dict[tuple[str, str], dict[str, Any]] = {}
+    for response in responses:
+        model = response.model_id.rsplit("/", 1)[-1]
+        key = (model, response.mode)
+        row = grouped.setdefault(
+            key,
+            {
+                "model": model,
+                "mode": response.mode,
+                "total": 0,
+                "correct": 0,
+                "incorrect": 0,
+                "lure": 0,
+                "both": 0,
+                "other": 0,
+                "format_failures": 0,
+                "protocol_failures": 0,
+            },
+        )
+        row["total"] += 1
+        row[response.answer_label] += 1
+        if response.answer_label != "correct":
+            row["incorrect"] += 1
+        if not response.final_answer_format_ok:
+            row["format_failures"] += 1
+        if response.thinking_protocol_ok is False:
+            row["protocol_failures"] += 1
+
+    for row in grouped.values():
+        row["accuracy"] = row["correct"] / row["total"] if row["total"] else 0.0
+    return list(grouped.values())
+
+
 def save_qwen_text_responses(
     responses: Sequence[QwenTextResponse],
     path: str | Path,

@@ -11,6 +11,11 @@ from mindscopex_analysis import (
 
 
 class FinalAnswerInstructionTests(unittest.TestCase):
+    def test_instruction_is_answer_only_without_leaking_a_case_answer(self) -> None:
+        self.assertIn("exactly one line", CRT_FINAL_ANSWER_SYSTEM_PROMPT)
+        self.assertIn("Do not include calculations", CRT_FINAL_ANSWER_SYSTEM_PROMPT)
+        self.assertNotIn("5 cents", CRT_FINAL_ANSWER_SYSTEM_PROMPT)
+
     def test_prefix_is_applied_only_once(self) -> None:
         prompt = "Question?\nAnswer:"
         instructed = prepend_final_answer_instruction(prompt)
