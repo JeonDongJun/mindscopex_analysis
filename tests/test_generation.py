@@ -55,6 +55,16 @@ class AnswerClassificationTests(unittest.TestCase):
     def test_does_not_confuse_five_with_ten(self) -> None:
         self.assertFalse(text_contains_answer("The answer is 10 cents.", "5 cents"))
 
+    def test_recognizes_nature_currency_surface_forms(self) -> None:
+        self.assertTrue(text_contains_answer("$20", "$20.0"))
+        self.assertTrue(text_contains_answer("0.15 dollars", "$0.150"))
+        self.assertFalse(text_contains_answer("$40", "$20.0"))
+
+    def test_recognizes_extended_time_units_and_ordinal_days(self) -> None:
+        self.assertTrue(text_contains_answer("7 hours", "7 hours"))
+        self.assertTrue(text_contains_answer("50 weeks", "50 weeks"))
+        self.assertTrue(text_contains_answer("day 5", "5th day"))
+
     def test_labels_final_answer(self) -> None:
         self.assertEqual(classify_lure_answer("5 cents", BAT_BALL_CASE), "correct")
         self.assertEqual(classify_lure_answer("10 cents", BAT_BALL_CASE), "lure")

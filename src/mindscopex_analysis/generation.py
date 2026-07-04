@@ -8,6 +8,7 @@ import time
 import unicodedata
 from collections.abc import Sequence
 from dataclasses import asdict, dataclass
+from decimal import Decimal
 from pathlib import Path
 from typing import Any, Literal
 
@@ -176,6 +177,22 @@ def _answer_patterns(answer: str) -> tuple[str, ...]:
     normalized = _normalized_text(answer)
     patterns = [rf"(?<!\w){re.escape(normalized)}(?!\w)"]
 
+    currency = re.fullmatch(r"\$\s*(\d+(?:\.\d+)?)", normalized)
+    if currency:
+        value = Decimal(currency.group(1))
+        plain = format(value.normalize(), "f")
+        if "." in plain:
+            integer, fraction = plain.split(".", 1)
+            number_pattern = rf"{re.escape(integer)}\.{re.escape(fraction)}0*"
+        else:
+            number_pattern = rf"{re.escape(plain)}(?:\.0+)?"
+        patterns.extend(
+            [
+                rf"(?<!\w)\$\s*{number_pattern}(?![\d.])",
+                rf"(?<!\w){number_pattern}\s*(?:dollars?|usd)(?!\w)",
+            ]
+        )
+
     cents = re.fullmatch(r"(\d+) cents?", normalized)
     if cents:
         value = int(cents.group(1))
@@ -187,11 +204,24 @@ def _answer_patterns(answer: str) -> tuple[str, ...]:
             ]
         )
 
-    quantity = re.fullmatch(r"(\d+) (minutes?|days?)", normalized)
+    quantity = re.fullmatch(
+        r"(\d+) (seconds?|minutes?|hours?|days?|weeks?|months?|years?)",
+        normalized,
+    )
     if quantity:
         value, unit = quantity.groups()
-        root = "minute" if unit.startswith("minute") else "day"
+        root = unit.rstrip("s")
         patterns.append(rf"(?<!\w){value}\s*{root}s?(?!\w)")
+
+    ordinal_day = re.fullmatch(r"(\d+)(?:st|nd|rd|th) day", normalized)
+    if ordinal_day:
+        value = ordinal_day.group(1)
+        patterns.extend(
+            [
+                rf"(?<!\w){value}(?:st|nd|rd|th)?\s+day(?!\w)",
+                rf"(?<!\w)day\s+{value}(?!\w)",
+            ]
+        )
 
     return tuple(dict.fromkeys(patterns))
 

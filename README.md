@@ -24,6 +24,19 @@ chat system message; notebooks 01-13 prepend the same text to Base-model prompts
 Qwen-Scope model/SAE pairing remains unchanged. Instructed feature handles use a separate
 cache file to avoid mixing them with earlier unprompted discoveries.
 
+## CRT Datasets
+
+Notebook 00 supports two dataset modes:
+
+- `DATASET_NAME = "pilot"`: the repository's 9-item smoke-test suite.
+- `DATASET_NAME = "nature_crt150"`: the 150 public CRT variants from Hagendorff,
+  Fabi, and Kosinski (2023), downloaded from OSF with a pinned SHA-256 checksum.
+
+The full Nature run contains 150 cases and produces 900 responses with the default three
+models and two reasoning modes. Use `NATURE_LIMIT_PER_TYPE` and a smaller `model_ids` list
+before launching the full benchmark. Dataset provenance, licensing notes, and the review of
+newer CRT-related resources are documented in [docs/crt_datasets.md](docs/crt_datasets.md).
+
 ## Experiment Notebooks
 
 - `00_qwen_crt_text_responses.ipynb`: full CRT responses from Qwen models in thinking and non-thinking modes.
@@ -46,6 +59,7 @@ cache file to avoid mixing them with earlier unprompted discoveries.
 - `src/mindscopex_analysis/models.py`: Qwen + NNsight model loading helpers.
 - `src/mindscopex_analysis/prompts.py`: shared final-answer instruction and Base-prompt helpers.
 - `src/mindscopex_analysis/generation.py`: Qwen CRT generation, response parsing, and JSON persistence.
+- `src/mindscopex_analysis/datasets.py`: checksum-pinned public CRT dataset download and parsing.
 - `src/mindscopex_analysis/activations.py`: residual stream capture with `lm.trace(...).save()`.
 - `src/mindscopex_analysis/qwen_scope.py`: Qwen-Scope SAE loading, TopK feature extraction, and a first-pass layer ranking helper.
 - `src/mindscopex_analysis/effects.py`: answer logprob margins and SAE decoder-direction ablation.
