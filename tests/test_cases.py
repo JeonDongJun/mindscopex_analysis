@@ -2,10 +2,19 @@ from __future__ import annotations
 
 import unittest
 
-from mindscopex_analysis import crt_behavior_cases, crt_transfer_cases
+from mindscopex_analysis import (
+    PILOT_CRT_DATASET_ID,
+    crt_behavior_cases,
+    crt_transfer_cases,
+    load_pilot_crt_cases,
+)
 
 
 class CrtBehaviorCasesTests(unittest.TestCase):
+    def test_loads_versioned_json_pilot_dataset(self) -> None:
+        self.assertEqual(PILOT_CRT_DATASET_ID, "mindscopex_crt_pilot_v1")
+        self.assertEqual(load_pilot_crt_cases(), crt_behavior_cases())
+
     def test_behavior_suite_extends_transfer_suite(self) -> None:
         transfer_ids = [case.case_id for case in crt_transfer_cases()]
         behavior = crt_behavior_cases()

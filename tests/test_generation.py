@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import unittest
 from dataclasses import replace
+from pathlib import Path
+from tempfile import TemporaryDirectory
 
 import torch
 
@@ -9,6 +11,8 @@ from mindscopex_analysis import (
     BAT_BALL_CASE,
     classify_lure_answer,
     generate_qwen_text_response,
+    generate_qwen_text_response_with_retries,
+    save_crt_markdown_report,
     summarize_crt_accuracy,
     text_contains_answer,
 )
@@ -31,6 +35,15 @@ class _FakeTokenizer:
 
     def decode(self, _token_ids, **_kwargs):
         return self.decoded_text
+
+
+class _SequenceTokenizer(_FakeTokenizer):
+    def __init__(self, decoded_texts) -> None:
+        super().__init__()
+        self.decoded_texts = iter(decoded_texts)
+
+    def decode(self, _token_ids, **_kwargs):
+        return next(self.decoded_texts)
 
 
 class _FakeModel(torch.nn.Module):
@@ -165,7 +178,101 @@ class AnswerClassificationTests(unittest.TestCase):
         self.assertEqual(rows[0]["correct"], 1)
         self.assertEqual(rows[0]["incorrect"], 1)
         self.assertEqual(rows[0]["lure"], 1)
+        self.assertEqual(rows[0]["hallucination"], 0)
         self.assertEqual(rows[0]["accuracy"], 0.5)
+
+    def test_retries_both_with_a_new_seed_and_keeps_history(self) -> None:
+        response = generate_qwen_text_response_with_retries(
+            _FakeModel(),
+            _SequenceTokenizer(
+                [
+                    "5 cents, not 10 cents<|im_end|>",
+                    "5 cents<|im_end|>",
+                ]
+            ),
+            BAT_BALL_CASE,
+            model_id="Qwen/fake",
+            enable_thinking=False,
+            max_new_tokens=4,
+            do_sample=True,
+            seed=42,
+            max_retries=2,
+        )
+
+        self.assertEqual(response.answer_label, "correct")
+        self.assertEqual(response.evaluation_label, "correct")
+        self.assertEqual(response.generation_attempts, 2)
+        self.assertEqual(response.seed, 43)
+        self.assertEqual(response.retry_reasons, ("ambiguous_both",))
+        self.assertEqual(len(response.attempt_history), 2)
+        self.assertTrue(response.attempt_history[0]["retried"])
+        self.assertFalse(response.attempt_history[1]["retried"])
+
+    def test_retries_thinking_protocol_issue(self) -> None:
+        response = generate_qwen_text_response_with_retries(
+            _FakeModel(),
+            _SequenceTokenizer(
+                [
+                    "5 cents<|im_end|>",
+                    "<think>check</think>5 cents<|im_end|>",
+                ]
+            ),
+            BAT_BALL_CASE,
+            model_id="Qwen/fake",
+            enable_thinking=True,
+            max_new_tokens=4,
+            do_sample=True,
+            max_retries=1,
+        )
+
+        self.assertTrue(response.thinking_protocol_ok)
+        self.assertEqual(response.retry_reasons, ("protocol:missing_thinking_block",))
+        self.assertEqual(response.generation_attempts, 2)
+
+    def test_summary_maps_both_and_other_to_hallucination(self) -> None:
+        base = generate_qwen_text_response(
+            _FakeModel(),
+            _FakeTokenizer("5 cents<|im_end|>"),
+            BAT_BALL_CASE,
+            model_id="Qwen/fake",
+            enable_thinking=False,
+            max_new_tokens=4,
+            do_sample=False,
+        )
+        rows = summarize_crt_accuracy(
+            [
+                base,
+                replace(base, answer_label="both"),
+                replace(base, answer_label="other"),
+            ]
+        )
+
+        self.assertEqual(rows[0]["correct"], 1)
+        self.assertEqual(rows[0]["both"], 1)
+        self.assertEqual(rows[0]["other"], 1)
+        self.assertEqual(rows[0]["hallucination"], 2)
+
+    def test_writes_markdown_summary_and_review_rows(self) -> None:
+        response = generate_qwen_text_response(
+            _FakeModel(),
+            _FakeTokenizer("unknown<|im_end|>"),
+            BAT_BALL_CASE,
+            model_id="Qwen/fake",
+            enable_thinking=False,
+            max_new_tokens=4,
+            do_sample=False,
+        )
+        with TemporaryDirectory() as directory:
+            path = save_crt_markdown_report(
+                [response],
+                Path(directory) / "report.md",
+                dataset_name="pilot",
+            )
+            report = path.read_text(encoding="utf-8")
+
+        self.assertIn("| fake | non_thinking | 1 | 0 | 0 | 1 |", report)
+        self.assertIn("Responses requiring review", report)
+        self.assertIn("unknown", report)
 
 
 if __name__ == "__main__":

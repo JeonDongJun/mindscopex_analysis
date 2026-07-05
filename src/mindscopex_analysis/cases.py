@@ -2,7 +2,11 @@
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
+from importlib.resources import files
+from pathlib import Path
+from typing import Any
 
 
 @dataclass(frozen=True)
@@ -22,23 +26,83 @@ def _answer_prompt(text: str) -> str:
     return text.strip() + "\nAnswer:"
 
 
-BAT_BALL_CASE = LureCase(
-    case_id="bat_ball_original",
-    family="crt_arithmetic",
-    prompt=_answer_prompt(
-        "A bat and a ball cost $1.10 in total. "
-        "The bat costs $1.00 more than the ball. "
-        "How much does the ball cost? Answer in cents."
-    ),
-    correct_answer=" 5 cents",
-    lure_answer=" 10 cents",
-    control_prompt=_answer_prompt(
-        "A bat and a ball cost $1.10 in total. "
-        "The bat costs $1.05. "
-        "How much does the ball cost? Answer in cents."
-    ),
-    note="Canonical CRT item; 10 cents is the intuitive arithmetic lure.",
+PILOT_CRT_DATASET_ID = "mindscopex_crt_pilot_v1"
+_PILOT_TRANSFER_CASE_IDS = (
+    "bat_ball_original",
+    "machines_widgets",
+    "lily_pads",
+    "printers_pages",
 )
+
+
+def _required_text(row: dict[str, Any], field: str, *, case_number: int) -> str:
+    value = row.get(field)
+    if not isinstance(value, str) or not value.strip():
+        raise ValueError(f"Pilot CRT case {case_number} has invalid {field!r}")
+    return value.strip()
+
+
+def load_pilot_crt_cases(path: str | Path | None = None) -> list[LureCase]:
+    """Load and validate the repository's small JSON CRT pilot set."""
+
+    if path is None:
+        source = files("mindscopex_analysis").joinpath("data", "crt_pilot.json")
+        payload = json.loads(source.read_text(encoding="utf-8"))
+    else:
+        payload = json.loads(Path(path).read_text(encoding="utf-8"))
+
+    if not isinstance(payload, dict):
+        raise TypeError("Pilot CRT JSON root must be an object")
+    if payload.get("dataset_id") != PILOT_CRT_DATASET_ID:
+        raise ValueError(f"Unexpected pilot CRT dataset_id={payload.get('dataset_id')!r}")
+    rows = payload.get("cases")
+    if not isinstance(rows, list) or not rows:
+        raise ValueError("Pilot CRT JSON must contain a non-empty 'cases' list")
+
+    cases: list[LureCase] = []
+    seen_ids: set[str] = set()
+    for index, row in enumerate(rows, start=1):
+        if not isinstance(row, dict):
+            raise TypeError(f"Pilot CRT case {index} must be an object")
+        case_id = _required_text(row, "case_id", case_number=index)
+        if case_id in seen_ids:
+            raise ValueError(f"Duplicate pilot CRT case_id={case_id!r}")
+        seen_ids.add(case_id)
+
+        correct_answer = _required_text(row, "correct_answer", case_number=index)
+        lure_answer = _required_text(row, "lure_answer", case_number=index)
+        if correct_answer.casefold() == lure_answer.casefold():
+            raise ValueError(f"Pilot CRT case {case_id!r} has identical correct and lure answers")
+
+        control_question = row.get("control_question", "")
+        if not isinstance(control_question, str):
+            raise TypeError(f"Pilot CRT case {case_id!r} has invalid 'control_question'")
+        note = row.get("note", "")
+        if not isinstance(note, str):
+            raise TypeError(f"Pilot CRT case {case_id!r} has invalid 'note'")
+
+        cases.append(
+            LureCase(
+                case_id=case_id,
+                family=_required_text(row, "family", case_number=index),
+                prompt=_answer_prompt(_required_text(row, "question", case_number=index)),
+                correct_answer=" " + correct_answer,
+                lure_answer=" " + lure_answer,
+                control_prompt=_answer_prompt(control_question) if control_question.strip() else "",
+                note=note.strip(),
+            )
+        )
+    return cases
+
+
+def _pilot_case(case_id: str) -> LureCase:
+    try:
+        return next(case for case in load_pilot_crt_cases() if case.case_id == case_id)
+    except StopIteration as exc:
+        raise ValueError(f"Pilot CRT dataset is missing required case {case_id!r}") from exc
+
+
+BAT_BALL_CASE = _pilot_case("bat_ball_original")
 
 
 def bat_ball_paraphrases() -> list[LureCase]:
@@ -98,121 +162,17 @@ def bat_ball_paraphrases() -> list[LureCase]:
 def crt_transfer_cases() -> list[LureCase]:
     """Small set of CRT-like lure cases for transfer checks."""
 
-    return [
-        BAT_BALL_CASE,
-        LureCase(
-            case_id="machines_widgets",
-            family="crt_rate",
-            prompt=_answer_prompt(
-                "If it takes 5 machines 5 minutes to make 5 widgets, "
-                "how long would it take 100 machines to make 100 widgets? "
-                "Answer in minutes."
-            ),
-            correct_answer=" 5 minutes",
-            lure_answer=" 100 minutes",
-            control_prompt=_answer_prompt(
-                "Each machine makes 1 widget in 5 minutes. "
-                "How long would it take 100 machines to make 100 widgets? "
-                "Answer in minutes."
-            ),
-            note="Rate/proportionality lure.",
-        ),
-        LureCase(
-            case_id="lily_pads",
-            family="crt_growth",
-            prompt=_answer_prompt(
-                "In a lake, a patch of lily pads doubles in size every day. "
-                "If it takes 48 days to cover the whole lake, "
-                "how long to cover half the lake?"
-            ),
-            correct_answer=" 47 days",
-            lure_answer=" 24 days",
-            control_prompt=_answer_prompt(
-                "A patch of lily pads doubles every day. "
-                "It covers half the lake on day 47 and the whole lake on day 48. "
-                "On what day does it cover half the lake?"
-            ),
-            note="Exponential-growth lure.",
-        ),
-        LureCase(
-            case_id="printers_pages",
-            family="crt_rate",
-            prompt=_answer_prompt(
-                "If 3 printers print 3 pages in 3 minutes, "
-                "how long would it take 9 printers to print 9 pages? "
-                "Answer in minutes."
-            ),
-            correct_answer=" 3 minutes",
-            lure_answer=" 9 minutes",
-            note="Rate lure with smaller numbers.",
-        ),
-    ]
+    by_id = {case.case_id: case for case in load_pilot_crt_cases()}
+    missing = set(_PILOT_TRANSFER_CASE_IDS) - set(by_id)
+    if missing:
+        raise ValueError(f"Pilot CRT dataset is missing transfer cases: {sorted(missing)}")
+    return [by_id[case_id] for case_id in _PILOT_TRANSFER_CASE_IDS]
 
 
 def crt_behavior_cases() -> list[LureCase]:
     """Broader CRT suite for model-level answer accuracy comparisons."""
 
-    return [
-        *crt_transfer_cases(),
-        LureCase(
-            case_id="race_second_place",
-            family="crt_verbal",
-            prompt=_answer_prompt(
-                "You are running a race and pass the runner in second place. "
-                "What place are you in now? Answer with first place, second place, and so on."
-            ),
-            correct_answer=" second place",
-            lure_answer=" first place",
-            note="Passing second place puts the runner in second, not first.",
-        ),
-        LureCase(
-            case_id="sheep_all_but",
-            family="crt_verbal",
-            prompt=_answer_prompt(
-                "A farmer has 15 sheep. All but 8 die. How many sheep remain? "
-                "Answer as a number followed by sheep."
-            ),
-            correct_answer=" 8 sheep",
-            lure_answer=" 7 sheep",
-            note="The phrase 'all but 8' means that 8 remain.",
-        ),
-        LureCase(
-            case_id="class_rank",
-            family="crt_counting",
-            prompt=_answer_prompt(
-                "With no tied scores, a student is both the 15th highest and the 15th lowest "
-                "scorer in a class. How many students are in the class? "
-                "Answer as a number followed by students."
-            ),
-            correct_answer=" 29 students",
-            lure_answer=" 30 students",
-            note="The focal student is counted in both ranks, so 15 + 15 - 1 = 29.",
-        ),
-        LureCase(
-            case_id="clock_strikes",
-            family="crt_rate",
-            prompt=_answer_prompt(
-                "A clock takes 5 seconds from its first strike to its sixth strike. "
-                "At the same rate, how many seconds pass from its first strike to its "
-                "twelfth strike? Answer in seconds."
-            ),
-            correct_answer=" 11 seconds",
-            lure_answer=" 10 seconds",
-            note="Six strikes contain five intervals; twelve strikes contain eleven.",
-        ),
-        LureCase(
-            case_id="discount_reversal",
-            family="crt_percentage",
-            prompt=_answer_prompt(
-                "An item initially costs 100 dollars. Its price is reduced by 20 percent, "
-                "then the reduced price is increased by 20 percent. What is the final price? "
-                "Answer in dollars."
-            ),
-            correct_answer=" 96 dollars",
-            lure_answer=" 100 dollars",
-            note="Opposite percentage changes use different bases and do not cancel.",
-        ),
-    ]
+    return load_pilot_crt_cases()
 
 
 def semantic_lure_cases() -> list[LureCase]:

@@ -7,8 +7,10 @@ import re
 import time
 import unicodedata
 from collections.abc import Sequence
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, replace
+from datetime import UTC, datetime
 from decimal import Decimal
+from html import escape
 from pathlib import Path
 from typing import Any, Literal
 
@@ -21,6 +23,7 @@ from mindscopex_analysis.prompts import (
 from mindscopex_analysis.qwen_scope import split_qwen_thinking
 
 AnswerLabel = Literal["correct", "lure", "both", "other"]
+EvaluationLabel = Literal["correct", "lure", "hallucination"]
 
 _FINAL_EXPLANATION_PATTERN = re.compile(
     r"(?i)(?:\b(?:answer|because|therefore|thus|hence|since|calculation|reasoning)\b|"
@@ -48,6 +51,9 @@ class QwenTextResponse:
     elapsed_seconds: float
     seed: int
     hit_max_tokens: bool
+    generation_attempts: int = 1
+    retry_reasons: tuple[str, ...] = ()
+    attempt_history: tuple[dict[str, Any], ...] = ()
 
     @property
     def mode(self) -> str:
@@ -128,6 +134,16 @@ class QwenTextResponse:
     def final_answer_format_ok(self) -> bool:
         return self.final_answer_format_issue is None
 
+    @property
+    def evaluation_label(self) -> EvaluationLabel:
+        """Map final answers to the three headline categories used in reports."""
+
+        if self.answer_label == "correct":
+            return "correct"
+        if self.answer_label == "lure":
+            return "lure"
+        return "hallucination"
+
     def as_dict(self) -> dict[str, Any]:
         row = asdict(self)
         row["mode"] = self.mode
@@ -137,6 +153,7 @@ class QwenTextResponse:
         row["thinking_protocol_issue"] = self.thinking_protocol_issue
         row["final_answer_format_ok"] = self.final_answer_format_ok
         row["final_answer_format_issue"] = self.final_answer_format_issue
+        row["evaluation_label"] = self.evaluation_label
         return row
 
     def summary_row(self) -> dict[str, Any]:
@@ -153,7 +170,10 @@ class QwenTextResponse:
             "answer_only": self.final_answer_format_ok,
             "format_issue": self.final_answer_format_issue,
             "label": self.answer_label,
+            "outcome": self.evaluation_label,
             "final_answer": self.answer,
+            "attempts": self.generation_attempts,
+            "retry_reasons": ", ".join(self.retry_reasons),
             "output_tokens": self.output_tokens,
             "seconds": round(self.elapsed_seconds, 2),
             "truncated": self.hit_max_tokens,
@@ -265,10 +285,17 @@ def _prepare_inputs(
     if not use_chat_template:
         return dict(tokenizer(prompt, return_tensors="pt"))
 
+    uses_multimodal_content = hasattr(tokenizer, "image_processor")
+
+    def message_content(text: str) -> str | list[dict[str, str]]:
+        if uses_multimodal_content:
+            return [{"type": "text", "text": text}]
+        return text
+
     messages = []
     if system_prompt:
-        messages.append({"role": "system", "content": system_prompt})
-    messages.append({"role": "user", "content": prompt})
+        messages.append({"role": "system", "content": message_content(system_prompt)})
+    messages.append({"role": "user", "content": message_content(prompt)})
 
     template_kwargs: dict[str, Any] = {
         "tokenize": True,
@@ -285,7 +312,7 @@ def _prepare_inputs(
         # Older tokenizer templates use the textual Qwen3 soft switch.
         if enable_thinking is not None:
             suffix = " /think" if enable_thinking else " /no_think"
-            messages[-1] = {"role": "user", "content": prompt + suffix}
+            messages[-1] = {"role": "user", "content": message_content(prompt + suffix)}
         template_kwargs.pop("enable_thinking", None)
         encoded = tokenizer.apply_chat_template(messages, **template_kwargs)
 
@@ -330,8 +357,9 @@ def generate_qwen_text_response(
     }
     if do_sample:
         kwargs.update(qwen_recommended_sampling_kwargs(enable_thinking))
-    if tokenizer.pad_token_id is not None:
-        kwargs["pad_token_id"] = tokenizer.pad_token_id
+    token_backend = getattr(tokenizer, "tokenizer", tokenizer)
+    if token_backend.pad_token_id is not None:
+        kwargs["pad_token_id"] = token_backend.pad_token_id
     if generation_kwargs:
         kwargs.update(generation_kwargs)
 
@@ -352,7 +380,7 @@ def generate_qwen_text_response(
     raw_text = tokenizer.decode(generated_ids, skip_special_tokens=False)
     thinking, answer = split_qwen_thinking(raw_text)
 
-    eos_ids = tokenizer.eos_token_id
+    eos_ids = token_backend.eos_token_id
     if eos_ids is None:
         eos_set: set[int] = set()
     elif isinstance(eos_ids, int):
@@ -381,6 +409,110 @@ def generate_qwen_text_response(
     )
 
 
+def response_retry_reason(
+    response: QwenTextResponse,
+    *,
+    retry_protocol_issues: bool = True,
+    retry_both: bool = True,
+) -> str | None:
+    """Return the issue that should trigger another stochastic generation."""
+
+    if retry_protocol_issues and response.thinking_protocol_issue is not None:
+        return f"protocol:{response.thinking_protocol_issue}"
+    if retry_both and response.answer_label == "both":
+        return "ambiguous_both"
+    return None
+
+
+def _attempt_record(
+    response: QwenTextResponse,
+    *,
+    attempt_number: int,
+    retry_reason: str | None,
+    retried: bool,
+) -> dict[str, Any]:
+    return {
+        "attempt": attempt_number,
+        "seed": response.seed,
+        "answer_label": response.answer_label,
+        "evaluation_label": response.evaluation_label,
+        "answer": response.answer,
+        "raw_text": response.raw_text,
+        "thinking_protocol_issue": response.thinking_protocol_issue,
+        "final_answer_format_issue": response.final_answer_format_issue,
+        "hit_max_tokens": response.hit_max_tokens,
+        "retry_reason": retry_reason,
+        "retried": retried,
+    }
+
+
+def generate_qwen_text_response_with_retries(
+    model: Any,
+    tokenizer: Any,
+    case: LureCase,
+    *,
+    model_id: str,
+    enable_thinking: bool | None = False,
+    use_chat_template: bool = True,
+    system_prompt: str = "",
+    max_new_tokens: int = 1024,
+    do_sample: bool = True,
+    seed: int = 42,
+    generation_kwargs: dict[str, Any] | None = None,
+    max_retries: int = 0,
+    retry_protocol_issues: bool = True,
+    retry_both: bool = True,
+    retry_seed_step: int = 1,
+) -> QwenTextResponse:
+    """Regenerate protocol failures and ambiguous answers while preserving an audit trail."""
+
+    if max_retries < 0:
+        raise ValueError("max_retries must be non-negative")
+    if retry_seed_step < 1:
+        raise ValueError("retry_seed_step must be positive")
+
+    history: list[dict[str, Any]] = []
+    retry_reasons: list[str] = []
+    for attempt_index in range(max_retries + 1):
+        response = generate_qwen_text_response(
+            model,
+            tokenizer,
+            case,
+            model_id=model_id,
+            enable_thinking=enable_thinking,
+            use_chat_template=use_chat_template,
+            system_prompt=system_prompt,
+            max_new_tokens=max_new_tokens,
+            do_sample=do_sample,
+            seed=seed + attempt_index * retry_seed_step,
+            generation_kwargs=generation_kwargs,
+        )
+        retry_reason = response_retry_reason(
+            response,
+            retry_protocol_issues=retry_protocol_issues,
+            retry_both=retry_both,
+        )
+        will_retry = retry_reason is not None and attempt_index < max_retries
+        history.append(
+            _attempt_record(
+                response,
+                attempt_number=attempt_index + 1,
+                retry_reason=retry_reason,
+                retried=will_retry,
+            )
+        )
+        if not will_retry:
+            return replace(
+                response,
+                generation_attempts=attempt_index + 1,
+                retry_reasons=tuple(retry_reasons),
+                attempt_history=tuple(history),
+            )
+        retry_reasons.append(retry_reason)
+
+    raise RuntimeError("Generation retry loop ended unexpectedly")
+
+
 def generate_crt_response_suite(
     model: Any,
     tokenizer: Any,
@@ -394,6 +526,10 @@ def generate_crt_response_suite(
     do_sample: bool = True,
     seed: int = 42,
     generation_kwargs: dict[str, Any] | None = None,
+    max_retries: int = 0,
+    retry_protocol_issues: bool = True,
+    retry_both: bool = True,
+    retry_seed_step: int = 1,
 ) -> list[QwenTextResponse]:
     """Generate all case-by-mode responses for one already-loaded model."""
 
@@ -401,7 +537,7 @@ def generate_crt_response_suite(
     for case in cases:
         for enable_thinking in thinking_modes:
             results.append(
-                generate_qwen_text_response(
+                generate_qwen_text_response_with_retries(
                     model,
                     tokenizer,
                     case,
@@ -413,6 +549,10 @@ def generate_crt_response_suite(
                     do_sample=do_sample,
                     seed=seed,
                     generation_kwargs=generation_kwargs,
+                    max_retries=max_retries,
+                    retry_protocol_issues=retry_protocol_issues,
+                    retry_both=retry_both,
+                    retry_seed_step=retry_seed_step,
                 )
             )
     return results
@@ -436,20 +576,28 @@ def summarize_crt_accuracy(
                 "correct": 0,
                 "incorrect": 0,
                 "lure": 0,
+                "hallucination": 0,
                 "both": 0,
                 "other": 0,
                 "format_failures": 0,
                 "protocol_failures": 0,
+                "retried_responses": 0,
+                "retry_attempts": 0,
             },
         )
         row["total"] += 1
         row[response.answer_label] += 1
+        if response.evaluation_label == "hallucination":
+            row["hallucination"] += 1
         if response.answer_label != "correct":
             row["incorrect"] += 1
         if not response.final_answer_format_ok:
             row["format_failures"] += 1
         if response.thinking_protocol_ok is False:
             row["protocol_failures"] += 1
+        if response.generation_attempts > 1:
+            row["retried_responses"] += 1
+            row["retry_attempts"] += response.generation_attempts - 1
 
     for row in grouped.values():
         row["accuracy"] = row["correct"] / row["total"] if row["total"] else 0.0
@@ -469,4 +617,140 @@ def save_qwen_text_responses(
         json.dumps(payload, ensure_ascii=False, indent=2),
         encoding="utf-8",
     )
+    return destination
+
+
+def _markdown_cell(value: Any) -> str:
+    text = escape(str(value), quote=False)
+    return text.replace("|", "\\|").replace("\r", " ").replace("\n", "<br>")
+
+
+def save_crt_markdown_report(
+    responses: Sequence[QwenTextResponse],
+    path: str | Path,
+    *,
+    dataset_name: str = "",
+    dataset_reference: str = "",
+) -> Path:
+    """Write a readable experiment summary while retaining quality and retry diagnostics."""
+
+    destination = Path(path)
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    summary = summarize_crt_accuracy(responses)
+    generated_at = datetime.now(UTC).replace(microsecond=0).isoformat()
+
+    lines = [
+        "# CRT text-generation result summary",
+        "",
+        f"- Generated at: `{generated_at}`",
+        f"- Dataset: `{_markdown_cell(dataset_name or 'unspecified')}`",
+        f"- Dataset reference: {_markdown_cell(dataset_reference or 'not provided')}",
+        f"- Final responses: **{len(responses)}**",
+        "",
+        "## Headline results",
+        "",
+        "`Hallucination` is an operational bucket for final answers that are neither only the "
+        "correct answer nor only the known lure. It includes unresolved `both` and `other` "
+        "responses, so inspect the quality table before interpreting it as factual fabrication.",
+        "",
+        "| Model | Mode | N | Correct | Lure | Hallucination | Accuracy | Retried |",
+        "|---|---:|---:|---:|---:|---:|---:|---:|",
+    ]
+    for row in summary:
+        lines.append(
+            "| {model} | {mode} | {total} | {correct} | {lure} | {hallucination} | "
+            "{accuracy:.1%} | {retried_responses} |".format(
+                **{key: _markdown_cell(value) for key, value in row.items() if key != "accuracy"},
+                accuracy=row["accuracy"],
+            )
+        )
+
+    lines.extend(
+        [
+            "",
+            "## Quality and retry diagnostics",
+            "",
+            "| Model | Mode | Format failures | Protocol failures | Retry attempts | "
+            "Unresolved both | Other |",
+            "|---|---:|---:|---:|---:|---:|---:|",
+        ]
+    )
+    for row in summary:
+        lines.append(
+            f"| {_markdown_cell(row['model'])} | {_markdown_cell(row['mode'])} | "
+            f"{row['format_failures']} | {row['protocol_failures']} | {row['retry_attempts']} | "
+            f"{row['both']} | {row['other']} |"
+        )
+
+    review_rows = [
+        response
+        for response in responses
+        if response.evaluation_label == "hallucination"
+        or not response.final_answer_format_ok
+        or response.thinking_protocol_ok is False
+        or response.generation_attempts > 1
+    ]
+    lines.extend(
+        [
+            "",
+            "## Responses requiring review",
+            "",
+            "This section includes hallucination/other outcomes, quality failures, and all retried "
+            "responses so the final sample can be audited.",
+            "",
+        ]
+    )
+    if not review_rows:
+        lines.append("No responses require review.")
+    else:
+        lines.extend(
+            [
+                "| Model | Mode | Case | Outcome | Raw label | Final answer | Attempts | "
+                "Retry reasons | Protocol issue | Format issue |",
+                "|---|---|---|---|---|---|---:|---|---|---|",
+            ]
+        )
+        for response in review_rows:
+            values = [
+                response.model_id.rsplit("/", 1)[-1],
+                response.mode,
+                response.case_id,
+                response.evaluation_label,
+                response.answer_label,
+                response.answer,
+                response.generation_attempts,
+                ", ".join(response.retry_reasons),
+                response.thinking_protocol_issue or "",
+                response.final_answer_format_issue or "",
+            ]
+            lines.append("| " + " | ".join(_markdown_cell(value) for value in values) + " |")
+
+    retried_rows = [response for response in responses if response.generation_attempts > 1]
+    lines.extend(["", "## Retry audit", ""])
+    if not retried_rows:
+        lines.append("No response was regenerated.")
+    else:
+        lines.extend(
+            [
+                "| Model | Mode | Case | Attempt | Seed | Raw label | Answer | "
+                "Retry trigger | Retried |",
+                "|---|---|---|---:|---:|---|---|---|---|",
+            ]
+        )
+        for response in retried_rows:
+            for attempt in response.attempt_history:
+                values = [
+                    response.model_id.rsplit("/", 1)[-1],
+                    response.mode,
+                    response.case_id,
+                    attempt["attempt"],
+                    attempt["seed"],
+                    attempt["answer_label"],
+                    attempt["answer"],
+                    attempt["retry_reason"] or "",
+                    attempt["retried"],
+                ]
+                lines.append("| " + " | ".join(_markdown_cell(value) for value in values) + " |")
+
+    destination.write_text("\n".join(lines) + "\n", encoding="utf-8")
     return destination

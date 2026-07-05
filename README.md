@@ -28,7 +28,8 @@ cache file to avoid mixing them with earlier unprompted discoveries.
 
 Notebook 00 supports two dataset modes:
 
-- `DATASET_NAME = "pilot"`: the repository's 9-item smoke-test suite.
+- `DATASET_NAME = "pilot"`: the repository's 9-item smoke-test suite, loaded from
+  `src/mindscopex_analysis/data/crt_pilot.json`.
 - `DATASET_NAME = "nature_crt150"`: the 150 public CRT variants from Hagendorff,
   Fabi, and Kosinski (2023), downloaded from OSF with a pinned SHA-256 checksum.
 
@@ -36,6 +37,14 @@ The full Nature run contains 150 cases and produces 900 responses with the defau
 models and two reasoning modes. Use `NATURE_LIMIT_PER_TYPE` and a smaller `model_ids` list
 before launching the full benchmark. Dataset provenance, licensing notes, and the review of
 newer CRT-related resources are documented in [docs/crt_datasets.md](docs/crt_datasets.md).
+The official Qwen-Scope SAE coverage and checkpoint-matching notes are tracked in
+[docs/qwen_scope_sae_catalog.md](docs/qwen_scope_sae_catalog.md).
+
+Notebook 00 retries thinking-protocol failures and ambiguous `both` answers with new seeds while
+retaining every attempt in the JSON output. It also writes a Markdown report with correct, lure,
+and operational hallucination/other counts. Set `INCLUDE_27B_A100 = True` to add
+[`Qwen/Qwen3.5-27B`](https://huggingface.co/Qwen/Qwen3.5-27B) on an A100 80GB runtime; keep its
+results separate because Qwen3.5 uses a newer multimodal hybrid architecture.
 
 ## Experiment Notebooks
 
@@ -58,12 +67,12 @@ newer CRT-related resources are documented in [docs/crt_datasets.md](docs/crt_da
 
 - `src/mindscopex_analysis/models.py`: Qwen + NNsight model loading helpers.
 - `src/mindscopex_analysis/prompts.py`: shared final-answer instruction and Base-prompt helpers.
-- `src/mindscopex_analysis/generation.py`: Qwen CRT generation, response parsing, and JSON persistence.
+- `src/mindscopex_analysis/generation.py`: Qwen CRT generation, retries, classification, and JSON/Markdown persistence.
 - `src/mindscopex_analysis/datasets.py`: checksum-pinned public CRT dataset download and parsing.
 - `src/mindscopex_analysis/activations.py`: residual stream capture with `lm.trace(...).save()`.
 - `src/mindscopex_analysis/qwen_scope.py`: Qwen-Scope SAE loading, TopK feature extraction, and a first-pass layer ranking helper.
 - `src/mindscopex_analysis/effects.py`: answer logprob margins and SAE decoder-direction ablation.
-- `src/mindscopex_analysis/cases.py`: lure/control prompt cases.
+- `src/mindscopex_analysis/cases.py`: validated pilot JSON loading plus experimental lure/control cases.
 - `src/mindscopex_analysis/workflows.py`: reusable notebook-level experiment loops.
 
 The default pair is:
@@ -75,15 +84,19 @@ That is the smallest currently available Qwen3 + Qwen-Scope pairing in the publi
 
 ## Recommended Research Target
 
-- Primary behavioral model: `Qwen/Qwen3-8B`, comparing `enable_thinking=False` and `True`
-  within the same post-trained checkpoint.
-- Primary SAE candidate: `Qwen/SAE-Res-Qwen3-8B-Base-W64K-L0_50`, transferred to the
-  post-trained 8B checkpoint only after measuring SAE reconstruction quality there.
+- Exact-checkpoint research target: `Qwen/Qwen3.5-27B` with
+  `Qwen/SAE-Res-Qwen3.5-27B-W80K-L0_50`. This official SAE covers all 64 residual layers
+  of the same post-trained checkpoint, so it is the cleanest thinking/non-thinking comparison.
+- Lower-cost behavioral target: `Qwen/Qwen3-8B`, comparing `enable_thinking=False` and `True`.
+  Its official SAE was trained on `Qwen3-8B-Base`, so transfer requires reconstruction checks.
+- Exact Base control: `Qwen/Qwen3-8B-Base` with
+  `Qwen/SAE-Res-Qwen3-8B-Base-W64K-L0_50`.
 - Low-cost pilot: the existing Qwen3-1.7B-Base pair remains useful for validating the
   intervention code path.
 - Format stress test: Qwen3-0.6B is optional and should not be pooled into the main result.
-- Future extension: Qwen3.5-27B has an official checkpoint-matched Qwen-Scope SAE, but its
-  current software and single-L40 requirements make it a second-stage target.
+- Large-model behavior extension: Qwen3.5-27B can be enabled for A100 80GB runs in notebook 00.
+  It requires a current Transformers build with Qwen3.5 support. The NNsight residual hook path
+  must be smoke-tested before using the 27B SAE intervention results.
 
 ## Checks
 

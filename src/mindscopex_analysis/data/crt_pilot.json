@@ -1,0 +1,81 @@
+{
+  "dataset_id": "mindscopex_crt_pilot_v1",
+  "description": "Small hand-curated CRT pilot set for pipeline and format checks.",
+  "cases": [
+    {
+      "case_id": "bat_ball_original",
+      "family": "crt_arithmetic",
+      "question": "A bat and a ball cost $1.10 in total. The bat costs $1.00 more than the ball. How much does the ball cost? Answer in cents.",
+      "correct_answer": "5 cents",
+      "lure_answer": "10 cents",
+      "control_question": "A bat and a ball cost $1.10 in total. The bat costs $1.05. How much does the ball cost? Answer in cents.",
+      "note": "Canonical CRT item; 10 cents is the intuitive arithmetic lure."
+    },
+    {
+      "case_id": "machines_widgets",
+      "family": "crt_rate",
+      "question": "If it takes 5 machines 5 minutes to make 5 widgets, how long would it take 100 machines to make 100 widgets? Answer in minutes.",
+      "correct_answer": "5 minutes",
+      "lure_answer": "100 minutes",
+      "control_question": "Each machine makes 1 widget in 5 minutes. How long would it take 100 machines to make 100 widgets? Answer in minutes.",
+      "note": "Rate/proportionality lure."
+    },
+    {
+      "case_id": "lily_pads",
+      "family": "crt_growth",
+      "question": "In a lake, a patch of lily pads doubles in size every day. If it takes 48 days to cover the whole lake, how long to cover half the lake?",
+      "correct_answer": "47 days",
+      "lure_answer": "24 days",
+      "control_question": "A patch of lily pads doubles every day. It covers half the lake on day 47 and the whole lake on day 48. On what day does it cover half the lake?",
+      "note": "Exponential-growth lure."
+    },
+    {
+      "case_id": "printers_pages",
+      "family": "crt_rate",
+      "question": "If 3 printers print 3 pages in 3 minutes, how long would it take 9 printers to print 9 pages? Answer in minutes.",
+      "correct_answer": "3 minutes",
+      "lure_answer": "9 minutes",
+      "note": "Rate lure with smaller numbers."
+    },
+    {
+      "case_id": "race_second_place",
+      "family": "crt_verbal",
+      "question": "You are running a race and pass the runner in second place. What place are you in now? Answer with first place, second place, and so on.",
+      "correct_answer": "second place",
+      "lure_answer": "first place",
+      "note": "Passing second place puts the runner in second, not first."
+    },
+    {
+      "case_id": "sheep_all_but",
+      "family": "crt_verbal",
+      "question": "A farmer has 15 sheep. All but 8 die. How many sheep remain? Answer as a number followed by sheep.",
+      "correct_answer": "8 sheep",
+      "lure_answer": "7 sheep",
+      "note": "The phrase 'all but 8' means that 8 remain."
+    },
+    {
+      "case_id": "class_rank",
+      "family": "crt_counting",
+      "question": "With no tied scores, a student is both the 15th highest and the 15th lowest scorer in a class. How many students are in the class? Answer as a number followed by students.",
+      "correct_answer": "29 students",
+      "lure_answer": "30 students",
+      "note": "The focal student is counted in both ranks, so 15 + 15 - 1 = 29."
+    },
+    {
+      "case_id": "clock_strikes",
+      "family": "crt_rate",
+      "question": "A clock takes 5 seconds from its first strike to its sixth strike. At the same rate, how many seconds pass from its first strike to its twelfth strike? Answer in seconds.",
+      "correct_answer": "11 seconds",
+      "lure_answer": "10 seconds",
+      "note": "Six strikes contain five intervals; twelve strikes contain eleven."
+    },
+    {
+      "case_id": "discount_reversal",
+      "family": "crt_percentage",
+      "question": "An item initially costs 100 dollars. Its price is reduced by 20 percent, then the reduced price is increased by 20 percent. What is the final price? Answer in dollars.",
+      "correct_answer": "96 dollars",
+      "lure_answer": "100 dollars",
+      "note": "Opposite percentage changes use different bases and do not cancel."
+    }
+  ]
+}

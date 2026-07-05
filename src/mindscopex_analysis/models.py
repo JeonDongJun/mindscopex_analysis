@@ -15,6 +15,7 @@ DEFAULT_QWEN_CHAT_MODEL_IDS = (
     "Qwen/Qwen3-4B",
     "Qwen/Qwen3-8B",
 )
+QWEN_LARGE_CHAT_MODEL_IDS = ("Qwen/Qwen3.5-27B",)
 QWEN_FORMAT_STRESS_MODEL_IDS = ("Qwen/Qwen3-0.6B",)
 RECOMMENDED_INTERPRETABILITY_MODEL_ID = "Qwen/Qwen3-8B"
 RECOMMENDED_INTERPRETABILITY_SAE_REPO_ID = "Qwen/SAE-Res-Qwen3-8B-Base-W64K-L0_50"
@@ -132,14 +133,20 @@ def load_qwen_text_generation_model(
     """Load a Qwen tokenizer and causal LM for ordinary text generation."""
 
     try:
-        from transformers import AutoModelForCausalLM, AutoTokenizer
+        from transformers import AutoConfig, AutoModelForCausalLM, AutoTokenizer
     except ImportError as exc:
         raise ImportError("transformers is required for Qwen text generation.") from exc
 
-    tokenizer = AutoTokenizer.from_pretrained(
-        model_id,
-        trust_remote_code=trust_remote_code,
-    )
+    try:
+        config = AutoConfig.from_pretrained(model_id, trust_remote_code=trust_remote_code)
+    except ValueError as exc:
+        if "qwen3_5" in str(exc).lower() or "qwen3.5" in model_id.lower():
+            raise RuntimeError(
+                "Qwen3.5 requires a Transformers build with qwen3_5 support. "
+                "Follow the official Qwen3.5 model card and install the latest Transformers."
+            ) from exc
+        raise
+
     model_kwargs: dict[str, Any] = {
         "device_map": device_map,
         "trust_remote_code": trust_remote_code,
@@ -149,7 +156,24 @@ def load_qwen_text_generation_model(
     if resolved_dtype is not None:
         model_kwargs["torch_dtype"] = resolved_dtype
 
-    model = AutoModelForCausalLM.from_pretrained(model_id, **model_kwargs)
+    if config.model_type == "qwen3_5":
+        try:
+            from transformers import AutoModelForMultimodalLM, AutoProcessor
+        except ImportError as exc:
+            raise ImportError(
+                "Qwen3.5 requires AutoModelForMultimodalLM from the latest Transformers build."
+            ) from exc
+        tokenizer = AutoProcessor.from_pretrained(
+            model_id,
+            trust_remote_code=trust_remote_code,
+        )
+        model = AutoModelForMultimodalLM.from_pretrained(model_id, **model_kwargs)
+    else:
+        tokenizer = AutoTokenizer.from_pretrained(
+            model_id,
+            trust_remote_code=trust_remote_code,
+        )
+        model = AutoModelForCausalLM.from_pretrained(model_id, **model_kwargs)
     model.eval()
     return model, tokenizer
 

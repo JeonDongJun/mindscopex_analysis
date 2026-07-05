@@ -1,6 +1,14 @@
 # CRT Dataset Notes
 
-검토 기준일: 2026-06-29
+검토 기준일: 2026-07-05
+
+## 저장소 pilot 세트
+
+빠른 파이프라인 점검용 9문항은
+`src/mindscopex_analysis/data/crt_pilot.json`에서 관리한다. `load_pilot_crt_cases()`가
+dataset ID, 필수 문자열, 중복 case ID, 정답과 함정 답의 충돌을 검증한다. 이 세트는
+정식 벤치마크가 아니라 생성, 응답 파싱, 재시도, 시각화가 정상 작동하는지 확인하는
+smoke test다.
 
 ## 채택: Nature CRT-150
 
