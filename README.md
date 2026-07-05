@@ -28,23 +28,28 @@ cached per Qwen3.5 profile so feature IDs from different SAE dictionaries cannot
 
 ## CRT Datasets
 
-Notebook 00 supports two dataset modes:
+Notebook 00 supports three run presets:
 
-- `DATASET_NAME = "pilot"`: the repository's 9-item smoke-test suite, loaded from
+- `RUN_PRESET = "pilot"`: the repository's 9-item smoke-test suite, loaded from
   `src/mindscopex_analysis/data/crt_pilot.json`.
-- `DATASET_NAME = "nature_crt150"`: the 150 public CRT variants from Hagendorff,
-  Fabi, and Kosinski (2023), downloaded from OSF with a pinned SHA-256 checksum.
+- `RUN_PRESET = "nature_smoke"`: three items from each Nature CRT family.
+- `RUN_PRESET = "nature_full"`: all 150 public CRT variants from Hagendorff, Fabi,
+  and Kosinski (2023), downloaded from OSF with a pinned SHA-256 checksum.
 
 The full Nature run contains 150 cases and produces 1,200 responses with the default four
-models and two reasoning modes. Use `NATURE_LIMIT_PER_TYPE` and a smaller `model_ids` list
-before launching the full benchmark. Dataset provenance, licensing notes, and the review of
-newer CRT-related resources are documented in [docs/crt_datasets.md](docs/crt_datasets.md).
+models and two reasoning modes per seed. Run `nature_smoke` and optionally reduce
+`MODEL_IDS_TO_RUN` before launching the full benchmark. Dataset provenance, licensing notes,
+and the review of newer CRT-related resources are documented in
+[docs/crt_datasets.md](docs/crt_datasets.md).
 The official Qwen-Scope SAE coverage and checkpoint-matching notes are tracked in
 [docs/qwen_scope_sae_catalog.md](docs/qwen_scope_sae_catalog.md).
 
 Notebook 00 retries thinking-protocol failures and ambiguous `both` answers with new seeds while
 retaining every attempt in the JSON output. It also writes a Markdown report with correct, lure,
-and operational hallucination/other counts. The default behavior suite is Qwen3.5 2B, 9B,
+and operational hallucination/other counts, plus family-level lure rates with Wilson 95%
+intervals. `GENERATION_PROTOCOL` separates Qwen-native sampling from a no-system-prompt,
+deterministic replication baseline. Multiple-seed inference should cluster by item rather than
+treating repeated responses as independent. The default behavior suite is Qwen3.5 2B, 9B,
 27B, and 35B-A3B, loaded sequentially. The first cell installs a pinned Transformers revision
 with Qwen3.5 support when the runtime does not already provide it.
 

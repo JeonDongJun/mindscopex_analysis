@@ -42,6 +42,10 @@ cases = nature_crt150_cases(limit_per_type=3)
 cases = nature_crt150_cases(limit_per_type=None)
 ```
 
+노트북 `00`에서는 직접 loader 인자를 바꾸기보다 `RUN_PRESET="nature_smoke"`로 유형별
+3문항을 먼저 점검한 뒤 `RUN_PRESET="nature_full"`로 150문항을 실행한다. 결과는
+`nature_crt_difference`, `nature_crt_rate`, `nature_crt_growth`별로 분리 집계한다.
+
 `prompt_style="task_only"`는 공개 task 문장을 그대로 사용한다. 과거 completion 모델과
 같이 `Question:` 및 `Answer:` 경계를 넣으려면 `prompt_style="question_answer"`를 사용한다.
 

@@ -58,12 +58,12 @@ output은 Git에서 제외되므로 원시 결과가 실수로 push되지 않는
 mkdir -p results/00 results/candidates
 
 colab download -s mindscopex \
-  /content/mindscopex_analysis/outputs/00_qwen_crt_text_responses_pilot.json \
-  results/00/pilot.json
+  /content/mindscopex_analysis/outputs/00_qwen_crt_text_responses_nature_smoke_qwen_native_seeds-42.json \
+  results/00/nature_smoke_qwen_native_seed42.json
 
 colab download -s mindscopex \
-  /content/mindscopex_analysis/outputs/00_qwen_crt_text_responses_pilot.md \
-  results/00/pilot.md
+  /content/mindscopex_analysis/outputs/00_qwen_crt_text_responses_nature_smoke_qwen_native_seeds-42.md \
+  results/00/nature_smoke_qwen_native_seed42.md
 
 colab download -s mindscopex \
   /content/mindscopex_analysis/outputs/candidates/bat_ball_top_feature_answer_instruction_27b.json \

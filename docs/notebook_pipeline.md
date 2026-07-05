@@ -104,11 +104,14 @@ flowchart LR
 ### ① 기준선
 
 #### `00_qwen_crt_text_responses` — CRT 실제 텍스트 응답
-- **목적:** Qwen 모델군에 CRT 9문항을 직접 풀게 해, thinking / non-thinking 모드별로 **함정에 빠지는지** 실측 기준점을 만든다.
-- **입력:** `crt_behavior_cases()` 9문항, `CRT_FINAL_ANSWER_SYSTEM_PROMPT`(정답 예시 없음, 최종 답 1줄 제한), seed=42, Qwen3.5 권장 샘플링.
+- **목적:** Qwen 모델군에 pilot 또는 Nature CRT-150을 직접 풀게 해, thinking / non-thinking
+  모드별로 **함정에 빠지는지** 실측 기준점을 만든다.
+- **입력:** `RUN_PRESET=pilot/nature_smoke/nature_full`, Qwen3.5 네 모델, thinking/non-thinking,
+  하나 이상의 seed. `GENERATION_PROTOCOL`로 Qwen-native sampling과 deterministic 기준선을 분리한다.
 - **단계:** 모델 로드 → 모드별 응답 생성 → thinking 블록/프로토콜/형식 준수 점검 → 정답·함정 라벨 분류 → 정확도 집계.
 - **함수:** `load_qwen_text_generation_model`, `generate_crt_response_suite`, `summarize_crt_accuracy`, `save_qwen_text_responses`.
-- **산출물:** `outputs/00_qwen_crt_text_responses_{dataset}.json`과 `.md`, 모델·모드별 정답률/함정률 표와 막대 차트.
+- **산출물:** `outputs/00_qwen_crt_text_responses_{preset}_{protocol}_seeds-{seeds}.json`과
+  `.md`, 모델·모드 전체 및 CRT family별 정답률·함정률·Wilson 95% 구간과 그래프.
 - **다음으로:** 함정에 안정적으로 빠지는 케이스(특히 bat-ball)를 내부 분석 대상으로 선정 → `01`.
 
 ### ② 발견

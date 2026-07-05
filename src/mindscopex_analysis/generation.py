@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import math
 import re
 import time
 import unicodedata
@@ -562,20 +563,36 @@ def generate_crt_response_suite(
     return results
 
 
-def summarize_crt_accuracy(
-    responses: Sequence[QwenTextResponse],
-) -> list[dict[str, Any]]:
-    """Aggregate correct and incorrect CRT generations by model and mode."""
+def _wilson_interval(successes: int, total: int, z: float = 1.96) -> tuple[float, float]:
+    if total <= 0:
+        return 0.0, 0.0
+    proportion = successes / total
+    denominator = 1.0 + z**2 / total
+    centre = (proportion + z**2 / (2 * total)) / denominator
+    radius = (
+        z
+        * math.sqrt(proportion * (1 - proportion) / total + z**2 / (4 * total**2))
+        / denominator
+    )
+    return max(0.0, centre - radius), min(1.0, centre + radius)
 
-    grouped: dict[tuple[str, str], dict[str, Any]] = {}
+
+def _summarize_crt_accuracy(
+    responses: Sequence[QwenTextResponse],
+    *,
+    by_family: bool,
+) -> list[dict[str, Any]]:
+    grouped: dict[tuple[str, ...], dict[str, Any]] = {}
     for response in responses:
         model = response.model_id.rsplit("/", 1)[-1]
-        key = (model, response.mode)
+        key = (model, response.mode, response.family) if by_family else (model, response.mode)
+        labels = {"model": model, "mode": response.mode}
+        if by_family:
+            labels["family"] = response.family
         row = grouped.setdefault(
             key,
             {
-                "model": model,
-                "mode": response.mode,
+                **labels,
                 "total": 0,
                 "correct": 0,
                 "incorrect": 0,
@@ -604,8 +621,35 @@ def summarize_crt_accuracy(
             row["retry_attempts"] += response.generation_attempts - 1
 
     for row in grouped.values():
-        row["accuracy"] = row["correct"] / row["total"] if row["total"] else 0.0
+        total = row["total"]
+        row["accuracy"] = row["correct"] / total if total else 0.0
+        row["lure_rate"] = row["lure"] / total if total else 0.0
+        row["hallucination_rate"] = row["hallucination"] / total if total else 0.0
+        row["accuracy_ci_low"], row["accuracy_ci_high"] = _wilson_interval(
+            row["correct"],
+            total,
+        )
+        row["lure_rate_ci_low"], row["lure_rate_ci_high"] = _wilson_interval(
+            row["lure"],
+            total,
+        )
     return list(grouped.values())
+
+
+def summarize_crt_accuracy(
+    responses: Sequence[QwenTextResponse],
+) -> list[dict[str, Any]]:
+    """Aggregate CRT outcomes by model and reasoning mode."""
+
+    return _summarize_crt_accuracy(responses, by_family=False)
+
+
+def summarize_crt_accuracy_by_family(
+    responses: Sequence[QwenTextResponse],
+) -> list[dict[str, Any]]:
+    """Aggregate CRT outcomes by model, reasoning mode, and task family."""
+
+    return _summarize_crt_accuracy(responses, by_family=True)
 
 
 def save_qwen_text_responses(
@@ -641,6 +685,7 @@ def save_crt_markdown_report(
     destination = Path(path)
     destination.parent.mkdir(parents=True, exist_ok=True)
     summary = summarize_crt_accuracy(responses)
+    family_summary = summarize_crt_accuracy_by_family(responses)
     generated_at = datetime.now(UTC).replace(microsecond=0).isoformat()
 
     lines = [
@@ -667,6 +712,30 @@ def save_crt_markdown_report(
                 **{key: _markdown_cell(value) for key, value in row.items() if key != "accuracy"},
                 accuracy=row["accuracy"],
             )
+        )
+
+    lines.extend(
+        [
+            "",
+            "## Results by CRT family",
+            "",
+            "Wilson intervals below treat rows as independent Bernoulli observations. When the "
+            "same items are repeated across multiple sampling seeds, use an item-clustered "
+            "bootstrap for inferential intervals instead of interpreting the pooled Wilson "
+            "interval as a confidence interval.",
+            "",
+            "| Model | Mode | Family | N | Correct | Lure | Other | Accuracy | "
+            "Lure rate (Wilson 95% CI) |",
+            "|---|---|---|---:|---:|---:|---:|---:|---:|",
+        ]
+    )
+    for row in family_summary:
+        lines.append(
+            f"| {_markdown_cell(row['model'])} | {_markdown_cell(row['mode'])} | "
+            f"{_markdown_cell(row['family'])} | {row['total']} | {row['correct']} | "
+            f"{row['lure']} | {row['hallucination']} | {row['accuracy']:.1%} | "
+            f"{row['lure_rate']:.1%} "
+            f"[{row['lure_rate_ci_low']:.1%}, {row['lure_rate_ci_high']:.1%}] |"
         )
 
     lines.extend(

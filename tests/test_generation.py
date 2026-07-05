@@ -15,6 +15,7 @@ from mindscopex_analysis import (
     qwen_recommended_sampling_kwargs,
     save_crt_markdown_report,
     summarize_crt_accuracy,
+    summarize_crt_accuracy_by_family,
     text_contains_answer,
 )
 
@@ -279,6 +280,31 @@ class AnswerClassificationTests(unittest.TestCase):
         self.assertEqual(rows[0]["other"], 1)
         self.assertEqual(rows[0]["hallucination"], 2)
 
+    def test_summarizes_nature_results_by_family_with_intervals(self) -> None:
+        base = generate_qwen_text_response(
+            _FakeModel(),
+            _FakeTokenizer("5 cents<|im_end|>"),
+            BAT_BALL_CASE,
+            model_id="Qwen/fake",
+            enable_thinking=False,
+            max_new_tokens=4,
+            do_sample=False,
+        )
+        rows = summarize_crt_accuracy_by_family(
+            [
+                replace(base, family="nature_crt_difference"),
+                replace(base, family="nature_crt_difference", answer_label="lure"),
+                replace(base, family="nature_crt_rate", answer_label="lure"),
+            ]
+        )
+
+        self.assertEqual(len(rows), 2)
+        self.assertEqual(rows[0]["family"], "nature_crt_difference")
+        self.assertEqual(rows[0]["total"], 2)
+        self.assertEqual(rows[0]["lure_rate"], 0.5)
+        self.assertLess(rows[0]["lure_rate_ci_low"], 0.5)
+        self.assertGreater(rows[0]["lure_rate_ci_high"], 0.5)
+
     def test_writes_markdown_summary_and_review_rows(self) -> None:
         response = generate_qwen_text_response(
             _FakeModel(),
@@ -298,6 +324,8 @@ class AnswerClassificationTests(unittest.TestCase):
             report = path.read_text(encoding="utf-8")
 
         self.assertIn("| fake | non_thinking | 1 | 0 | 0 | 1 |", report)
+        self.assertIn("Results by CRT family", report)
+        self.assertIn("Lure rate (Wilson 95% CI)", report)
         self.assertIn("Responses requiring review", report)
         self.assertIn("unknown", report)
 

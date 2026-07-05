@@ -49,6 +49,7 @@ from mindscopex_analysis.generation import (
     save_crt_markdown_report,
     save_qwen_text_responses,
     summarize_crt_accuracy,
+    summarize_crt_accuracy_by_family,
     text_contains_answer,
 )
 from mindscopex_analysis.models import (
@@ -197,6 +198,7 @@ __all__ = [
     "score_answer_logprob",
     "semantic_lure_cases",
     "summarize_crt_accuracy",
+    "summarize_crt_accuracy_by_family",
     "summarize_qwen_scope_features",
     "token_position_sweep_rows",
     "top_qwen_scope_features",
