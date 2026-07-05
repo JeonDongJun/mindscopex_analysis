@@ -94,6 +94,6 @@ node-level license가 표시되어 있지 않다. 이 저장소는 원문을 재
 ## 원 논문과 현재 실험의 차이
 
 Nature 연구는 temperature 0, 당시 OpenAI GPT 계열, 수동 응답 검토를 사용했다. 현재
-노트북은 Qwen3의 native thinking switch, Qwen 권장 sampling, 자동 정답/함정 문자열
+노트북은 Qwen3.5의 native thinking switch, Qwen 권장 sampling, 자동 정답/함정 문자열
 분류를 사용한다. 따라서 같은 150문항을 쓰더라도 strict replication이 아니라 모델군과
 내부 분석 방법을 확장한 연구로 보고해야 한다.

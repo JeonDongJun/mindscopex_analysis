@@ -248,7 +248,7 @@ def score_answer_logprob(
     """Score one answer, optionally removing one feature direction during the trace.
 
     If ``token_index`` is ``None``, ablation is applied at the final prompt
-    token, not the final token of ``prompt + answer``. Qwen3 block outputs are
+    token, not the final token of ``prompt + answer``. Qwen3.5 block outputs are
     tensors, so ``output_index`` defaults to ``None`` to preserve the batch
     dimension.
     """

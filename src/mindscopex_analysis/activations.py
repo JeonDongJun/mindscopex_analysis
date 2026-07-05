@@ -27,7 +27,7 @@ def get_module(root: Any, path: str) -> Any:
 
 
 def count_layers(lm: Any, block_path_template: str = DEFAULT_BLOCK_PATH_TEMPLATE) -> int:
-    """Count transformer blocks addressed by a template such as ``model.layers.{layer}``."""
+    """Count blocks addressed by a template such as ``model.language_model.layers.{layer}``."""
 
     if "{layer}" not in block_path_template:
         raise ValueError("block_path_template must contain `{layer}`")
@@ -76,7 +76,7 @@ def capture_residual_stream(
 ) -> dict[int, torch.Tensor]:
     """Capture residual stream tensors from Qwen layers using NNsight.
 
-    Qwen3 decoder blocks return the hidden-state tensor directly, so the
+    Qwen3.5 decoder blocks return the hidden-state tensor directly, so the
     default captures ``block.output`` without indexing away the batch axis.
     Pass an explicit ``output_index`` only for models whose block output is a
     tuple.

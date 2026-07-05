@@ -56,7 +56,7 @@ flowchart TD
 | ⑤ 일반성 | `10` `11` `12` `13` | 다른 문제로 전이되는가? 우회 가능한가? 한 family인가? 산술 전용인가? |
 
 > **핵심 산출물 — feature handle:** `03`(또는 `02`)이 찾은 최고 feature를
-> `outputs/candidates/bat_ball_top_feature_answer_instruction.json`에 저장합니다.
+> `outputs/candidates/bat_ball_top_feature_answer_instruction_{profile}.json`에 저장합니다.
 > `04`~`13`은 이 handle을 캐시에서 **로드해서 재사용**하므로 발견 과정을 매번 반복하지 않습니다.
 
 ```mermaid
@@ -71,11 +71,11 @@ flowchart LR
 
 | 재료 | 값 |
 |------|-----|
-| 해석용 모델 | `Qwen/Qwen3-1.7B-Base` (Qwen-Scope SAE와 정확히 매칭) |
-| 행동 관찰 모델 (`00`) | post-trained `Qwen3-1.7B / 4B / 8B` (옵션 0.6B) |
-| SAE | `Qwen/SAE-Res-Qwen3-1.7B-Base-W32K-L0_50` (residual stream, 32K feature) |
+| 해석용 모델 | 프로필별 Qwen3.5 분석 checkpoint; 기본값은 exact `Qwen3.5-27B` |
+| 행동 관찰 모델 (`00`) | post-trained `Qwen3.5-2B / 9B / 27B / 35B-A3B` |
+| SAE | 프로필별 공식 Qwen-Scope K50 SAE; 27B만 post-trained checkpoint와 직접 일치 |
 | 대표 케이스 | `BAT_BALL_CASE` — 정답 `" 5 cents"`, 함정 `" 10 cents"` |
-| 주 스캔 layer | `[6, 14, 21, 27]` (기본 작업 layer는 14) |
+| 주 스캔 layer | 프로필의 전체 깊이를 4구간으로 나눈 `PROFILE.scan_layers` |
 | 개입 단위 | `coefficient × feature_value × W_dec[:, feature_id]` |
 | 측정 지표 | `margin = logprob(lure) − logprob(correct)`, `margin_delta = baseline − edited` |
 
@@ -90,7 +90,7 @@ flowchart LR
 
 #### `00_qwen_crt_text_responses` — CRT 실제 텍스트 응답
 - **목적:** Qwen 모델군에 CRT 9문항을 직접 풀게 해, thinking / non-thinking 모드별로 **함정에 빠지는지** 실측 기준점을 만든다.
-- **입력:** `crt_behavior_cases()` 9문항, `CRT_FINAL_ANSWER_SYSTEM_PROMPT`(정답 예시 없음, 최종 답 1줄 제한), seed=42, Qwen3 권장 샘플링.
+- **입력:** `crt_behavior_cases()` 9문항, `CRT_FINAL_ANSWER_SYSTEM_PROMPT`(정답 예시 없음, 최종 답 1줄 제한), seed=42, Qwen3.5 권장 샘플링.
 - **단계:** 모델 로드 → 모드별 응답 생성 → thinking 블록/프로토콜/형식 준수 점검 → 정답·함정 라벨 분류 → 정확도 집계.
 - **함수:** `load_qwen_text_generation_model`, `generate_crt_response_suite`, `summarize_crt_accuracy`, `save_qwen_text_responses`.
 - **산출물:** `outputs/00_qwen_crt_text_responses.json`, 모델·모드별 정답률/함정률 표와 막대 차트.
@@ -100,21 +100,21 @@ flowchart LR
 
 #### `01_qwen_scope_activation_mvp` — Activation 캡처 MVP
 - **목적:** NNsight로 residual activation을 뽑고 SAE로 해석해, feature가 가장 강하게 켜지는 **layer 후보**를 고른다.
-- **입력:** 5개 프롬프트(bat-ball 등), 샘플 layer `[6, 14, 21, 27]`, token 위치 `"last"`.
+- **입력:** 5개 프롬프트(bat-ball 등), 프로필별 `scan_layers`, token 위치 `"last"`.
 - **단계:** 모델 로드 → `capture_layer_residuals` → SAE 로드 → `summarize_qwen_scope_features`로 상위 feature → `scan_qwen_scope_layers`로 layer별 품질 점수 → 최고 layer 선택.
 - **함수:** `capture_layer_residuals`, `load_qwen_scope_sae`, `summarize_qwen_scope_features`, `scan_qwen_scope_layers`, `top_qwen_scope_features`.
 - **산출물:** layer별 상위 feature 표(rank, feature_id, mean_abs, activation_rate)와 후보 layer.
 
 #### `02_bat_ball_lure_feature_ablation` — Bat-Ball 단일 feature ablation
 - **목적:** bat-ball에서 **함정 답 logprob을 끌어올리는 feature**를 ablation으로 식별하고 효과를 정량화한다.
-- **입력:** `instruct_lure_case(BAT_BALL_CASE)`, layer 14, 상위 후보 12개, 계수 1.0.
-- **단계:** baseline margin 측정 → layer 14 residual 캡처 → SAE encode 상위 12 feature → 각 feature의 decoder direction 제거 후 logprob 재계산 → `margin_delta`로 정렬 → 최고 feature handle 저장.
+- **입력:** `instruct_lure_case(BAT_BALL_CASE)`, 프로필의 두 번째 scan layer, 상위 후보 12개, 계수 1.0.
+- **단계:** baseline margin 측정 → 선택 layer residual 캡처 → SAE encode 상위 12 feature → 각 feature의 decoder direction 제거 후 logprob 재계산 → `margin_delta`로 정렬 → 최고 feature handle 저장.
 - **함수:** `answer_logprob_margin`, `active_prompt_features`, `rank_lure_feature_effects`, `feature_handle_from_result`, `save_feature_handle`.
-- **산출물:** feature별 `margin_delta / lure_logprob_delta / correct_logprob_delta` 표, `outputs/candidates/bat_ball_top_feature_answer_instruction.json`.
+- **산출물:** feature별 `margin_delta / lure_logprob_delta / correct_logprob_delta` 표, 프로필명이 붙은 feature-handle JSON.
 
 #### `03_layer_sweep_feature_search` — Layer sweep
 - **목적:** `02`의 ablation을 **모든 스캔 layer로 확장**해 함정 답에 가장 큰 영향을 주는 layer-feature 조합을 찾는다.
-- **입력:** layer `[6, 14, 21, 27]`, layer당 상위 8개 후보, 계수 1.0.
+- **입력:** 프로필별 `scan_layers`, layer당 상위 8개 후보, 계수 1.0.
 - **단계:** 각 layer SAE 로드 → `layer_feature_search_rows`(layer별 feature 추출 + ablation + margin 재계산) → `margin_delta` 정렬 → 최고 handle 저장.
 - **함수:** `layer_feature_search_rows`, `load_qwen_scope_sae`, `feature_handle_from_result`, `save_feature_handle`.
 - **산출물:** layer×feature 행 표와, 이후 단계가 공유하는 최종 feature handle.
@@ -179,13 +179,13 @@ flowchart LR
 
 #### `11_control_delta_bypass` — 우회 경로
 - **목적:** feature를 직접 제거하지 않고, **matched control residual과의 차이 벡터**를 더해 함정을 우회할 수 있는지.
-- **입력:** layer 14, `direction = control_residual − lure_residual`, 계수 `[-1 … 2]`, `add_vector` 모드.
+- **입력:** 프로필의 두 번째 scan layer, `direction = control_residual − lure_residual`, 계수 `[-1 … 2]`, `add_vector` 모드.
 - **함수:** `control_delta_bypass_rows`.
 - **읽기:** 양수 계수에서 margin 감소 → matched 표현이 함정 경로를 우회. 음수와 비교해 방향성 확인.
 
 #### `12_decoder_geometry` — feature family
 - **목적:** 상위 후보들이 **비슷한 decoder direction**을 갖는지(한 family인가, 서로 다른 경로인가).
-- **입력:** layer 14 상위 12 후보 → 효과 상위 8개.
+- **입력:** 프로필의 두 번째 scan layer 상위 12 후보 → 효과 상위 8개.
 - **함수:** `candidate_feature_rows`, `rank_lure_feature_effects`, `decoder_cosine_rows`.
 - **읽기:** 강한 후보끼리 cosine 높음 → 한 feature family. cosine 낮은데 효과 비슷 → 독립 경로.
 

@@ -45,7 +45,7 @@ def _make_sae(*, w_dec: torch.Tensor | None = None, top_k: int = 2) -> QwenScope
 
 class InferTopKTests(unittest.TestCase):
     def test_parses_suffix(self) -> None:
-        self.assertEqual(infer_top_k_from_repo("Qwen/SAE-Res-Qwen3-1.7B-Base-W32K-L0_50"), 50)
+        self.assertEqual(infer_top_k_from_repo("Qwen/SAE-Res-Qwen3.5-2B-Base-W32K-L0_50"), 50)
 
     def test_falls_back_to_default(self) -> None:
         self.assertEqual(infer_top_k_from_repo("no-suffix-here", default=17), 17)

@@ -20,9 +20,8 @@ then use `notebooks/01_qwen_scope_activation_mvp.ipynb` and
 feature ablation workflow.
 
 All experiments use the same concise final-answer instruction. Notebook 00 passes it as a
-chat system message; notebooks 01-13 prepend the same text to Base-model prompts so the
-Qwen-Scope model/SAE pairing remains unchanged. Instructed feature handles use a separate
-cache file to avoid mixing them with earlier unprompted discoveries.
+chat system message; notebooks 01-13 prepend it to the analysis prompt. Feature handles are
+cached per Qwen3.5 profile so feature IDs from different SAE dictionaries cannot be mixed.
 
 ## CRT Datasets
 
@@ -33,7 +32,7 @@ Notebook 00 supports two dataset modes:
 - `DATASET_NAME = "nature_crt150"`: the 150 public CRT variants from Hagendorff,
   Fabi, and Kosinski (2023), downloaded from OSF with a pinned SHA-256 checksum.
 
-The full Nature run contains 150 cases and produces 900 responses with the default three
+The full Nature run contains 150 cases and produces 1,200 responses with the default four
 models and two reasoning modes. Use `NATURE_LIMIT_PER_TYPE` and a smaller `model_ids` list
 before launching the full benchmark. Dataset provenance, licensing notes, and the review of
 newer CRT-related resources are documented in [docs/crt_datasets.md](docs/crt_datasets.md).
@@ -42,9 +41,9 @@ The official Qwen-Scope SAE coverage and checkpoint-matching notes are tracked i
 
 Notebook 00 retries thinking-protocol failures and ambiguous `both` answers with new seeds while
 retaining every attempt in the JSON output. It also writes a Markdown report with correct, lure,
-and operational hallucination/other counts. Set `INCLUDE_27B_A100 = True` to add
-[`Qwen/Qwen3.5-27B`](https://huggingface.co/Qwen/Qwen3.5-27B) on an A100 80GB runtime; keep its
-results separate because Qwen3.5 uses a newer multimodal hybrid architecture.
+and operational hallucination/other counts. The default behavior suite is Qwen3.5 2B, 9B,
+27B, and 35B-A3B, loaded sequentially. The first cell installs a pinned Transformers revision
+with Qwen3.5 support when the runtime does not already provide it.
 
 ## Experiment Notebooks
 
@@ -75,28 +74,27 @@ results separate because Qwen3.5 uses a newer multimodal hybrid architecture.
 - `src/mindscopex_analysis/cases.py`: validated pilot JSON loading plus experimental lure/control cases.
 - `src/mindscopex_analysis/workflows.py`: reusable notebook-level experiment loops.
 
-The default pair is:
+The default mechanistic pair is:
 
-- Model: `Qwen/Qwen3-1.7B-Base`
-- SAE repo: `Qwen/SAE-Res-Qwen3-1.7B-Base-W32K-L0_50`
+- Model: `Qwen/Qwen3.5-27B`
+- SAE repo: `Qwen/SAE-Res-Qwen3.5-27B-W80K-L0_50`
 
-That is the smallest currently available Qwen3 + Qwen-Scope pairing in the public collection.
+This is the only selected post-trained behavior checkpoint with a directly matching official
+Qwen-Scope SAE. Set `ANALYSIS_PROFILE_KEY` in notebooks 01-13 to `2b`, `9b`, `27b`, or
+`35b-a3b`; the matching analysis checkpoint, SAE, layer count, and scan layers change together.
 
 ## Recommended Research Target
 
 - Exact-checkpoint research target: `Qwen/Qwen3.5-27B` with
   `Qwen/SAE-Res-Qwen3.5-27B-W80K-L0_50`. This official SAE covers all 64 residual layers
   of the same post-trained checkpoint, so it is the cleanest thinking/non-thinking comparison.
-- Lower-cost behavioral target: `Qwen/Qwen3-8B`, comparing `enable_thinking=False` and `True`.
-  Its official SAE was trained on `Qwen3-8B-Base`, so transfer requires reconstruction checks.
-- Exact Base control: `Qwen/Qwen3-8B-Base` with
-  `Qwen/SAE-Res-Qwen3-8B-Base-W64K-L0_50`.
-- Low-cost pilot: the existing Qwen3-1.7B-Base pair remains useful for validating the
-  intervention code path.
-- Format stress test: Qwen3-0.6B is optional and should not be pooled into the main result.
-- Large-model behavior extension: Qwen3.5-27B can be enabled for A100 80GB runs in notebook 00.
-  It requires a current Transformers build with Qwen3.5 support. The NNsight residual hook path
-  must be smoke-tested before using the 27B SAE intervention results.
+- Lower-cost exact Base controls: `Qwen3.5-2B-Base` and `Qwen3.5-9B-Base` with their official
+  W32K/W64K K50 SAEs.
+- MoE Base control: `Qwen3.5-35B-A3B-Base` with the official W32K/K50 SAE.
+- Behavior comparison: the corresponding post-trained 2B, 9B, 27B, and 35B-A3B checkpoints
+  are all enabled in notebook 00.
+- Do not describe a 2B, 9B, or 35B-A3B Base feature as a post-trained-model feature without a
+  separate reconstruction and transfer validation; only the selected 27B pair is exact.
 
 ## Checks
 

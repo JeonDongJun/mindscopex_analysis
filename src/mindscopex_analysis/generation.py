@@ -63,7 +63,7 @@ class QwenTextResponse:
 
     @property
     def has_thinking_block(self) -> bool:
-        """Whether the generated tokens contain a complete Qwen thinking block."""
+        """Whether the reconstructed assistant response has a complete thinking block."""
 
         start = self.raw_text.find("<think>")
         end = self.raw_text.find("</think>")
@@ -181,11 +181,11 @@ class QwenTextResponse:
 
 
 def qwen_recommended_sampling_kwargs(enable_thinking: bool | None) -> dict[str, Any]:
-    """Return Qwen3 model-card sampling defaults for each reasoning mode."""
+    """Return Qwen3.5 text-task sampling defaults for each reasoning mode."""
 
     if enable_thinking:
-        return {"temperature": 0.6, "top_p": 0.95, "top_k": 20}
-    return {"temperature": 0.7, "top_p": 0.8, "top_k": 20}
+        return {"temperature": 1.0, "top_p": 0.95, "top_k": 20}
+    return {"temperature": 1.0, "top_p": 1.0, "top_k": 20}
 
 
 def _normalized_text(text: str) -> str:
@@ -309,7 +309,7 @@ def _prepare_inputs(
     try:
         encoded = tokenizer.apply_chat_template(messages, **template_kwargs)
     except TypeError:
-        # Older tokenizer templates use the textual Qwen3 soft switch.
+        # Older Qwen tokenizer templates use the textual thinking soft switch.
         if enable_thinking is not None:
             suffix = " /think" if enable_thinking else " /no_think"
             messages[-1] = {"role": "user", "content": message_content(prompt + suffix)}
@@ -378,6 +378,10 @@ def generate_qwen_text_response(
     generated_ids = output[0, input_tokens:]
     output_tokens = int(generated_ids.numel())
     raw_text = tokenizer.decode(generated_ids, skip_special_tokens=False)
+    if enable_thinking is True and "<think>" not in raw_text:
+        # Qwen3.5's chat template places the opening tag in the generation prompt,
+        # so decoding only newly generated tokens starts inside the thinking block.
+        raw_text = "<think>\n" + raw_text
     thinking, answer = split_qwen_thinking(raw_text)
 
     eos_ids = token_backend.eos_token_id

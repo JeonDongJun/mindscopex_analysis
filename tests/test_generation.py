@@ -12,6 +12,7 @@ from mindscopex_analysis import (
     classify_lure_answer,
     generate_qwen_text_response,
     generate_qwen_text_response_with_retries,
+    qwen_recommended_sampling_kwargs,
     save_crt_markdown_report,
     summarize_crt_accuracy,
     text_contains_answer,
@@ -61,6 +62,16 @@ class _FakeModel(torch.nn.Module):
 
 
 class AnswerClassificationTests(unittest.TestCase):
+    def test_qwen35_text_sampling_defaults(self) -> None:
+        self.assertEqual(
+            qwen_recommended_sampling_kwargs(False),
+            {"temperature": 1.0, "top_p": 1.0, "top_k": 20},
+        )
+        self.assertEqual(
+            qwen_recommended_sampling_kwargs(True),
+            {"temperature": 1.0, "top_p": 0.95, "top_k": 20},
+        )
+
     def test_recognizes_correct_cents_surface_forms(self) -> None:
         self.assertTrue(text_contains_answer("The answer is 5 cents.", "5 cents"))
         self.assertTrue(text_contains_answer("The ball costs $0.05.", "5 cents"))
@@ -109,6 +120,22 @@ class AnswerClassificationTests(unittest.TestCase):
         self.assertFalse(response.final_answer_format_ok)
         self.assertEqual(response.final_answer_format_issue, "label_or_explanation")
 
+    def test_restores_qwen35_thinking_open_tag_from_generation_prompt(self) -> None:
+        response = generate_qwen_text_response(
+            _FakeModel(),
+            _FakeTokenizer("check the algebra</think>5 cents<|im_end|>"),
+            BAT_BALL_CASE,
+            model_id="Qwen/Qwen3.5-2B",
+            enable_thinking=True,
+            max_new_tokens=4,
+            do_sample=False,
+        )
+
+        self.assertTrue(response.raw_text.startswith("<think>\n"))
+        self.assertEqual(response.thinking, "check the algebra")
+        self.assertEqual(response.answer, "5 cents")
+        self.assertTrue(response.thinking_protocol_ok)
+
     def test_non_thinking_response_has_no_generated_thinking_block(self) -> None:
         response = generate_qwen_text_response(
             _FakeModel(),
@@ -126,7 +153,7 @@ class AnswerClassificationTests(unittest.TestCase):
         self.assertTrue(response.thinking_protocol_ok)
         self.assertTrue(response.final_answer_format_ok)
 
-    def test_thinking_protocol_reports_missing_block(self) -> None:
+    def test_thinking_protocol_reports_missing_close_after_prompted_open(self) -> None:
         response = generate_qwen_text_response(
             _FakeModel(),
             _FakeTokenizer("5 cents<|im_end|>"),
@@ -138,7 +165,7 @@ class AnswerClassificationTests(unittest.TestCase):
         )
 
         self.assertFalse(response.thinking_protocol_ok)
-        self.assertEqual(response.thinking_protocol_issue, "missing_thinking_block")
+        self.assertEqual(response.thinking_protocol_issue, "missing_think_close")
 
     def test_thinking_protocol_distinguishes_truncated_block(self) -> None:
         response = generate_qwen_text_response(
@@ -226,7 +253,7 @@ class AnswerClassificationTests(unittest.TestCase):
         )
 
         self.assertTrue(response.thinking_protocol_ok)
-        self.assertEqual(response.retry_reasons, ("protocol:missing_thinking_block",))
+        self.assertEqual(response.retry_reasons, ("protocol:missing_think_close",))
         self.assertEqual(response.generation_attempts, 2)
 
     def test_summary_maps_both_and_other_to_hallucination(self) -> None:

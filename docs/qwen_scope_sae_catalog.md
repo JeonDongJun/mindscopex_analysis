@@ -32,6 +32,21 @@ SAE가 연결된 실제 checkpoint는 이름에 `-Base`가 없는 post-trained
 `Qwen/Qwen3.5-27B`다. 따라서 Qwen3/Qwen3.5의 Base SAE를 post-trained 모델에 옮겨 쓰는
 경우와 달리, 27B 조합은 SAE 학습 대상과 분석 대상 checkpoint가 직접 일치한다.
 
+## 저장소에서 선택한 Qwen3.5 모델군
+
+행동 비교는 공식 post-trained 4종을 모두 사용한다. 내부 분석에서는 checkpoint가 직접
+일치하는 공식 SAE를 우선하므로, 2B/9B/35B-A3B는 대응 Base checkpoint를 사용한다.
+
+| 프로필 | 행동 모델 (`00`) | 내부 분석 모델 (`01`-`13`) | K50 SAE | exact behavior match |
+|---|---|---|---|---|
+| `2b` | `Qwen3.5-2B` | `Qwen3.5-2B-Base` | W32K | 아니오 |
+| `9b` | `Qwen3.5-9B` | `Qwen3.5-9B-Base` | W64K | 아니오 |
+| `27b` | `Qwen3.5-27B` | `Qwen3.5-27B` | W80K | **예** |
+| `35b-a3b` | `Qwen3.5-35B-A3B` | `Qwen3.5-35B-A3B-Base` | W32K | 아니오 |
+
+기본 프로필은 `27b`다. 노트북의 `ANALYSIS_PROFILE_KEY` 하나를 바꾸면 분석 모델, SAE,
+layer 수, scan layer, 모델별 feature cache가 함께 바뀐다.
+
 ## 공식 SAE 전체 목록
 
 | 계열 | SAE 학습 대상 모델 | checkpoint 단계 | d_model | 레이어 | 공개 SAE |
@@ -81,10 +96,10 @@ reconstruction error, explained variance, feature activation 분포와 steering 
 - K50은 한 토큰에서 50개 feature만 활성화하므로 초기 후보 순위와 ablation이 비교적
   다루기 쉽다.
 
-단, Qwen3.5는 기존 Qwen3와 다른 multimodal hybrid architecture다. 현재 저장소의
-`model.layers.{layer}` NNsight 경로와 intervention 코드가 Qwen3.5 wrapper에서도 같은
-residual tensor를 가리키는지는 아직 실제 A100 실행으로 검증하지 않았다. 27B 본 실험에
-들어가기 전에 다음 smoke test를 먼저 통과해야 한다.
+Qwen3.5는 기존 Qwen3와 다른 multimodal hybrid architecture다. 공식 Transformers 구현을
+확인해 NNsight block 경로를 `model.language_model.layers.{layer}`로 변경했으며 dense와 MoE
+프로필 모두 같은 language-model 경로를 사용한다. 실제 A100 가중치 실행은 별도로 다음
+smoke test를 통과해야 한다.
 
 1. 모델의 실제 transformer block 경로와 총 64개 레이어를 확인한다.
 2. 한 레이어 residual 마지막 차원이 5,120인지 확인한다.
@@ -95,12 +110,14 @@ residual tensor를 가리키는지는 아직 실제 A100 실행으로 검증하�
 
 ### 비용 절감 및 대조군
 
-- 코드 검증: `Qwen3-1.7B-Base + W32K/K50`
-- 중간 규모 exact Base 분석: `Qwen3-8B-Base + W64K/K50`
-- post-trained Qwen3-8B 비교: 같은 8B Base SAE를 전이하되 reconstruction 검증 후 사용
+- 코드 검증: `Qwen3.5-2B-Base + W32K/K50`
+- 중간 규모 exact Base 분석: `Qwen3.5-9B-Base + W64K/K50`
+- MoE architecture 대조: `Qwen3.5-35B-A3B-Base + W32K/K50`
+- 주 인과 분석: `Qwen3.5-27B + W80K/K50`
 
-Qwen3.5-27B를 주 결과로 사용하더라도 1.7B 또는 8B exact Base 조합을 positive-control로
-남겨두면, 실패 원인이 연구 가설인지 새로운 모델 wrapper/SAE 연결 문제인지 구분하기 쉽다.
+이 세 Base 조합은 각 SAE와 정확히 일치하므로 코드와 SAE reconstruction의 positive control로
+사용할 수 있다. 다만 그 feature를 대응 post-trained 행동 모델의 feature라고 바로 부르지는
+않는다.
 
 ## 출처와 갱신 규칙
 

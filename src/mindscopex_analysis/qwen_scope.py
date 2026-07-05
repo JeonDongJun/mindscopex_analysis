@@ -365,7 +365,7 @@ def format_qwen_chat(
     system_prompt: str = "",
     enable_thinking: bool | None = None,
 ) -> str:
-    """Format a Qwen chat prompt with optional Qwen3 thinking switch."""
+    """Format a Qwen chat prompt with an optional Qwen3.5 thinking switch."""
 
     messages = []
     if system_prompt:
