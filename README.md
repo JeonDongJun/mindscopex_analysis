@@ -19,6 +19,9 @@ then use `notebooks/01_qwen_scope_activation_mvp.ipynb` and
 `notebooks/02_bat_ball_lure_feature_ablation.ipynb` for the bat-and-ball
 feature ablation workflow.
 
+The full experiment order, cache dependencies, and evidence gates are documented in
+[docs/notebook_pipeline.md](docs/notebook_pipeline.md).
+
 All experiments use the same concise final-answer instruction. Notebook 00 passes it as a
 chat system message; notebooks 01-13 prepend it to the analysis prompt. Feature handles are
 cached per Qwen3.5 profile so feature IDs from different SAE dictionaries cannot be mixed.
@@ -95,6 +98,14 @@ Qwen-Scope SAE. Set `ANALYSIS_PROFILE_KEY` in notebooks 01-13 to `2b`, `9b`, `27
   are all enabled in notebook 00.
 - Do not describe a 2B, 9B, or 35B-A3B Base feature as a post-trained-model feature without a
   separate reconstruction and transfer validation; only the selected 27B pair is exact.
+
+## Colab CLI Results
+
+The official Colab CLI can execute local notebooks on a hosted GPU and recover both executed
+`*_output.ipynb` notebooks and remote artifacts through `colab download` and `colab log`.
+The CLI currently supports Linux and macOS, so Windows development should use WSL2. See
+[docs/colab_cli_workflow.md](docs/colab_cli_workflow.md) for the repository-specific commands,
+remote paths, and result archival workflow.
 
 ## Checks
 

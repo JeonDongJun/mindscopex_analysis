@@ -54,7 +54,7 @@
 <div class="container">
 
   <h1>MindScopeX 분석 파이프라인</h1>
-  <p class="subtitle">Qwen3-1.7B-Base × Qwen-Scope SAE 활성화 기반 분석 아키텍처</p>
+  <p class="subtitle">Qwen3.5 profile × Qwen-Scope SAE 활성화 기반 분석 아키텍처 (기본: exact 27B)</p>
 
   <!-- ─── 전체 파이프라인 ─── -->
   <div class="card">
@@ -78,9 +78,9 @@
         <!-- Step 2: LM -->
         <rect x="160" y="55" width="150" height="90" rx="8" fill="#ede9fe" stroke="#7c3aed" stroke-width="1.5"/>
         <text x="235" y="82" text-anchor="middle" font-size="12" font-weight="700" fill="#6d28d9">Language Model</text>
-        <text x="235" y="100" text-anchor="middle" font-size="10" fill="#7c3aed">Qwen3-1.7B-Base</text>
+        <text x="235" y="100" text-anchor="middle" font-size="10" fill="#7c3aed">Qwen3.5-27B</text>
         <text x="235" y="116" text-anchor="middle" font-size="10" fill="#7c3aed">nnsight.LanguageModel</text>
-        <text x="235" y="133" text-anchor="middle" font-size="10" fill="#7c3aed">28 layers · d=2048</text>
+        <text x="235" y="133" text-anchor="middle" font-size="10" fill="#7c3aed">64 layers · d=5120</text>
 
         <line x1="310" y1="100" x2="338" y2="100" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#arr)"/>
         <text x="324" y="93" text-anchor="middle" font-size="9" fill="#64748b">residual</text>
@@ -93,13 +93,13 @@
         <text x="405" y="123" text-anchor="middle" font-size="10" fill="#1d4ed8">last prompt token</text>
 
         <line x1="470" y1="100" x2="498" y2="100" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#arr)"/>
-        <text x="484" y="93" text-anchor="middle" font-size="9" fill="#64748b">h ∈ ℝ²⁰⁴⁸</text>
+        <text x="484" y="93" text-anchor="middle" font-size="9" fill="#64748b">h ∈ ℝ⁵¹²⁰</text>
 
         <!-- Step 4: SAE -->
         <rect x="500" y="55" width="140" height="90" rx="8" fill="#cffafe" stroke="#0891b2" stroke-width="1.5"/>
         <text x="570" y="80" text-anchor="middle" font-size="12" font-weight="700" fill="#0e7490">Qwen-Scope SAE</text>
         <text x="570" y="97" text-anchor="middle" font-size="10" fill="#0e7490">W_enc · h → TopK</text>
-        <text x="570" y="113" text-anchor="middle" font-size="10" fill="#0e7490">32 768 features</text>
+        <text x="570" y="113" text-anchor="middle" font-size="10" fill="#0e7490">81 920 features</text>
         <text x="570" y="129" text-anchor="middle" font-size="10" fill="#0e7490">L0 ≈ 50 sparsity</text>
 
         <line x1="640" y1="100" x2="668" y2="100" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#arr)"/>
@@ -225,8 +225,8 @@
       <tbody>
         <tr>
           <td><code>models.py</code></td>
-          <td>Qwen LM 로딩, dtype/device 기본값</td>
-          <td><code>load_qwen_language_model()</code></td>
+          <td>Qwen3.5 profile, NNsight 로딩, dtype/device 기본값</td>
+          <td><code>get_qwen35_analysis_profile()</code> · <code>load_qwen_language_model()</code></td>
         </tr>
         <tr>
           <td><code>activations.py</code></td>
@@ -246,7 +246,7 @@
         <tr>
           <td><code>generation.py</code></td>
           <td>텍스트 생성 유틸리티 (CRT 응답 등)</td>
-          <td><code>generate_responses()</code></td>
+          <td><code>generate_crt_response_suite()</code></td>
         </tr>
       </tbody>
     </table>

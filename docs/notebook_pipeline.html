@@ -95,7 +95,7 @@
 <div class="container">
 
   <h1>노트북 파이프라인 가이드</h1>
-  <p class="subtitle">notebooks/ 00 → 13 · Qwen3-1.7B-Base × Qwen-Scope SAE 함정(lure) feature 분석</p>
+  <p class="subtitle">notebooks/ 00 → 13 · Qwen3.5 profiles × Qwen-Scope SAE 함정(lure) feature 분석</p>
 
   <div class="lead">
     14개 노트북은 하나의 연속된 실험입니다 →
@@ -122,7 +122,7 @@
       <div class="nb-row">
         <div class="nb c1"><b>01 · Activation MVP</b><span>layer 후보 선정</span></div>
         <div class="nb c1"><b>02 · Bat-Ball Ablation</b><span>단일 feature 인과 측정</span></div>
-        <div class="nb c1"><b>03 · Layer Sweep</b><span>모든 layer에서 최고 feature</span></div>
+        <div class="nb c1"><b>03 · Layer Sweep</b><span>대표 layer에서 최고 feature</span></div>
       </div>
     </div>
     <div class="down-arrow">▼ &nbsp;<span style="font-size:0.78rem;color:#64748b;">feature handle JSON 저장 → 이후 단계가 로드해 재사용</span></div>
@@ -191,12 +191,12 @@
         <text x="414" y="56" text-anchor="middle" font-size="9" fill="#64748b">load_or_discover</text>
 
         <rect x="440" y="40" width="250" height="48" rx="8" fill="#ede9fe" stroke="#7c3aed" stroke-width="1.5"/>
-        <text x="565" y="60" text-anchor="middle" font-size="12" font-weight="700" fill="#6d28d9">04 ~ 13 재사용 실험</text>
-        <text x="565" y="77" text-anchor="middle" font-size="10" fill="#7c3aed">발견을 매번 반복하지 않음</text>
+        <text x="565" y="60" text-anchor="middle" font-size="12" font-weight="700" fill="#6d28d9">04 ~ 10, 13 재사용</text>
+        <text x="565" y="77" text-anchor="middle" font-size="10" fill="#7c3aed">11/12는 독립 방향·후보 분석</text>
       </svg>
     </div>
     <p style="font-size:0.84rem;color:var(--muted);margin-top:0.6rem;">
-      저장 경로: <code>outputs/candidates/bat_ball_top_feature_answer_instruction.json</code>
+      저장 경로: <code>outputs/candidates/bat_ball_top_feature_answer_instruction_{profile}.json</code>
     </p>
   </div>
 
@@ -205,11 +205,11 @@
     <h2>공통 재료</h2>
     <table>
       <tbody>
-        <tr><th>해석용 모델</th><td><code>Qwen/Qwen3-1.7B-Base</code> (Qwen-Scope SAE와 정확히 매칭)</td></tr>
-        <tr><th>행동 관찰 모델 (00)</th><td>post-trained <code>Qwen3-1.7B / 4B / 8B</code> (옵션 0.6B)</td></tr>
-        <tr><th>SAE</th><td><code>Qwen/SAE-Res-Qwen3-1.7B-Base-W32K-L0_50</code> · residual stream · 32K feature</td></tr>
+        <tr><th>해석용 모델</th><td>프로필별 Qwen3.5 checkpoint (기본 <code>Qwen/Qwen3.5-27B</code>)</td></tr>
+        <tr><th>행동 관찰 모델 (00)</th><td>post-trained <code>Qwen3.5-2B / 9B / 27B / 35B-A3B</code></td></tr>
+        <tr><th>SAE</th><td>프로필별 공식 Qwen-Scope K50 SAE · 27B만 post-trained checkpoint와 직접 일치</td></tr>
         <tr><th>대표 케이스</th><td><code>BAT_BALL_CASE</code> — 정답 <code>" 5 cents"</code>, 함정 <code>" 10 cents"</code></td></tr>
-        <tr><th>주 스캔 layer</th><td><code>[6, 14, 21, 27]</code> (기본 작업 layer 14)</td></tr>
+        <tr><th>주 스캔 layer</th><td><code>PROFILE.scan_layers</code> (전체 깊이의 대표 4개 layer)</td></tr>
         <tr><th>개입 단위</th><td><code>coefficient × feature_value × W_dec[:, feature_id]</code></td></tr>
         <tr><th>측정 지표</th><td><code>margin = logprob(lure) − logprob(correct)</code> · <code>margin_delta = baseline − edited</code></td></tr>
       </tbody>
@@ -230,7 +230,7 @@
         <dt>입력</dt><dd><code>crt_behavior_cases()</code> 9문항, <code>CRT_FINAL_ANSWER_SYSTEM_PROMPT</code>(정답 예시 없음, 최종 답 1줄), seed=42.</dd>
         <dt>단계</dt><dd>모델 로드 → 모드별 응답 생성 → thinking 블록/프로토콜/형식 점검 → 정답·함정 라벨 분류 → 정확도 집계.</dd>
         <dt>함수</dt><dd><code>generate_crt_response_suite</code>, <code>summarize_crt_accuracy</code>, <code>save_qwen_text_responses</code>.</dd>
-        <dt>산출물</dt><dd><code>outputs/00_qwen_crt_text_responses.json</code>, 모델·모드별 정답률/함정률 표·차트.</dd>
+        <dt>산출물</dt><dd><code>outputs/00_qwen_crt_text_responses_{dataset}.json</code>과 <code>.md</code>, 모델·모드별 정답률/함정률 표·차트.</dd>
       </dl>
     </div>
   </div>
@@ -241,7 +241,7 @@
       <h3><span class="tag">01</span>Qwen-Scope Activation MVP</h3>
       <dl>
         <dt>목적</dt><dd>NNsight로 residual activation을 뽑고 SAE로 해석해, feature가 가장 강하게 켜지는 layer 후보를 고른다.</dd>
-        <dt>입력</dt><dd>5개 프롬프트(bat-ball 등), 샘플 layer <code>[6,14,21,27]</code>, token 위치 <code>"last"</code>.</dd>
+        <dt>입력</dt><dd>5개 프롬프트(bat-ball 등), 프로필별 <code>scan_layers</code>, token 위치 <code>"last"</code>.</dd>
         <dt>단계</dt><dd><code>capture_layer_residuals</code> → SAE 로드 → <code>summarize_qwen_scope_features</code> → <code>scan_qwen_scope_layers</code>로 layer별 점수 → 최고 layer 선택.</dd>
         <dt>산출물</dt><dd>layer별 상위 feature 표(rank, feature_id, mean_abs, activation_rate)와 후보 layer.</dd>
       </dl>
@@ -250,7 +250,7 @@
       <h3><span class="tag">02</span>Bat-Ball 단일 feature ablation</h3>
       <dl>
         <dt>목적</dt><dd>bat-ball에서 함정 답 logprob을 끌어올리는 feature를 ablation으로 식별·정량화한다.</dd>
-        <dt>입력</dt><dd><code>instruct_lure_case(BAT_BALL_CASE)</code>, layer 14, 상위 후보 12개, 계수 1.0.</dd>
+        <dt>입력</dt><dd><code>instruct_lure_case(BAT_BALL_CASE)</code>, 프로필의 두 번째 scan layer, 상위 후보 12개, 계수 1.0.</dd>
         <dt>단계</dt><dd>baseline margin → residual 캡처 → SAE encode 상위 12 → 각 feature decoder direction 제거 후 logprob 재계산 → <code>margin_delta</code> 정렬 → 최고 handle 저장.</dd>
         <dt>함수</dt><dd><code>answer_logprob_margin</code>, <code>active_prompt_features</code>, <code>rank_lure_feature_effects</code>, <code>save_feature_handle</code>.</dd>
         <dt>산출물</dt><dd>feature별 <code>margin_delta / lure_logprob_delta / correct_logprob_delta</code> 표 + handle JSON.</dd>
@@ -259,8 +259,8 @@
     <div class="detail b1">
       <h3><span class="tag">03</span>Layer sweep feature search</h3>
       <dl>
-        <dt>목적</dt><dd>02의 ablation을 모든 스캔 layer로 확장해 함정 답에 가장 큰 영향을 주는 layer-feature 조합을 찾는다.</dd>
-        <dt>입력</dt><dd>layer <code>[6,14,21,27]</code>, layer당 상위 8개, 계수 1.0.</dd>
+        <dt>목적</dt><dd>02의 ablation을 프로필의 대표 scan layer 네 곳으로 확장해 가장 큰 영향을 주는 layer-feature 조합을 찾는다.</dd>
+        <dt>입력</dt><dd><code>PROFILE.scan_layers</code>, layer당 상위 8개, 계수 1.0.</dd>
         <dt>단계</dt><dd>각 layer SAE 로드 → <code>layer_feature_search_rows</code>(feature 추출 + ablation + margin) → 정렬 → 최고 handle 저장.</dd>
         <dt>산출물</dt><dd>layer×feature 행 표와, 이후 단계가 공유하는 최종 feature handle.</dd>
       </dl>
@@ -344,7 +344,7 @@
       <h3><span class="tag">11</span>Control delta bypass</h3>
       <dl>
         <dt>목적</dt><dd>feature를 직접 제거하지 않고, matched control residual과의 차이 벡터를 더해 함정을 우회할 수 있는지.</dd>
-        <dt>입력</dt><dd>layer 14, <code>direction = control_residual − lure_residual</code>, 계수 <code>[-1 … 2]</code>, <code>add_vector</code> 모드.</dd>
+        <dt>입력</dt><dd>프로필의 두 번째 scan layer, <code>direction = control_residual − lure_residual</code>, 계수 <code>[-1 … 2]</code>, <code>add_vector</code> 모드.</dd>
         <dt>함수</dt><dd><code>control_delta_bypass_rows</code>.</dd>
         <dt>읽기</dt><dd>양수 계수에서 margin 감소 → matched 표현이 함정 경로를 우회. 음수와 비교해 방향성 확인.</dd>
       </dl>
@@ -353,7 +353,7 @@
       <h3><span class="tag">12</span>Decoder geometry</h3>
       <dl>
         <dt>목적</dt><dd>상위 후보들이 비슷한 decoder direction을 갖는지(한 family인가, 서로 다른 경로인가).</dd>
-        <dt>입력</dt><dd>layer 14 상위 12 후보 → 효과 상위 8개.</dd>
+        <dt>입력</dt><dd>프로필의 두 번째 scan layer 상위 12 후보 → 효과 상위 8개.</dd>
         <dt>함수</dt><dd><code>candidate_feature_rows</code>, <code>rank_lure_feature_effects</code>, <code>decoder_cosine_rows</code>.</dd>
         <dt>읽기</dt><dd>강한 후보끼리 cosine 높음 → 한 feature family. cosine 낮은데 효과 비슷 → 독립 경로.</dd>
       </dl>
@@ -394,7 +394,7 @@
   </div>
 
   <p class="footer">
-    MindScopeX Analysis · notebooks/ 00–13 · 텍스트 버전: <a href="notebook_pipeline.md">notebook_pipeline.md</a>
+    MindScopeX Analysis · notebooks/ 00–13 · <a href="notebook_pipeline.md">텍스트 버전</a> · <a href="colab_cli_workflow.md">Colab CLI 결과 회수</a>
   </p>
 
 </div>

@@ -6,6 +6,7 @@ __pycache__/
 .ruff_cache/
 outputs/
 results/
+*_output.ipynb
 multirun/
 wandb/
 paper/

@@ -115,4 +115,7 @@ lure_logprob_delta    = ablated_lure_logprob    - baseline_lure_logprob
 |------|------|
 | `src/mindscopex_analysis/effects.py` | `AnswerMargin`, `FeatureAblationResult`, `rank_lure_feature_effects()` 정의 |
 | `notebooks/02_bat_ball_lure_feature_ablation.ipynb` | bat-and-ball 실험 전체 흐름 |
-| `results/` | 각 실험 실행 결과 분석 파일 (git 미추적) |
+| `outputs/` | Colab runtime에서 생성되는 JSON, Markdown, feature handle (git 미추적) |
+| `results/` | Colab CLI로 로컬에 회수한 output notebook, log, archive (git 미추적) |
+
+원격 결과 회수 절차는 [colab_cli_workflow.md](colab_cli_workflow.md)를 참고하세요.

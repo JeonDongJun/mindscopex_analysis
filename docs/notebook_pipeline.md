@@ -21,7 +21,7 @@ flowchart TD
     subgraph P1["② 발견 — 함정 feature 찾기"]
         N01["01 · Activation MVP<br/>(layer 후보 선정)"]
         N02["02 · Bat-Ball Ablation<br/>(단일 feature 인과 측정)"]
-        N03["03 · Layer Sweep<br/>(모든 layer에서 최고 feature)"]
+        N03["03 · Layer Sweep<br/>(대표 layer에서 최고 feature)"]
     end
     subgraph P2["③ 인과성 — 효과는 진짜이며 조절 가능한가"]
         N04["04 · Coefficient Dose<br/>(용량-반응)"]
@@ -57,12 +57,16 @@ flowchart TD
 
 > **핵심 산출물 — feature handle:** `03`(또는 `02`)이 찾은 최고 feature를
 > `outputs/candidates/bat_ball_top_feature_answer_instruction_{profile}.json`에 저장합니다.
-> `04`~`13`은 이 handle을 캐시에서 **로드해서 재사용**하므로 발견 과정을 매번 반복하지 않습니다.
+> `04`~`10`, `13`은 이 handle을 캐시에서 **로드해서 재사용**합니다. 캐시가 없으면
+> 프로필의 두 번째 scan layer에서 후보를 다시 찾습니다. `11`은 control residual delta를
+> 직접 만들고, `12`는 decoder geometry용 후보를 다시 순위화하므로 handle에 의존하지 않습니다.
 
 ```mermaid
 flowchart LR
     D["02 / 03<br/>발견"] -->|save_feature_handle| H[("feature handle<br/>JSON 캐시")]
-    H -->|load_or_discover_handle_and_sae| U["04~13<br/>재사용 실험"]
+    H -->|load_or_discover_handle_and_sae| U["04~10, 13<br/>재사용 실험"]
+    D --> I["11 · control delta<br/>독립 방향"]
+    D --> G["12 · decoder geometry<br/>후보 재탐색"]
 ```
 
 ---
@@ -79,6 +83,17 @@ flowchart LR
 | 개입 단위 | `coefficient × feature_value × W_dec[:, feature_id]` |
 | 측정 지표 | `margin = logprob(lure) − logprob(correct)`, `margin_delta = baseline − edited` |
 
+프로필별 대표 scan layer는 다음과 같습니다. 네 점은 전체 layer sweep이 아니라 초기 탐색
+비용을 줄이기 위한 깊이별 표본입니다. 논문 주 결과에서는 후보 구간 주변 layer를 추가로
+촘촘히 탐색해야 합니다.
+
+| 프로필 | 분석 checkpoint | 대표 scan layer | SAE와 checkpoint 관계 |
+|---|---|---|---|
+| `2b` | `Qwen3.5-2B-Base` | `5, 11, 17, 23` | exact Base |
+| `9b` | `Qwen3.5-9B-Base` | `7, 15, 23, 31` | exact Base |
+| `27b` | `Qwen3.5-27B` | `15, 31, 47, 63` | exact post-trained |
+| `35b-a3b` | `Qwen3.5-35B-A3B-Base` | `9, 19, 29, 39` | exact Base, MoE |
+
 대부분의 실험 로직은 `src/mindscopex_analysis/workflows.py`의 `*_rows()` 헬퍼로 모듈화되어 있어,
 노트북은 "로드 → 헬퍼 호출 → 표/그래프"의 얇은 흐름만 유지합니다.
 
@@ -93,7 +108,7 @@ flowchart LR
 - **입력:** `crt_behavior_cases()` 9문항, `CRT_FINAL_ANSWER_SYSTEM_PROMPT`(정답 예시 없음, 최종 답 1줄 제한), seed=42, Qwen3.5 권장 샘플링.
 - **단계:** 모델 로드 → 모드별 응답 생성 → thinking 블록/프로토콜/형식 준수 점검 → 정답·함정 라벨 분류 → 정확도 집계.
 - **함수:** `load_qwen_text_generation_model`, `generate_crt_response_suite`, `summarize_crt_accuracy`, `save_qwen_text_responses`.
-- **산출물:** `outputs/00_qwen_crt_text_responses.json`, 모델·모드별 정답률/함정률 표와 막대 차트.
+- **산출물:** `outputs/00_qwen_crt_text_responses_{dataset}.json`과 `.md`, 모델·모드별 정답률/함정률 표와 막대 차트.
 - **다음으로:** 함정에 안정적으로 빠지는 케이스(특히 bat-ball)를 내부 분석 대상으로 선정 → `01`.
 
 ### ② 발견
@@ -112,8 +127,8 @@ flowchart LR
 - **함수:** `answer_logprob_margin`, `active_prompt_features`, `rank_lure_feature_effects`, `feature_handle_from_result`, `save_feature_handle`.
 - **산출물:** feature별 `margin_delta / lure_logprob_delta / correct_logprob_delta` 표, 프로필명이 붙은 feature-handle JSON.
 
-#### `03_layer_sweep_feature_search` — Layer sweep
-- **목적:** `02`의 ablation을 **모든 스캔 layer로 확장**해 함정 답에 가장 큰 영향을 주는 layer-feature 조합을 찾는다.
+#### `03_layer_sweep_feature_search` — Representative layer sweep
+- **목적:** `02`의 ablation을 프로필의 **대표 scan layer 네 곳으로 확장**해 함정 답에 가장 큰 영향을 주는 layer-feature 조합을 찾는다.
 - **입력:** 프로필별 `scan_layers`, layer당 상위 8개 후보, 계수 1.0.
 - **단계:** 각 layer SAE 로드 → `layer_feature_search_rows`(layer별 feature 추출 + ablation + margin 재계산) → `margin_delta` 정렬 → 최고 handle 저장.
 - **함수:** `layer_feature_search_rows`, `load_qwen_scope_sae`, `feature_handle_from_result`, `save_feature_handle`.
@@ -223,5 +238,22 @@ flowchart LR
 | 문서 | 내용 |
 |------|------|
 | [metrics_guide.md](metrics_guide.md) | `margin`, `margin_delta`, ablation 등 지표 해석 |
+| [colab_cli_workflow.md](colab_cli_workflow.md) | Colab GPU 실행 결과를 로컬로 회수하는 CLI 절차 |
 | `CLAUDE.md` | 레포 개요와 핵심 경로 |
 | `src/mindscopex_analysis/workflows.py` | 노트북이 호출하는 `*_rows()` 실험 헬퍼 |
+
+---
+
+## 6. 실행 순서와 연구 판정 기준
+
+1. `00`에서 모델·thinking 모드별로 실제 lure 응답이 존재하는지 확인한다.
+2. `01`은 activation/SAE shape와 대표 layer 탐색이 가능한지 확인하는 smoke test로 사용한다.
+3. `02`에서 단일 layer 파이프라인을 검증한 뒤 `03`에서 프로필별 feature handle을 확정한다.
+4. `04`의 dose response와 `05`의 역방향 steering이 재현되어야 인과 후보로 유지한다.
+5. `06`~`10`, `13`에서 control, paraphrase, 답변 표면형, token 위치, 다른 CRT 및 다른 lure
+   도메인으로 일반화되는지 분리해 보고한다.
+6. `11`과 `12`는 feature 제거와 다른 우회 방향 및 feature-family 기하를 묻는 보조 분석이다.
+
+단일 문항·단일 seed·단일 coefficient의 큰 `margin_delta`만으로 연구 결론을 내리지 않습니다.
+discovery/held-out 분리, 여러 seed, matched control, dose response가 함께 재현될 때만 lure
+feature의 인과적 역할을 주장합니다.
