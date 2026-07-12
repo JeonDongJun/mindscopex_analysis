@@ -89,8 +89,18 @@ def resolve_configs(path: Path) -> list[Path]:
 
 
 def ensure_session(session: str, gpu: str | None, tpu: str | None) -> None:
-    status = run_cmd(["colab", "status", "-s", session], check=False)
-    if status.returncode == 0:
+    cmd = ["colab", "status", "-s", session]
+    print("+ " + " ".join(cmd), flush=True)
+    status = subprocess.run(
+        cmd,
+        check=False,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+    )
+    if status.stdout:
+        print(status.stdout, end="" if status.stdout.endswith("\n") else "\n", flush=True)
+    if status.returncode == 0 and "not found" not in status.stdout.lower():
         return
 
     cmd = ["colab", "new", "-s", session]
@@ -113,6 +123,7 @@ def launch_one(
     keep_session: bool,
     default_gpu: str | None,
     default_tpu: str | None,
+    exec_timeout: float,
     dry_run: bool,
 ) -> Path:
     config = load_toml(config_path)
@@ -192,7 +203,18 @@ def launch_one(
                 remote_source_archive,
             ]
         )
-    run_cmd(["colab", "exec", "-s", session, "-f", str(bootstrap)])
+    run_cmd(
+        [
+            "colab",
+            "exec",
+            "-s",
+            session,
+            "--timeout",
+            str(exec_timeout),
+            "-f",
+            str(bootstrap),
+        ]
+    )
 
     remote_zip = f"{remote_output_root}/{name}.zip"
     local_zip = local_run_dir / "artifacts.zip"
@@ -217,6 +239,12 @@ def main() -> None:
     parser.add_argument("--tpu", default=None)
     parser.add_argument("--keep", action="store_true", help="Leave the Colab VM running.")
     parser.add_argument(
+        "--exec-timeout",
+        default=3600.0,
+        type=float,
+        help="Seconds to wait for `colab exec` to finish.",
+    )
+    parser.add_argument(
         "--dry-run",
         action="store_true",
         help="Prepare files but do not call Colab.",
@@ -239,11 +267,12 @@ def main() -> None:
                     keep_session=args.keep,
                     default_gpu=args.gpu,
                     default_tpu=args.tpu,
+                    exec_timeout=args.exec_timeout,
                     dry_run=args.dry_run,
                 )
             )
     finally:
-        if launched and not args.keep and not args.dry_run:
+        if not args.keep and not args.dry_run:
             run_cmd(["colab", "stop", "-s", args.session], check=False)
 
     print("Prepared runs:")
