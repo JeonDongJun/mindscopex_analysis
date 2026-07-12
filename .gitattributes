@@ -2,3 +2,4 @@
 
 *.zpln filter=nbstripout
 *.ipynb diff=ipynb
+experiments/*.sh text eol=lf

@@ -1,0 +1,5 @@
+[suite]
+name = "smoke"
+configs = [
+  "../configs/00_nature_smoke.toml",
+]
