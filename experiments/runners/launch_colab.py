@@ -8,6 +8,7 @@ import json
 import shutil
 import subprocess
 import sys
+import time
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -42,6 +43,35 @@ def run_cmd(
 ) -> subprocess.CompletedProcess:
     print("+ " + " ".join(cmd), flush=True)
     return subprocess.run(cmd, cwd=cwd, check=check, text=True)
+
+
+def run_cmd_retry(
+    cmd: list[str],
+    *,
+    cwd: Path | None = None,
+    attempts: int = 6,
+    delay: float = 5.0,
+) -> subprocess.CompletedProcess:
+    """Run a flaky file-transfer command, retrying on non-zero exit.
+
+    ``colab upload``/``download`` intermittently report a just-created remote
+    file as "not found" right after ``colab exec`` finishes; a short retry loop
+    lets the remote filesystem settle and makes the transfer reliable.
+    """
+
+    result: subprocess.CompletedProcess | None = None
+    for attempt in range(1, attempts + 1):
+        print(f"+ {' '.join(cmd)}  (attempt {attempt}/{attempts})", flush=True)
+        result = subprocess.run(cmd, cwd=cwd, check=False, text=True)
+        if result.returncode == 0:
+            return result
+        if attempt < attempts:
+            print(
+                f"  command failed (exit {result.returncode}); retrying in {delay:.0f}s",
+                flush=True,
+            )
+            time.sleep(delay)
+    raise subprocess.CalledProcessError(result.returncode if result else 1, cmd)
 
 
 def check_colab_cli() -> None:
@@ -191,9 +221,9 @@ def launch_one(
         return local_run_dir
 
     ensure_session(session, str(gpu) if gpu else None, str(tpu) if tpu else None)
-    run_cmd(["colab", "upload", "-s", session, str(local_config), remote_config_path])
+    run_cmd_retry(["colab", "upload", "-s", session, str(local_config), remote_config_path])
     if source == "archive":
-        run_cmd(
+        run_cmd_retry(
             [
                 "colab",
                 "upload",
@@ -218,7 +248,7 @@ def launch_one(
 
     remote_zip = f"{remote_output_root}/{name}.zip"
     local_zip = local_run_dir / "artifacts.zip"
-    run_cmd(["colab", "download", "-s", session, remote_zip, str(local_zip)])
+    run_cmd_retry(["colab", "download", "-s", session, remote_zip, str(local_zip)])
     unpack_archive(local_zip, local_run_dir / "artifacts")
     run_cmd(
         ["colab", "log", "-s", session, "-o", str(local_run_dir / "colab_log.md")],
