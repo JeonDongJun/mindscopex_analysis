@@ -1,0 +1,86 @@
+{
+  "dataset_id": "yax_crt_isomorph",
+  "schema_version": 1,
+  "title": "Yax et al. (2024) novel CRT isomorphs",
+  "description": "7 novel CRT isomorphs matched one-to-one to the classic CRT-7 structures but with fresh surface stories, built to reduce pretraining contamination. Pairs with crt7_classic for an original-vs-isomorph contrast; the source also ships matched pure-math controls.",
+  "task_kind": "crt",
+  "scoring": "logprob_margin",
+  "source": {
+    "authors": "Yax, N. et al.",
+    "year": 2024,
+    "title": "Studying and improving reasoning in humans and machines (novel CRT isomorphs)",
+    "venue": "Communications Psychology",
+    "doi": "10.1038/s44271-024-00091-8",
+    "project_url": "https://github.com/hrl-team/ReasoningGPT",
+    "license": "Article CC BY 4.0; companion code/data repo GPL-3.0",
+    "license_note": "Novel CRT isomorph stimuli transcribed from the open-access article. The companion GitHub repo (response matrix, .npy inputs) is GPL-3.0 and is NOT vendored here; only the published stimuli are included. The source also provides matched pure-math controls (Experiment='crt-math') and a solved-example condition that can be fetched from the repo if needed."
+  },
+  "generated_by": "scripts/build_datasets.py",
+  "n_cases": 7,
+  "family_counts": {
+    "crt_arithmetic": 1,
+    "crt_counting": 1,
+    "crt_difference": 1,
+    "crt_growth": 1,
+    "crt_percentage": 1,
+    "crt_rate": 2
+  },
+  "cases": [
+    {
+      "case_id": "yax_001",
+      "family": "crt_difference",
+      "question": "A scarf costs 210 euros more than a hat. The scarf and the hat cost 220 euros in total. How much does the hat cost? Answer in euros.",
+      "correct_answer": "5 euros",
+      "lure_answer": "10 euros",
+      "note": "Yax new-CRT isomorph of bat-and-ball."
+    },
+    {
+      "case_id": "yax_002",
+      "family": "crt_rate",
+      "question": "How long would it take 80 carpenters to repair 80 tables, if it takes 8 carpenters 8 hours to repair 8 tables? Answer in hours.",
+      "correct_answer": "8 hours",
+      "lure_answer": "80 hours",
+      "note": "Yax new-CRT isomorph of machines/widgets."
+    },
+    {
+      "case_id": "yax_003",
+      "family": "crt_growth",
+      "question": "An entire forest was consumed by a wildfire in 40 hours, with its size doubling every hour. How long did it take to burn 50% of the forest? Answer in hours.",
+      "correct_answer": "39 hours",
+      "lure_answer": "20 hours",
+      "note": "Yax new-CRT isomorph of lily pads."
+    },
+    {
+      "case_id": "yax_004",
+      "family": "crt_rate",
+      "question": "If Andrea can clean a house in 3 hours, and Alex can clean a house in 6 hours, how many hours would it take for them to clean a house together? Answer in hours.",
+      "correct_answer": "2 hours",
+      "lure_answer": "9 hours",
+      "note": "Yax new-CRT isomorph of shared-rate."
+    },
+    {
+      "case_id": "yax_005",
+      "family": "crt_counting",
+      "question": "A runner participates in a marathon and arrives both at the 100th highest and the 100th lowest position. How many participants are in the marathon?",
+      "correct_answer": "199 participants",
+      "lure_answer": "200 participants",
+      "note": "Yax new-CRT isomorph of class rank."
+    },
+    {
+      "case_id": "yax_006",
+      "family": "crt_arithmetic",
+      "question": "A woman buys a second-hand car for $1000, then sells it for $2000. Later she buys it back for $3000 and finally sells it for $4000. How much has she made? Answer in dollars.",
+      "correct_answer": "2000 dollars",
+      "lure_answer": "1000 dollars",
+      "note": "Yax new-CRT isomorph of pig trading."
+    },
+    {
+      "case_id": "yax_007",
+      "family": "crt_percentage",
+      "question": "Frank decided to invest $10,000 into bitcoin in January 2018. Four months after he invested, the bitcoin he had purchased went down 50%. In the subsequent eight months, the bitcoin he had purchased went up 80%. What is the value of Frank's bitcoin after one year? Answer in dollars.",
+      "correct_answer": "9000 dollars",
+      "lure_answer": "18000 dollars",
+      "note": "Yax new-CRT isomorph of the stock-market item."
+    }
+  ]
+}

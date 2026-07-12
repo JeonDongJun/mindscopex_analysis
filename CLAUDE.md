@@ -16,6 +16,9 @@
 | `src/mindscopex_analysis/activations.py` | NNsight trace 기반 residual stream 캡처 |
 | `src/mindscopex_analysis/qwen_scope.py` | Qwen-Scope SAE 로드, TopK feature 요약, layer scan |
 | `src/mindscopex_analysis/effects.py` | 답변 logprob margin과 feature decoder-direction ablation |
+| `src/mindscopex_analysis/lure_datasets.py` | `data/*.json` 통일 로더 (`load_lure_dataset`, `lure_dataset_cases`) |
+| `src/mindscopex_analysis/data/*.json` | 실험용 lure 데이터셋 (CRT/의미착각), 공통 스키마 |
+| `scripts/build_datasets.py` | 원본 fetch + 정규화(1회성). `docs/datasets.md`가 카탈로그 정본 |
 | `notebooks/01_qwen_scope_activation_mvp.ipynb` | activation 캡처부터 layer 후보 선정까지의 MVP |
 | `notebooks/02_bat_ball_lure_feature_ablation.ipynb` | bat-and-ball 함정 답 feature ablation 실험 |
 

@@ -1,5 +1,11 @@
 # CRT Dataset Notes
 
+> **참고:** 정규화된 전체 데이터셋 카탈로그(공통 JSON 스키마, `load_lure_dataset`
+> 로더, 항목별 통계·출처·라이선스·example)는 이제 **[datasets.md](datasets.md)**가
+> 정본이다. 이 문서는 `nature_crt150` 런타임 다운로드 경로(`datasets.py`)에 대한
+> 기존 설계 메모로 남겨 둔다. 신규 작업은 `datasets.md`와
+> `scripts/build_datasets.py`를 따른다.
+
 검토 기준일: 2026-07-05
 
 ## 저장소 pilot 세트

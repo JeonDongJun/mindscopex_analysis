@@ -1,0 +1,58 @@
+{
+  "dataset_id": "crt2",
+  "schema_version": 1,
+  "title": "CRT-2 (Thomson & Oppenheimer 2016)",
+  "description": "The 4-item alternate Cognitive Reflection Test, designed to rely less on numeracy than the original CRT and to be less familiar. Verbal insight traps with a salient intuitive lure.",
+  "task_kind": "crt",
+  "scoring": "logprob_margin",
+  "source": {
+    "authors": "Thomson, K. S. & Oppenheimer, D. M.",
+    "year": 2016,
+    "title": "Investigating an alternate form of the cognitive reflection test",
+    "venue": "Judgment and Decision Making 11(1), 99-113",
+    "doi": "",
+    "project_url": "https://journal.sjdm.org/15/151029/jdm151029.html",
+    "download_url": "https://journal.sjdm.org/15/151029/jdm151029.pdf",
+    "license": "CC BY 3.0",
+    "license_note": "The authors license the article under CC BY 3.0. The four items are transcribed verbatim from the article body."
+  },
+  "generated_by": "scripts/build_datasets.py",
+  "n_cases": 4,
+  "family_counts": {
+    "crt_verbal": 4
+  },
+  "cases": [
+    {
+      "case_id": "crt2_001",
+      "family": "crt_verbal",
+      "question": "If you're running a race and you pass the person in second place, what place are you in?",
+      "correct_answer": "second",
+      "lure_answer": "first",
+      "note": "CRT-2 item 1 (race). Passing 2nd place leaves you in 2nd, not 1st."
+    },
+    {
+      "case_id": "crt2_002",
+      "family": "crt_verbal",
+      "question": "A farmer had 15 sheep and all but 8 died. How many are left?",
+      "correct_answer": "8",
+      "lure_answer": "7",
+      "note": "CRT-2 item 2 (sheep). 'All but 8' means 8 remain."
+    },
+    {
+      "case_id": "crt2_003",
+      "family": "crt_verbal",
+      "question": "Emily's father has three daughters. The first two are named April and May. What is the third daughter's name?",
+      "correct_answer": "Emily",
+      "lure_answer": "June",
+      "note": "CRT-2 item 3 (Emily). The third daughter is Emily herself."
+    },
+    {
+      "case_id": "crt2_004",
+      "family": "crt_verbal",
+      "question": "How many cubic feet of dirt are there in a hole that is 3 feet deep by 3 feet wide by 3 feet long?",
+      "correct_answer": "none",
+      "lure_answer": "27",
+      "note": "CRT-2 item 4 (hole). A hole contains no dirt."
+    }
+  ]
+}

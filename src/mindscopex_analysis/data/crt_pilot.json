@@ -1,6 +1,17 @@
 {
   "dataset_id": "mindscopex_crt_pilot_v1",
+  "schema_version": 1,
+  "title": "MindScopeX CRT pilot",
   "description": "Small hand-curated CRT pilot set for pipeline and format checks.",
+  "task_kind": "crt",
+  "scoring": "logprob_margin",
+  "source": {
+    "authors": "MindScopeX (this repository)",
+    "year": 2026,
+    "title": "Hand-curated canonical CRT items for smoke tests",
+    "license": "Repository-authored; items are classic public-domain CRT problems (e.g. Frederick 2005).",
+    "license_note": "Not a formal benchmark; use for pipeline and output-format checks only."
+  },
   "cases": [
     {
       "case_id": "bat_ball_original",

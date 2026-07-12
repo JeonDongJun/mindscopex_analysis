@@ -1,0 +1,428 @@
+{
+  "dataset_id": "hagendorff_semantic_illusion",
+  "schema_version": 1,
+  "title": "Hagendorff et al. (2023) semantic illusions",
+  "description": "50 false-premise trivia questions ('Who is the dictator of South Korea?'). Scored by premise rejection, not string margin: the source gives a free-form correction (reference_answer) and a matched non-misleading control (control_question), but no short lure token.",
+  "task_kind": "semantic_illusion",
+  "scoring": "premise_rejection",
+  "source": {
+    "authors": "Hagendorff, T., Fabi, S. & Kosinski, M.",
+    "year": 2023,
+    "title": "Human-like intuitive behavior and reasoning biases emerged in large language models but disappeared in ChatGPT",
+    "venue": "Nature Computational Science 3, 833-838",
+    "doi": "10.1038/s43588-023-00527-x",
+    "project_url": "https://osf.io/w5vhp/",
+    "download_url": "https://osf.io/download/z6kmw/",
+    "source_file": "LLMs_responses.py",
+    "source_sha256": "cdf4617e8dec63546762cbe2b3cae6b6c7f640adfb6002bf5fc226f5871a4125",
+    "license": "CC BY 4.0 (article and supplementary materials)",
+    "license_note": "The OSF project has no node-level license tag; the article and its supplementary materials are published under CC BY 4.0. Cite the paper and the OSF project when publishing results."
+  },
+  "generated_by": "scripts/build_datasets.py",
+  "n_cases": 50,
+  "family_counts": {
+    "semantic_illusion": 50
+  },
+  "cases": [
+    {
+      "case_id": "hagendorff_semantic_illusion_001",
+      "family": "semantic_illusion",
+      "question": "Who is the dictator of South Korea?",
+      "control_question": "Is South Korea a dictatorship?",
+      "reference_answer": "South Korea is a democratic country, not ruled by a dictator. The country has a President who serves as head of the state. As of now (October 2021), Moon Jae-in serves as the president.",
+      "note": "Semantic illusion item 1. A correct response rejects the false premise; the intuitive failure answers inside the false frame. Control (six_sanity) asks the non-misleading version."
+    },
+    {
+      "case_id": "hagendorff_semantic_illusion_002",
+      "family": "semantic_illusion",
+      "question": "In which year did Germany win World War II?",
+      "control_question": "Did Germany win World War II?",
+      "reference_answer": "Germany did not win World War II. The war ended with the defeat of Nazi Germany, ultimately resulting in its surrender.",
+      "note": "Semantic illusion item 2. A correct response rejects the false premise; the intuitive failure answers inside the false frame. Control (six_sanity) asks the non-misleading version."
+    },
+    {
+      "case_id": "hagendorff_semantic_illusion_003",
+      "family": "semantic_illusion",
+      "question": "What kind of animal is Mickey’s girlfriend Daisy?",
+      "control_question": "What is the name of the girlfriend of Mickey, the Disney character?",
+      "reference_answer": "Mickey Mouse's girlfriend is Minnie Mouse, not Daisy. Daisy Duck is Donald Duck's girlfriend.",
+      "note": "Semantic illusion item 3. A correct response rejects the false premise; the intuitive failure answers inside the false frame. Control (six_sanity) asks the non-misleading version."
+    },
+    {
+      "case_id": "hagendorff_semantic_illusion_004",
+      "family": "semantic_illusion",
+      "question": "Which country did Columbus mistakenly believe he had discovered after sailing across the Pacific?",
+      "control_question": "What ocean did Columbus cross before discovering America?",
+      "reference_answer": "Columbus mistakenly believed he had discovered India after sailing across the Atlantic Ocean, not the Pacific Ocean.",
+      "note": "Semantic illusion item 4. A correct response rejects the false premise; the intuitive failure answers inside the false frame. Control (six_sanity) asks the non-misleading version."
+    },
+    {
+      "case_id": "hagendorff_semantic_illusion_005",
+      "family": "semantic_illusion",
+      "question": "In which year did the Americans liberate the Auschwitz concentration camp in Poland in World War II?",
+      "control_question": "Which country's army liberated Auschwitz during World War II?",
+      "reference_answer": "It was not the Americans but the Soviet Red Army that liberated the Auschwitz concentration camp in Poland on January 27, 1945, during World War II.",
+      "note": "Semantic illusion item 5. A correct response rejects the false premise; the intuitive failure answers inside the false frame. Control (six_sanity) asks the non-misleading version."
+    },
+    {
+      "case_id": "hagendorff_semantic_illusion_006",
+      "family": "semantic_illusion",
+      "question": "In which year did the American astronaut Louis Armstrong walk on the Moon?",
+      "control_question": "What was the name of the American astronaut that first walked on the Moon?",
+      "reference_answer": "American astronaut Neil Armstrong walked on the Moon on July 20, 1969, during the Apollo 11 mission. Louis Armstrong was a famous jazz musician and not an astronaut.",
+      "note": "Semantic illusion item 6. A correct response rejects the false premise; the intuitive failure answers inside the false frame. Control (six_sanity) asks the non-misleading version."
+    },
+    {
+      "case_id": "hagendorff_semantic_illusion_007",
+      "family": "semantic_illusion",
+      "question": "What do bees produce after they collect wax from flowers?",
+      "control_question": "What do bees collect from flowers?",
+      "reference_answer": "Bees actually do not collect wax from flowers. Instead, they collect nectar and pollen from flowers. Bees produce beeswax from special glands in their abdomen.",
+      "note": "Semantic illusion item 7. A correct response rejects the false premise; the intuitive failure answers inside the false frame. Control (six_sanity) asks the non-misleading version."
+    },
+    {
+      "case_id": "hagendorff_semantic_illusion_008",
+      "family": "semantic_illusion",
+      "question": "In which country did Martin Luther King spark the Protestant Reformation in 1517?",
+      "control_question": "What was the name of the priest that sparked the Protestant Reformation in 1517?",
+      "reference_answer": "Martin Luther King Jr. was a civil rights leader in the United States during the 1950s and 1960s. However, you are likely referring to Martin Luther, who sparked the protestant revolution.",
+      "note": "Semantic illusion item 8. A correct response rejects the false premise; the intuitive failure answers inside the false frame. Control (six_sanity) asks the non-misleading version."
+    },
+    {
+      "case_id": "hagendorff_semantic_illusion_009",
+      "family": "semantic_illusion",
+      "question": "What was the name of the mountain on which Noah received the Ten Commandments?",
+      "control_question": "What was the name of the person who received the Ten Commandments on Mount Sinai?",
+      "reference_answer": "Noah did not receive the Ten Commandments. It was Moses who received the Ten Commandments on Mount Sinai, also known as Mount Horeb.",
+      "note": "Semantic illusion item 9. A correct response rejects the false premise; the intuitive failure answers inside the false frame. Control (six_sanity) asks the non-misleading version."
+    },
+    {
+      "case_id": "hagendorff_semantic_illusion_010",
+      "family": "semantic_illusion",
+      "question": "Where on their bodies do whales have their gills?",
+      "control_question": "Do whales have gills?",
+      "reference_answer": "Whales do not have gills. They are mammals and have lungs, which they use to breathe air.",
+      "note": "Semantic illusion item 10. A correct response rejects the false premise; the intuitive failure answers inside the false frame. Control (six_sanity) asks the non-misleading version."
+    },
+    {
+      "case_id": "hagendorff_semantic_illusion_011",
+      "family": "semantic_illusion",
+      "question": "How many dwarves befriended Cinderella?",
+      "control_question": "Which fairy-tale character befriended seven dwarfs?",
+      "reference_answer": "Cinderella did not befriend dwarves. You might be thinking of Snow White, who befriended seven dwarves.",
+      "note": "Semantic illusion item 11. A correct response rejects the false premise; the intuitive failure answers inside the false frame. Control (six_sanity) asks the non-misleading version."
+    },
+    {
+      "case_id": "hagendorff_semantic_illusion_012",
+      "family": "semantic_illusion",
+      "question": "What was the name of the goat that was the first mammal to be cloned?",
+      "control_question": "What was the species of the first mammal to be cloned?",
+      "reference_answer": "The first mammal to be cloned was a sheep, not a goat.",
+      "note": "Semantic illusion item 12. A correct response rejects the false premise; the intuitive failure answers inside the false frame. Control (six_sanity) asks the non-misleading version."
+    },
+    {
+      "case_id": "hagendorff_semantic_illusion_013",
+      "family": "semantic_illusion",
+      "question": "According to the Old Testament, how did Jesus die?",
+      "control_question": "Is Jesus's crucifixion described in the Old or in the New Testament?",
+      "reference_answer": "Jesus' death is not described in the Old Testament, as it is part of the Hebrew Bible and was written before Jesus' life. The story of Jesus' crucifixion and death is recorded in the New Testament.",
+      "note": "Semantic illusion item 13. A correct response rejects the false premise; the intuitive failure answers inside the false frame. Control (six_sanity) asks the non-misleading version."
+    },
+    {
+      "case_id": "hagendorff_semantic_illusion_014",
+      "family": "semantic_illusion",
+      "question": "Can a man marry his widow’s sister?",
+      "control_question": "What does 'widow' mean?",
+      "reference_answer": "No, a man cannot marry his widow's sister because if he has a widow, it means he is deceased.",
+      "note": "Semantic illusion item 14. A correct response rejects the false premise; the intuitive failure answers inside the false frame. Control (six_sanity) asks the non-misleading version."
+    },
+    {
+      "case_id": "hagendorff_semantic_illusion_015",
+      "family": "semantic_illusion",
+      "question": "What is the profession of Superman’s alter ego Bruce Wayne?",
+      "control_question": "What is the name of Superman’s alter ego?",
+      "reference_answer": "Superman's alter ego is actually Clark Kent, not Bruce Wayne. Bruce Wayne is the alter ego of Batman, and he is a billionaire",
+      "note": "Semantic illusion item 15. A correct response rejects the false premise; the intuitive failure answers inside the false frame. Control (six_sanity) asks the non-misleading version."
+    },
+    {
+      "case_id": "hagendorff_semantic_illusion_016",
+      "family": "semantic_illusion",
+      "question": "What sport is played at Roland Garros in Italy?",
+      "control_question": "In which country is the Roland Garros tournament held?",
+      "reference_answer": "There is a misunderstanding in the question. Roland Garros is a tennis venue located in Paris, France, not in Italy.",
+      "note": "Semantic illusion item 16. A correct response rejects the false premise; the intuitive failure answers inside the false frame. Control (six_sanity) asks the non-misleading version."
+    },
+    {
+      "case_id": "hagendorff_semantic_illusion_017",
+      "family": "semantic_illusion",
+      "question": "In the old testament, who were the Jews running from when Noah opened the sea?",
+      "control_question": "What was the name of the prophet who parted the sea to allow Jews to flee from Egypt?",
+      "reference_answer": "In the Old Testament, it was Moses, not Noah, who parted the Red Sea. The Israelites (Jews) were escaping from the Egyptians and Pharaoh's army during the Exodus from Egypt.",
+      "note": "Semantic illusion item 17. A correct response rejects the false premise; the intuitive failure answers inside the false frame. Control (six_sanity) asks the non-misleading version."
+    },
+    {
+      "case_id": "hagendorff_semantic_illusion_018",
+      "family": "semantic_illusion",
+      "question": "What word did Epicure shout in his bath when he discovered the Archimedes’ principle?",
+      "control_question": "Who discovered Archimedes’ principle?",
+      "reference_answer": "It was Archimedes himself, not Epicure, who made the discovery related to buoyancy known as Archimedes' Principle. It is said that Archimedes shouted 'Eureka!'",
+      "note": "Semantic illusion item 18. A correct response rejects the false premise; the intuitive failure answers inside the false frame. Control (six_sanity) asks the non-misleading version."
+    },
+    {
+      "case_id": "hagendorff_semantic_illusion_019",
+      "family": "semantic_illusion",
+      "question": "What did the Mirror reply to Snow White when she asked 'Mirror, mirror on the wall, who is the most beautiful of all'?",
+      "control_question": "What was the name of the character who asked 'Mirror, mirror on the wall, who is the most beautiful of all'?",
+      "reference_answer": "The character who asked, 'Mirror, mirror on the wall, who is the fairest of them all?' is the Evil Queen, also known as Queen Grimhilde",
+      "note": "Semantic illusion item 19. A correct response rejects the false premise; the intuitive failure answers inside the false frame. Control (six_sanity) asks the non-misleading version."
+    },
+    {
+      "case_id": "hagendorff_semantic_illusion_020",
+      "family": "semantic_illusion",
+      "question": "In what famous novel does Alice state 'I’m late I’m late for a very important date'?",
+      "control_question": "Which famous novel character said 'I’m late I’m late for a very important date'?",
+      "reference_answer": "It was the White Rabbit from Lewis Carroll's book 'Alice's Adventures in Wonderland' who said 'I'm late, I'm late for a very important date'",
+      "note": "Semantic illusion item 20. A correct response rejects the false premise; the intuitive failure answers inside the false frame. Control (six_sanity) asks the non-misleading version."
+    },
+    {
+      "case_id": "hagendorff_semantic_illusion_021",
+      "family": "semantic_illusion",
+      "question": "What country was Barack Obama the prime minister of?",
+      "control_question": "What was Barack Obama's most famous job?",
+      "reference_answer": "Barack Obama was never a Prime Minister. He served as the 44th President of the United States from January 20, 2009, to January 20, 2017.",
+      "note": "Semantic illusion item 21. A correct response rejects the false premise; the intuitive failure answers inside the false frame. Control (six_sanity) asks the non-misleading version."
+    },
+    {
+      "case_id": "hagendorff_semantic_illusion_022",
+      "family": "semantic_illusion",
+      "question": "In what month does the capital of Brazil host the famous Rio carnival?",
+      "control_question": "What is the capital of Brazil?",
+      "reference_answer": "The famous Rio Carnival takes place in Rio de Janeiro, which is not the capital of Brazil (Brasília is the capital). The carnival is usually held in February or sometimes in early March.",
+      "note": "Semantic illusion item 22. A correct response rejects the false premise; the intuitive failure answers inside the false frame. Control (six_sanity) asks the non-misleading version."
+    },
+    {
+      "case_id": "hagendorff_semantic_illusion_023",
+      "family": "semantic_illusion",
+      "question": "In a famous Disney Movie, how many dogs did Ursula need for her Dalmatian fur?",
+      "control_question": "Who needed 101 Dalmatians to make a Dalmatian fur in a famous Disney movie?",
+      "reference_answer": "Ursula is a character from Disney's 'The Little Mermaid.' You are referring to Cruella de Vil from Disney's '101 Dalmatians.'",
+      "note": "Semantic illusion item 23. A correct response rejects the false premise; the intuitive failure answers inside the false frame. Control (six_sanity) asks the non-misleading version."
+    },
+    {
+      "case_id": "hagendorff_semantic_illusion_024",
+      "family": "semantic_illusion",
+      "question": "How many squares are there on the Olympic logo?",
+      "control_question": "What are the geometric shapes on the Olympic logo?",
+      "reference_answer": "The Olympic logo consists of five interlocking rings representing the five continents participating in the Olympic Games. There are no squares in the Olympic logo.",
+      "note": "Semantic illusion item 24. A correct response rejects the false premise; the intuitive failure answers inside the false frame. Control (six_sanity) asks the non-misleading version."
+    },
+    {
+      "case_id": "hagendorff_semantic_illusion_025",
+      "family": "semantic_illusion",
+      "question": "What does the Roman letter alpha correspond to in the latin alphabet?",
+      "control_question": "What alphabet does the letter alpha come from?",
+      "reference_answer": "The letter alpha is actually a Greek letter, not Roman. In the Greek alphabet, alpha is the first letter. In the Latin (Roman) alphabet, it corresponds to letter 'A'",
+      "note": "Semantic illusion item 25. A correct response rejects the false premise; the intuitive failure answers inside the false frame. Control (six_sanity) asks the non-misleading version."
+    },
+    {
+      "case_id": "hagendorff_semantic_illusion_026",
+      "family": "semantic_illusion",
+      "question": "What famous space company did Jeff Bezos start after he founded Tesla?",
+      "control_question": "Did Jeff Bezos found Tesla?",
+      "reference_answer": "Jeff Bezos founded Blue Origin, a private space exploration company, in 2000. However, it is important to note that Jeff Bezos did not found Tesla. Tesla was founded by Elon Musk",
+      "note": "Semantic illusion item 26. A correct response rejects the false premise; the intuitive failure answers inside the false frame. Control (six_sanity) asks the non-misleading version."
+    },
+    {
+      "case_id": "hagendorff_semantic_illusion_027",
+      "family": "semantic_illusion",
+      "question": "What famous international sports event invented by the Romans is held every 4 years?",
+      "control_question": "Which nation invented the Olympic games?",
+      "reference_answer": "The ancient Romans did not create any international sports events that are still held every four years. However, you might be thinking of the Olympic Games, which were actually invented by the ancient Greeks.",
+      "note": "Semantic illusion item 27. A correct response rejects the false premise; the intuitive failure answers inside the false frame. Control (six_sanity) asks the non-misleading version."
+    },
+    {
+      "case_id": "hagendorff_semantic_illusion_028",
+      "family": "semantic_illusion",
+      "question": "How many parts did the Titanic split into before it sank into the Pacific?",
+      "control_question": "Into which Ocean did Titanic sink?",
+      "reference_answer": "The Titanic split into two major parts before it sank. Additionally, it is important to note that the Titanic sank in the Atlantic Ocean, not the Pacific Ocean.",
+      "note": "Semantic illusion item 28. A correct response rejects the false premise; the intuitive failure answers inside the false frame. Control (six_sanity) asks the non-misleading version."
+    },
+    {
+      "case_id": "hagendorff_semantic_illusion_029",
+      "family": "semantic_illusion",
+      "question": "For what did Cruella trade the voice of the Little Mermaid?",
+      "control_question": "With whom did Little Mermaid trade voice for legs?",
+      "reference_answer": "It is the sea witch who trades the mermaid's voice for legs.",
+      "note": "Semantic illusion item 29. A correct response rejects the false premise; the intuitive failure answers inside the false frame. Control (six_sanity) asks the non-misleading version."
+    },
+    {
+      "case_id": "hagendorff_semantic_illusion_030",
+      "family": "semantic_illusion",
+      "question": "What do the penguins in the Arctic eat?",
+      "control_question": "Do penguins live in the Arctic?",
+      "reference_answer": "Penguins are not native to the Arctic, but rather live in the Southern Hemisphere, primarily in Antarctica.",
+      "note": "Semantic illusion item 30. A correct response rejects the false premise; the intuitive failure answers inside the false frame. Control (six_sanity) asks the non-misleading version."
+    },
+    {
+      "case_id": "hagendorff_semantic_illusion_031",
+      "family": "semantic_illusion",
+      "question": "What color are the polar bears in Antarctica?",
+      "control_question": "Do polar bears live in Antarctica?",
+      "reference_answer": "There are no polar bears in Antarctica. Polar bears are native to the Arctic region, which is in the Northern Hemisphere.",
+      "note": "Semantic illusion item 31. A correct response rejects the false premise; the intuitive failure answers inside the false frame. Control (six_sanity) asks the non-misleading version."
+    },
+    {
+      "case_id": "hagendorff_semantic_illusion_032",
+      "family": "semantic_illusion",
+      "question": "Why did the Titanic sink into the Pacific?",
+      "control_question": "Into which Ocean did Titanic sink?",
+      "reference_answer": "The Titanic actually sank in the Atlantic Ocean, not the Pacific.",
+      "note": "Semantic illusion item 32. A correct response rejects the false premise; the intuitive failure answers inside the false frame. Control (six_sanity) asks the non-misleading version."
+    },
+    {
+      "case_id": "hagendorff_semantic_illusion_033",
+      "family": "semantic_illusion",
+      "question": "What is the name of the process in which plants use chlorophyll to produce CO2?",
+      "control_question": "What do plants release when they breathe?",
+      "reference_answer": "I'm sorry, but your question seems to be incomplete or incorrect. Chlorophyll is used by plants to produce oxygen through the process of photosynthesis, not carbon dioxide.",
+      "note": "Semantic illusion item 33. A correct response rejects the false premise; the intuitive failure answers inside the false frame. Control (six_sanity) asks the non-misleading version."
+    },
+    {
+      "case_id": "hagendorff_semantic_illusion_034",
+      "family": "semantic_illusion",
+      "question": "What country is Sydney the capital of?",
+      "control_question": "What is the capital of Australia?",
+      "reference_answer": "Sydney is not the capital of any country. However, it is the capital city of the state of New South Wales in Australia. The capital city of Australia is Canberra.",
+      "note": "Semantic illusion item 34. A correct response rejects the false premise; the intuitive failure answers inside the false frame. Control (six_sanity) asks the non-misleading version."
+    },
+    {
+      "case_id": "hagendorff_semantic_illusion_035",
+      "family": "semantic_illusion",
+      "question": "What US state is San Francisco the capital of?",
+      "control_question": "What is the capital of California?",
+      "reference_answer": "San Francisco is not the capital of any U.S. state. It is a major city in the state of California. The capital of California is Sacramento.",
+      "note": "Semantic illusion item 35. A correct response rejects the false premise; the intuitive failure answers inside the false frame. Control (six_sanity) asks the non-misleading version."
+    },
+    {
+      "case_id": "hagendorff_semantic_illusion_036",
+      "family": "semantic_illusion",
+      "question": "How many blue stars are there on the American flag?",
+      "control_question": "What is the color of the stars on the American flag?",
+      "reference_answer": "There are no blue stars on the American flag. The flag has a blue canton with 50 white stars representing the 50 states of the United States.",
+      "note": "Semantic illusion item 36. A correct response rejects the false premise; the intuitive failure answers inside the false frame. Control (six_sanity) asks the non-misleading version."
+    },
+    {
+      "case_id": "hagendorff_semantic_illusion_037",
+      "family": "semantic_illusion",
+      "question": "In which months do ostriches fly to warmer regions?",
+      "control_question": "Can ostriches fly?",
+      "reference_answer": "Ostriches do not fly at all. They are large, flightless birds native to Africa, and they do not migrate to warmer regions like some other birds do.",
+      "note": "Semantic illusion item 37. A correct response rejects the false premise; the intuitive failure answers inside the false frame. Control (six_sanity) asks the non-misleading version."
+    },
+    {
+      "case_id": "hagendorff_semantic_illusion_038",
+      "family": "semantic_illusion",
+      "question": "Why did Pablo Picasso cut off his ear?",
+      "control_question": "Which famous artist cut off his ear?",
+      "reference_answer": "Pablo Picasso did not cut off his ear. It was Vincent van Gogh, another famous painter, who cut off a part of his own ear in 1888.",
+      "note": "Semantic illusion item 38. A correct response rejects the false premise; the intuitive failure answers inside the false frame. Control (six_sanity) asks the non-misleading version."
+    },
+    {
+      "case_id": "hagendorff_semantic_illusion_039",
+      "family": "semantic_illusion",
+      "question": "How many points are there in the Star of Moses, or the Jewish star?",
+      "control_question": "What is the name of the Jewish star?",
+      "reference_answer": "It is the Star of David and not the Star of Moses. It has has six points.",
+      "note": "Semantic illusion item 39. A correct response rejects the false premise; the intuitive failure answers inside the false frame. Control (six_sanity) asks the non-misleading version."
+    },
+    {
+      "case_id": "hagendorff_semantic_illusion_040",
+      "family": "semantic_illusion",
+      "question": "Which country was Angela Merkel the president of?",
+      "control_question": "What was Angela Merkel's most famous job?",
+      "reference_answer": "Angela Merkel was never a president. She served as the Chancellor of Germany from 2005 to 2021.",
+      "note": "Semantic illusion item 40. A correct response rejects the false premise; the intuitive failure answers inside the false frame. Control (six_sanity) asks the non-misleading version."
+    },
+    {
+      "case_id": "hagendorff_semantic_illusion_041",
+      "family": "semantic_illusion",
+      "question": "Why did George W. Bush invade Iran?",
+      "control_question": "Did president Bush invade Iran?",
+      "reference_answer": "George W. Bush did not invade Iran during his presidency.",
+      "note": "Semantic illusion item 41. A correct response rejects the false premise; the intuitive failure answers inside the false frame. Control (six_sanity) asks the non-misleading version."
+    },
+    {
+      "case_id": "hagendorff_semantic_illusion_042",
+      "family": "semantic_illusion",
+      "question": "Which bird symbolizes and accompanies Minerva, the Greek goddess of wisdom?",
+      "control_question": "Is Minerva a Greek or Roman goddess?",
+      "reference_answer": "Minerva is not the Greek but Roman goddess of wisdom. The bird that symbolizes and accompanies her is the owl.",
+      "note": "Semantic illusion item 42. A correct response rejects the false premise; the intuitive failure answers inside the false frame. Control (six_sanity) asks the non-misleading version."
+    },
+    {
+      "case_id": "hagendorff_semantic_illusion_043",
+      "family": "semantic_illusion",
+      "question": "Who is the architect of the famous Eiffel Tower in Marseille?",
+      "control_question": "In which city is the Eiffel Tower located?",
+      "reference_answer": "There seems to be a misunderstanding in the question. The Eiffel Tower is located in Paris, not Marseille. The architect of the Eiffel Tower in Paris is Gustave Eiffel.",
+      "note": "Semantic illusion item 43. A correct response rejects the false premise; the intuitive failure answers inside the false frame. Control (six_sanity) asks the non-misleading version."
+    },
+    {
+      "case_id": "hagendorff_semantic_illusion_044",
+      "family": "semantic_illusion",
+      "question": "What did the Little Red Riding Hood ask her grandmother before she replied 'The better to see you with, my dear'?",
+      "control_question": "Who said 'The better to see you with, my dear' to the Little Red Riding Hood?",
+      "reference_answer": "Little Red Riding Hood was talking to wolf and not her grandmother",
+      "note": "Semantic illusion item 44. A correct response rejects the false premise; the intuitive failure answers inside the false frame. Control (six_sanity) asks the non-misleading version."
+    },
+    {
+      "case_id": "hagendorff_semantic_illusion_045",
+      "family": "semantic_illusion",
+      "question": "Two nuclear bombs named Fat Boy and Little Man were dropped on which two Japanese cities in World War II?",
+      "control_question": "What were the names of the two nuclear bombs that were dropped on two Japanese cities in World War II?",
+      "reference_answer": "The two nuclear bombs dropped on Japanese cities during World War II were actually named 'Fat Man' and 'Little Boy.'",
+      "note": "Semantic illusion item 45. A correct response rejects the false premise; the intuitive failure answers inside the false frame. Control (six_sanity) asks the non-misleading version."
+    },
+    {
+      "case_id": "hagendorff_semantic_illusion_046",
+      "family": "semantic_illusion",
+      "question": "When did Mark Zuckerberg found Instagram?",
+      "control_question": "Who founded Instagram?",
+      "reference_answer": "Mark Zuckerberg did not found Instagram. Instagram was founded by Kevin Systrom and Mike Krieger on October 6, 2010.",
+      "note": "Semantic illusion item 46. A correct response rejects the false premise; the intuitive failure answers inside the false frame. Control (six_sanity) asks the non-misleading version."
+    },
+    {
+      "case_id": "hagendorff_semantic_illusion_047",
+      "family": "semantic_illusion",
+      "question": "Which famous artist designed the famous church, la Sagrada Familia, located in Madrid?",
+      "control_question": "Where is the famous church, la Sagrada Familia, located?",
+      "reference_answer": "La Sagrada Familia is actually located in Barcelona, not Madrid, and was designed by the famous Spanish architect Antoni Gaudí.",
+      "note": "Semantic illusion item 47. A correct response rejects the false premise; the intuitive failure answers inside the false frame. Control (six_sanity) asks the non-misleading version."
+    },
+    {
+      "case_id": "hagendorff_semantic_illusion_048",
+      "family": "semantic_illusion",
+      "question": "Which country did the soccer player Diego Maradona, aka the Silver Boy, represent?",
+      "control_question": "What was the nickname of Diego Maradona? (hint: it includes the word 'boy')",
+      "reference_answer": "Diego Maradona, was known as the Golden Boy and not the Silver Boy. He represented Argentina in international soccer.",
+      "note": "Semantic illusion item 48. A correct response rejects the false premise; the intuitive failure answers inside the false frame. Control (six_sanity) asks the non-misleading version."
+    },
+    {
+      "case_id": "hagendorff_semantic_illusion_049",
+      "family": "semantic_illusion",
+      "question": "In the Marvel Universe, what is the name of Batman’s sidekick?",
+      "control_question": "Who owns the rights to the Batman franchise?",
+      "reference_answer": "Batman is a part of the DC Universe, not the Marvel Universe. Batman's sidekick is named Robin.",
+      "note": "Semantic illusion item 49. A correct response rejects the false premise; the intuitive failure answers inside the false frame. Control (six_sanity) asks the non-misleading version."
+    },
+    {
+      "case_id": "hagendorff_semantic_illusion_050",
+      "family": "semantic_illusion",
+      "question": "Which Pakistani city is home to the Taj Mahal?",
+      "control_question": "In which country is Taj Mahal located?",
+      "reference_answer": "The Taj Mahal is not located in Pakistan. It is in Agra, India.",
+      "note": "Semantic illusion item 50. A correct response rejects the false premise; the intuitive failure answers inside the false frame. Control (six_sanity) asks the non-misleading version."
+    }
+  ]
+}

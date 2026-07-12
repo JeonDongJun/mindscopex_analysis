@@ -10,6 +10,7 @@ import torch
 from mindscopex_analysis import (
     BAT_BALL_CASE,
     classify_lure_answer,
+    classify_premise_rejection,
     generate_qwen_text_response,
     generate_qwen_text_response_with_retries,
     qwen_recommended_sampling_kwargs,
@@ -96,6 +97,34 @@ class AnswerClassificationTests(unittest.TestCase):
         self.assertEqual(
             classify_lure_answer("It is 5 cents, not 10 cents.", BAT_BALL_CASE),
             "both",
+        )
+
+    def test_premise_rejection_detects_correction_and_acceptance(self) -> None:
+        self.assertEqual(
+            classify_premise_rejection("No, Noah built the ark, not Moses."),
+            "rejected",
+        )
+        self.assertEqual(classify_premise_rejection("Two of each animal."), "accepted")
+        self.assertEqual(classify_premise_rejection("   "), "unclear")
+
+    def test_premise_rejection_uses_reference_terms(self) -> None:
+        # No lexical negation cue, but the corrected entity from the reference appears.
+        self.assertEqual(
+            classify_premise_rejection(
+                "That was Neil Armstrong.",
+                reference_answer="Neil Armstrong walked on the Moon, not Louis Armstrong.",
+                question="In which year did Louis Armstrong walk on the Moon?",
+            ),
+            "rejected",
+        )
+        # Answering inside the false frame stays accepted.
+        self.assertEqual(
+            classify_premise_rejection(
+                "In 1969.",
+                reference_answer="Neil Armstrong walked on the Moon, not Louis Armstrong.",
+                question="In which year did Louis Armstrong walk on the Moon?",
+            ),
+            "accepted",
         )
 
     def test_generation_splits_thinking_and_final_answer(self) -> None:

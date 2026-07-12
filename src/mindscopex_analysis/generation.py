@@ -268,6 +268,91 @@ def classify_lure_answer(text: str, case: LureCase) -> AnswerLabel:
     return "other"
 
 
+PremiseVerdict = Literal["rejected", "accepted", "unclear"]
+
+_PREMISE_REJECTION_CUES: tuple[str, ...] = (
+    r"\bno\b",
+    r"\bnot\b",
+    r"n['o]t\b",
+    r"\bnever\b",
+    r"\bneither\b",
+    r"\bnone\b",
+    r"\bactually\b",
+    r"\bin fact\b",
+    r"\bincorrect\b",
+    r"\bfalse\b",
+    r"\bmistaken\b",
+    r"\bmisconception\b",
+    r"\bconfus",
+    r"\bwrong\b",
+    r"\bno such\b",
+    r"\bdoes ?not exist\b",
+    r"\bthere (?:is|are|was|were) no\b",
+    r"\byou (?:probably )?mean\b",
+    r"\btrick question\b",
+    r"아니",
+    r"없",
+    r"않",
+    r"잘못",
+    r"사실",
+)
+
+_PREMISE_COMMON_WORDS = frozenset(
+    {
+        "that",
+        "this",
+        "with",
+        "have",
+        "from",
+        "they",
+        "there",
+        "which",
+        "were",
+        "country",
+        "during",
+        "after",
+        "before",
+        "serves",
+        "known",
+        "called",
+        "named",
+        "actually",
+    }
+)
+
+
+def classify_premise_rejection(
+    text: str,
+    *,
+    reference_answer: str = "",
+    question: str = "",
+) -> PremiseVerdict:
+    """Heuristically judge whether a response rejected a semantic illusion's false premise.
+
+    Returns ``"rejected"`` (the correct behaviour: the response challenges the false
+    premise), ``"accepted"`` (the intuitive failure: it answers inside the false
+    frame), or ``"unclear"`` for empty text. This is a lexical baseline for the
+    ``premise_rejection`` datasets such as ``hagendorff_semantic_illusion``; for
+    rigorous scoring use an LLM judge. ``reference_answer`` (the authoritative
+    correction stored on those cases) and ``question`` supply a secondary signal:
+    a response is treated as a rejection if it surfaces a distinctive term from the
+    correction that the question itself did not contain.
+    """
+
+    normalized = _normalized_text(text)
+    if not normalized:
+        return "unclear"
+    if any(re.search(pattern, normalized) for pattern in _PREMISE_REJECTION_CUES):
+        return "rejected"
+    if reference_answer:
+        question_terms = set(re.findall(r"[a-z]{4,}", _normalized_text(question)))
+        reference_terms = set(re.findall(r"[a-z]{4,}", _normalized_text(reference_answer)))
+        distinctive = reference_terms - question_terms - _PREMISE_COMMON_WORDS
+        if any(re.search(rf"(?<!\w){re.escape(term)}(?!\w)", normalized) for term in distinctive):
+            return "rejected"
+    return "accepted"
+
+
 def _input_device(model: Any) -> torch.device:
     try:
         return model.get_input_embeddings().weight.device
@@ -570,9 +655,7 @@ def _wilson_interval(successes: int, total: int, z: float = 1.96) -> tuple[float
     denominator = 1.0 + z**2 / total
     centre = (proportion + z**2 / (2 * total)) / denominator
     radius = (
-        z
-        * math.sqrt(proportion * (1 - proportion) / total + z**2 / (4 * total**2))
-        / denominator
+        z * math.sqrt(proportion * (1 - proportion) / total + z**2 / (4 * total**2)) / denominator
     )
     return max(0.0, centre - radius), min(1.0, centre + radius)
 

@@ -1,0 +1,106 @@
+{
+  "dataset_id": "verbal_crt",
+  "schema_version": 1,
+  "title": "Verbal CRT / CRT-V (Sirota et al. 2021)",
+  "description": "A 10-item non-mathematical Cognitive Reflection Test. Each item has a salient intuitive lure and a reflective correct answer, isolating cognitive reflection from numeracy. Answers are heterogeneous phrases; several items are premise-rejection style and can also be scored by a generation judge rather than logprob margin.",
+  "task_kind": "crt",
+  "scoring": "logprob_margin",
+  "source": {
+    "authors": "Sirota, M., Dewberry, C., Juanchich, M., Valus, L. & Marshall, A. C.",
+    "year": 2021,
+    "title": "Measuring cognitive reflection without maths: Development and validation of the verbal cognitive reflection test",
+    "venue": "Journal of Behavioral Decision Making 34(3), 322-343",
+    "doi": "10.1002/bdm.2213",
+    "project_url": "https://osf.io/xehbv/",
+    "download_url": "https://osf.io/download/64x92/",
+    "license": "CC BY 4.0",
+    "license_note": "OSF node licensed CC BY 4.0. The 10 items are transcribed verbatim from the Supplementary Materials PDF (p.6). Response CSVs code answers as 1=correct, 2=intuitive lure, 3=other."
+  },
+  "generated_by": "scripts/build_datasets.py",
+  "n_cases": 10,
+  "family_counts": {
+    "crt_verbal": 10
+  },
+  "cases": [
+    {
+      "case_id": "verbal_crt_001",
+      "family": "crt_verbal",
+      "question": "Mary's father has 5 daughters but no sons - Nana, Nene, Nini, Nono. What is the fifth daughter's name probably?",
+      "correct_answer": "Mary",
+      "lure_answer": "Nunu",
+      "note": "CRT-V item 1. The fifth daughter is Mary."
+    },
+    {
+      "case_id": "verbal_crt_002",
+      "family": "crt_verbal",
+      "question": "If you were running a race, and you passed the person in 2nd place, what place would you be in now?",
+      "correct_answer": "2nd",
+      "lure_answer": "1st",
+      "note": "CRT-V item 2."
+    },
+    {
+      "case_id": "verbal_crt_003",
+      "family": "crt_verbal",
+      "question": "It's a stormy night and a plane takes off from JFK airport in New York. The storm worsens, and the plane crashes - half lands in the United States, the other half lands in Canada. In which country do you bury the survivors?",
+      "correct_answer": "you do not bury survivors",
+      "lure_answer": "the United States",
+      "note": "CRT-V item 3. Survivors are not buried."
+    },
+    {
+      "case_id": "verbal_crt_004",
+      "family": "crt_verbal",
+      "question": "A monkey, a squirrel, and a bird are racing to the top of a coconut tree. Who will get the banana first, the monkey, the squirrel, or the bird?",
+      "correct_answer": "there is no banana on a coconut tree",
+      "lure_answer": "the bird",
+      "note": "CRT-V item 4. Coconut trees have no bananas."
+    },
+    {
+      "case_id": "verbal_crt_005",
+      "family": "crt_verbal",
+      "question": "In a one-storey pink house, there was a pink person, a pink cat, a pink fish, a pink computer, a pink chair, a pink table, a pink telephone, a pink shower - everything was pink! What colour were the stairs probably?",
+      "correct_answer": "there are no stairs in a one-storey house",
+      "lure_answer": "pink",
+      "note": "CRT-V item 5. A one-storey house has no stairs."
+    },
+    {
+      "case_id": "verbal_crt_006",
+      "family": "crt_verbal",
+      "question": "How many of each animal did Moses put on the ark?",
+      "correct_answer": "none",
+      "lure_answer": "two",
+      "note": "CRT-V item 6 (Moses illusion). Noah, not Moses, built the ark."
+    },
+    {
+      "case_id": "verbal_crt_007",
+      "family": "crt_verbal",
+      "question": "The wind blows west. An electric train runs east. In which cardinal direction does the smoke from the locomotive blow?",
+      "correct_answer": "an electric train produces no smoke",
+      "lure_answer": "west",
+      "note": "CRT-V item 7. Electric trains produce no smoke."
+    },
+    {
+      "case_id": "verbal_crt_008",
+      "family": "crt_verbal",
+      "question": "If you have only one match and you walk into a dark room where there is an oil lamp, a newspaper and wood - which thing would you light first?",
+      "correct_answer": "the match",
+      "lure_answer": "the oil lamp",
+      "note": "CRT-V item 8. You light the match first."
+    },
+    {
+      "case_id": "verbal_crt_009",
+      "family": "crt_verbal",
+      "question": "Would it be ethical for a man to marry the sister of his widow?",
+      "correct_answer": "it is not possible",
+      "lure_answer": "no",
+      "note": "CRT-V item 9. A man with a widow is dead, so he cannot marry."
+    },
+    {
+      "case_id": "verbal_crt_010",
+      "family": "crt_verbal",
+      "question": "Which sentence is correct: a) \"the yolk of the egg are white\" or b) \"the yolk of the egg is white\"?",
+      "correct_answer": "neither, the yolk is yellow",
+      "lure_answer": "b",
+      "note": "CRT-V item 10. Egg yolks are yellow, not white."
+    }
+  ]
+}

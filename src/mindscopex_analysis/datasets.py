@@ -216,7 +216,13 @@ def nature_crt150_cases(
     limit_per_type: int | None = None,
     prompt_style: NaturePromptStyle = "task_only",
 ) -> list[LureCase]:
-    """Return a type-balanced selection of Nature CRT-150 items as experiment cases."""
+    """Return a type-balanced selection of Nature CRT-150 items as experiment cases.
+
+    Deprecated: this downloads the OSF source at runtime and emits legacy
+    ``nature_*`` case ids. Prefer ``load_lure_dataset("hagendorff_crt")`` (or
+    ``lure_dataset_cases``), which reads the committed, checksum-provenanced JSON
+    and also carries the matched control for each item.
+    """
 
     valid_types = set(_NATURE_TYPE_FAMILY)
     unknown = set(crt_types) - valid_types
@@ -235,3 +241,23 @@ def nature_crt150_cases(
             selected = selected[:limit_per_type]
         cases.extend(item.as_lure_case(prompt_style=prompt_style) for item in selected)
     return cases
+
+
+# ---------------------------------------------------------------------------
+# Canonical hagendorff_* names.
+#
+# The dataset is Hagendorff, Fabi & Kosinski (2023); "Nature" was only the
+# journal, so the ``NATURE_*``/``nature_*`` symbols above are kept as backward-
+# compatible aliases while these names are canonical for the OSF fetch/parse
+# layer used by scripts/build_datasets.py. To load cases for experiments,
+# prefer ``mindscopex_analysis.load_lure_dataset("hagendorff_crt")``.
+# ---------------------------------------------------------------------------
+HAGENDORFF_CRT150_DOI = NATURE_CRT150_DOI
+HAGENDORFF_CRT150_OSF_URL = NATURE_CRT150_OSF_URL
+HAGENDORFF_CRT150_SOURCE_SHA256 = NATURE_CRT150_SOURCE_SHA256
+HAGENDORFF_CRT150_SOURCE_URL = NATURE_CRT150_SOURCE_URL
+
+HagendorffCRTItem = NatureCRTItem
+download_hagendorff_crt150_source = download_nature_crt150_source
+parse_hagendorff_crt150_source = parse_nature_crt150_source
+load_hagendorff_crt150_items = load_nature_crt150_items

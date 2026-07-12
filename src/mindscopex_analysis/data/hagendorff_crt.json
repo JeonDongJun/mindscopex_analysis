@@ -1,0 +1,1380 @@
+{
+  "dataset_id": "hagendorff_crt",
+  "schema_version": 1,
+  "title": "Hagendorff et al. (2023) CRT-150 (hostile items + matched controls)",
+  "description": "150 bespoke cognitive-reflection tasks (50 each of price-difference, work-rate, and exponential-growth types) designed to elicit an intuitive but wrong answer. Each item embeds its matched non-hostile control as control_question (same surface, trap removed).",
+  "task_kind": "crt",
+  "scoring": "logprob_margin",
+  "source": {
+    "authors": "Hagendorff, T., Fabi, S. & Kosinski, M.",
+    "year": 2023,
+    "title": "Human-like intuitive behavior and reasoning biases emerged in large language models but disappeared in ChatGPT",
+    "venue": "Nature Computational Science 3, 833-838",
+    "doi": "10.1038/s43588-023-00527-x",
+    "project_url": "https://osf.io/w5vhp/",
+    "download_url": "https://osf.io/download/z6kmw/",
+    "source_file": "LLMs_responses.py",
+    "source_sha256": "cdf4617e8dec63546762cbe2b3cae6b6c7f640adfb6002bf5fc226f5871a4125",
+    "license": "CC BY 4.0 (article and supplementary materials)",
+    "license_note": "The OSF project has no node-level license tag; the article and its supplementary materials are published under CC BY 4.0. Cite the paper and the OSF project when publishing results."
+  },
+  "generated_by": "scripts/build_datasets.py",
+  "n_cases": 150,
+  "family_counts": {
+    "crt_difference": 50,
+    "crt_growth": 50,
+    "crt_rate": 50
+  },
+  "cases": [
+    {
+      "case_id": "hagendorff_crt_difference_001",
+      "family": "crt_difference",
+      "question": "A pear and a fridge together cost $140. The pear costs $100 more than the fridge. How much does the fridge cost?",
+      "correct_answer": "$20.0",
+      "lure_answer": "$40.0",
+      "control_question": "A pear and a fridge together cost $140. The pear costs $100. How much does the fridge cost?",
+      "note": "CRT1 (price difference) item 1. Matched control (crt_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_difference_002",
+      "family": "crt_difference",
+      "question": "A potato and a camera together cost $1.40. The potato costs $1 more than the camera. How much does the camera cost?",
+      "correct_answer": "$0.20",
+      "lure_answer": "$0.40",
+      "control_question": "A potato and a camera together cost $1.40. The potato costs $1. How much does the camera cost?",
+      "note": "CRT1 (price difference) item 2. Matched control (crt_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_difference_003",
+      "family": "crt_difference",
+      "question": "A boat and a potato together cost $110. The boat costs $100 more than the potato. How much does the potato cost?",
+      "correct_answer": "$5.0",
+      "lure_answer": "$10.0",
+      "control_question": "A boat and a potato together cost $110. The boat costs $100. How much does the potato cost?",
+      "note": "CRT1 (price difference) item 3. Matched control (crt_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_difference_004",
+      "family": "crt_difference",
+      "question": "A light bulb and a pan together cost $12. The light bulb costs $10 more than the pan. How much does the pan cost?",
+      "correct_answer": "$1.0",
+      "lure_answer": "$2.0",
+      "control_question": "A light bulb and a pan together cost $12. The light bulb costs $10. How much does the pan cost?",
+      "note": "CRT1 (price difference) item 4. Matched control (crt_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_difference_005",
+      "family": "crt_difference",
+      "question": "A chair and a coat together cost $13. The chair costs $10 more than the coat. How much does the coat cost?",
+      "correct_answer": "$1.5",
+      "lure_answer": "$3.0",
+      "control_question": "A chair and a coat together cost $13. The chair costs $10. How much does the coat cost?",
+      "note": "CRT1 (price difference) item 5. Matched control (crt_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_difference_006",
+      "family": "crt_difference",
+      "question": "A tube of toothpaste and a wallet together cost $54. The tube of toothpaste costs $50 more than the wallet. How much does the wallet cost?",
+      "correct_answer": "$2.0",
+      "lure_answer": "$4.0",
+      "control_question": "A tube of toothpaste and a wallet together cost $54. The tube of toothpaste costs $50. How much does the wallet cost?",
+      "note": "CRT1 (price difference) item 6. Matched control (crt_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_difference_007",
+      "family": "crt_difference",
+      "question": "A coffee table and a mixing bowl together cost $52. The coffee table costs $50 more than the mixing bowl. How much does the mixing bowl cost?",
+      "correct_answer": "$1.0",
+      "lure_answer": "$2.0",
+      "control_question": "A coffee table and a mixing bowl together cost $52. The coffee table costs $50. How much does the mixing bowl cost?",
+      "note": "CRT1 (price difference) item 7. Matched control (crt_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_difference_008",
+      "family": "crt_difference",
+      "question": "A microwave oven and a flower box together cost $51. The microwave oven costs $50 more than the flower box. How much does the flower box cost?",
+      "correct_answer": "$0.50",
+      "lure_answer": "$1.0",
+      "control_question": "A microwave oven and a flower box together cost $51. The microwave oven costs $50. How much does the flower box cost?",
+      "note": "CRT1 (price difference) item 8. Matched control (crt_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_difference_009",
+      "family": "crt_difference",
+      "question": "A can of baby food and a helmet together cost $1.20. The can of baby food costs $1 more than the helmet. How much does the helmet cost?",
+      "correct_answer": "$0.10",
+      "lure_answer": "$0.20",
+      "control_question": "A can of baby food and a helmet together cost $1.20. The can of baby food costs $1. How much does the helmet cost?",
+      "note": "CRT1 (price difference) item 9. Matched control (crt_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_difference_010",
+      "family": "crt_difference",
+      "question": "A sculpture and a box of lipstick together cost $13. The sculpture costs $10 more than the box of lipstick. How much does the box of lipstick cost?",
+      "correct_answer": "$1.5",
+      "lure_answer": "$3.0",
+      "control_question": "A sculpture and a box of lipstick together cost $13. The sculpture costs $10. How much does the box of lipstick cost?",
+      "note": "CRT1 (price difference) item 10. Matched control (crt_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_difference_011",
+      "family": "crt_difference",
+      "question": "A pair of leggings and a body lotion together cost $54. The pair of leggings costs $50 more than the body lotion. How much does the body lotion cost?",
+      "correct_answer": "$2.0",
+      "lure_answer": "$4.0",
+      "control_question": "A pair of leggings and a body lotion together cost $54. The pair of leggings costs $50. How much does the body lotion cost?",
+      "note": "CRT1 (price difference) item 11. Matched control (crt_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_difference_012",
+      "family": "crt_difference",
+      "question": "A trampoline and a box of batteries together cost $520. The trampoline costs $500 more than the box of batteries. How much does the box of batteries cost?",
+      "correct_answer": "$10.0",
+      "lure_answer": "$20.0",
+      "control_question": "A trampoline and a box of batteries together cost $520. The trampoline costs $500. How much does the box of batteries cost?",
+      "note": "CRT1 (price difference) item 12. Matched control (crt_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_difference_013",
+      "family": "crt_difference",
+      "question": "A mouse and a can of baby food together cost $1.20. The mouse costs $1 more than the can of baby food. How much does the can of baby food cost?",
+      "correct_answer": "$0.10",
+      "lure_answer": "$0.20",
+      "control_question": "A mouse and a can of baby food together cost $1.20. The mouse costs $1. How much does the can of baby food cost?",
+      "note": "CRT1 (price difference) item 13. Matched control (crt_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_difference_014",
+      "family": "crt_difference",
+      "question": "A bottle of shampoo and a knife together cost $110. The bottle of shampoo costs $100 more than the knife. How much does the knife cost?",
+      "correct_answer": "$5.0",
+      "lure_answer": "$10.0",
+      "control_question": "A bottle of shampoo and a knife together cost $110. The bottle of shampoo costs $100. How much does the knife cost?",
+      "note": "CRT1 (price difference) item 14. Matched control (crt_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_difference_015",
+      "family": "crt_difference",
+      "question": "A bottle of bath salts and a set of crayons together cost $520. The bottle of bath salts costs $500 more than the set of crayons. How much does the set of crayons cost?",
+      "correct_answer": "$10.0",
+      "lure_answer": "$20.0",
+      "control_question": "A bottle of bath salts and a set of crayons together cost $520. The bottle of bath salts costs $500. How much does the set of crayons cost?",
+      "note": "CRT1 (price difference) item 15. Matched control (crt_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_difference_016",
+      "family": "crt_difference",
+      "question": "A set of wine glasses and a pencil together cost $12. The set of wine glasses costs $10 more than the pencil. How much does the pencil cost?",
+      "correct_answer": "$1.0",
+      "lure_answer": "$2.0",
+      "control_question": "A set of wine glasses and a pencil together cost $12. The set of wine glasses costs $10. How much does the pencil cost?",
+      "note": "CRT1 (price difference) item 16. Matched control (crt_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_difference_017",
+      "family": "crt_difference",
+      "question": "A wallet and a camera together cost $52. The wallet costs $50 more than the camera. How much does the camera cost?",
+      "correct_answer": "$1.0",
+      "lure_answer": "$2.0",
+      "control_question": "A wallet and a camera together cost $52. The wallet costs $50. How much does the camera cost?",
+      "note": "CRT1 (price difference) item 17. Matched control (crt_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_difference_018",
+      "family": "crt_difference",
+      "question": "A pair of hiking boots and a coffee table together cost $1.20. The pair of hiking boots costs $1 more than the coffee table. How much does the coffee table cost?",
+      "correct_answer": "$0.10",
+      "lure_answer": "$0.20",
+      "control_question": "A pair of hiking boots and a coffee table together cost $1.20. The pair of hiking boots costs $1. How much does the coffee table cost?",
+      "note": "CRT1 (price difference) item 18. Matched control (crt_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_difference_019",
+      "family": "crt_difference",
+      "question": "A tube of toothpaste and a pear together cost $12. The tube of toothpaste costs $10 more than the pear. How much does the pear cost?",
+      "correct_answer": "$1.0",
+      "lure_answer": "$2.0",
+      "control_question": "A tube of toothpaste and a pear together cost $12. The tube of toothpaste costs $10. How much does the pear cost?",
+      "note": "CRT1 (price difference) item 19. Matched control (crt_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_difference_020",
+      "family": "crt_difference",
+      "question": "A trampoline and a flower box together cost $54. The trampoline costs $50 more than the flower box. How much does the flower box cost?",
+      "correct_answer": "$2.0",
+      "lure_answer": "$4.0",
+      "control_question": "A trampoline and a flower box together cost $54. The trampoline costs $50. How much does the flower box cost?",
+      "note": "CRT1 (price difference) item 20. Matched control (crt_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_difference_021",
+      "family": "crt_difference",
+      "question": "A silicone case and a lawnmower together cost $130. The silicone case costs $100 more than the lawnmower. How much does the lawnmower cost?",
+      "correct_answer": "$15.0",
+      "lure_answer": "$30.0",
+      "control_question": "A silicone case and a lawnmower together cost $130. The silicone case costs $100. How much does the lawnmower cost?",
+      "note": "CRT1 (price difference) item 21. Matched control (crt_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_difference_022",
+      "family": "crt_difference",
+      "question": "A toy and a microwave oven together cost $5.40. The toy costs $5 more than the microwave oven. How much does the microwave oven cost?",
+      "correct_answer": "$0.20",
+      "lure_answer": "$0.40",
+      "control_question": "A toy and a microwave oven together cost $5.40. The toy costs $5. How much does the microwave oven cost?",
+      "note": "CRT1 (price difference) item 22. Matched control (crt_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_difference_023",
+      "family": "crt_difference",
+      "question": "A purse and a mixing bowl together cost $5.40. The purse costs $5 more than the mixing bowl. How much does the mixing bowl cost?",
+      "correct_answer": "$0.20",
+      "lure_answer": "$0.40",
+      "control_question": "A purse and a mixing bowl together cost $5.40. The purse costs $5. How much does the mixing bowl cost?",
+      "note": "CRT1 (price difference) item 23. Matched control (crt_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_difference_024",
+      "family": "crt_difference",
+      "question": "A hat and a mouse together cost $540. The hat costs $500 more than the mouse. How much does the mouse cost?",
+      "correct_answer": "$20.0",
+      "lure_answer": "$40.0",
+      "control_question": "A hat and a mouse together cost $540. The hat costs $500. How much does the mouse cost?",
+      "note": "CRT1 (price difference) item 24. Matched control (crt_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_difference_025",
+      "family": "crt_difference",
+      "question": "A purse and a box of cigarettes together cost $1.40. The purse costs $1 more than the box of cigarettes. How much does the box of cigarettes cost?",
+      "correct_answer": "$0.20",
+      "lure_answer": "$0.40",
+      "control_question": "A purse and a box of cigarettes together cost $1.40. The purse costs $1. How much does the box of cigarettes cost?",
+      "note": "CRT1 (price difference) item 25. Matched control (crt_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_difference_026",
+      "family": "crt_difference",
+      "question": "A box of mascara and a microwave oven together cost $14. The box of mascara costs $10 more than the microwave oven. How much does the microwave oven cost?",
+      "correct_answer": "$2.0",
+      "lure_answer": "$4.0",
+      "control_question": "A box of mascara and a microwave oven together cost $14. The box of mascara costs $10. How much does the microwave oven cost?",
+      "note": "CRT1 (price difference) item 26. Matched control (crt_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_difference_027",
+      "family": "crt_difference",
+      "question": "A bag and a food processor together cost $54. The bag costs $50 more than the food processor. How much does the food processor cost?",
+      "correct_answer": "$2.0",
+      "lure_answer": "$4.0",
+      "control_question": "A bag and a food processor together cost $54. The bag costs $50. How much does the food processor cost?",
+      "note": "CRT1 (price difference) item 27. Matched control (crt_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_difference_028",
+      "family": "crt_difference",
+      "question": "A coat and a pot together cost $510. The coat costs $500 more than the pot. How much does the pot cost?",
+      "correct_answer": "$5.0",
+      "lure_answer": "$10.0",
+      "control_question": "A coat and a pot together cost $510. The coat costs $500. How much does the pot cost?",
+      "note": "CRT1 (price difference) item 28. Matched control (crt_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_difference_029",
+      "family": "crt_difference",
+      "question": "A jacket and a set of wine glasses together cost $5.10. The jacket costs $5 more than the set of wine glasses. How much does the set of wine glasses cost?",
+      "correct_answer": "$0.05",
+      "lure_answer": "$0.10",
+      "control_question": "A jacket and a set of wine glasses together cost $5.10. The jacket costs $5. How much does the set of wine glasses cost?",
+      "note": "CRT1 (price difference) item 29. Matched control (crt_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_difference_030",
+      "family": "crt_difference",
+      "question": "A hat and a coffee table together cost $1.20. The hat costs $1 more than the coffee table. How much does the coffee table cost?",
+      "correct_answer": "$0.10",
+      "lure_answer": "$0.20",
+      "control_question": "A hat and a coffee table together cost $1.20. The hat costs $1. How much does the coffee table cost?",
+      "note": "CRT1 (price difference) item 30. Matched control (crt_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_difference_031",
+      "family": "crt_difference",
+      "question": "A pencil and a keyboard together cost $14. The pencil costs $10 more than the keyboard. How much does the keyboard cost?",
+      "correct_answer": "$2.0",
+      "lure_answer": "$4.0",
+      "control_question": "A pencil and a keyboard together cost $14. The pencil costs $10. How much does the keyboard cost?",
+      "note": "CRT1 (price difference) item 31. Matched control (crt_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_difference_032",
+      "family": "crt_difference",
+      "question": "A bag and a coffee table together cost $53. The bag costs $50 more than the coffee table. How much does the coffee table cost?",
+      "correct_answer": "$1.5",
+      "lure_answer": "$3.0",
+      "control_question": "A bag and a coffee table together cost $53. The bag costs $50. How much does the coffee table cost?",
+      "note": "CRT1 (price difference) item 32. Matched control (crt_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_difference_033",
+      "family": "crt_difference",
+      "question": "A mixing bowl and a laundry detergent together cost $52. The mixing bowl costs $50 more than the laundry detergent. How much does the laundry detergent cost?",
+      "correct_answer": "$1.0",
+      "lure_answer": "$2.0",
+      "control_question": "A mixing bowl and a laundry detergent together cost $52. The mixing bowl costs $50. How much does the laundry detergent cost?",
+      "note": "CRT1 (price difference) item 33. Matched control (crt_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_difference_034",
+      "family": "crt_difference",
+      "question": "A perfume and a bottle of ouzo together cost $120. The perfume costs $100 more than the bottle of ouzo. How much does the bottle of ouzo cost?",
+      "correct_answer": "$10.0",
+      "lure_answer": "$20.0",
+      "control_question": "A perfume and a bottle of ouzo together cost $120. The perfume costs $100. How much does the bottle of ouzo cost?",
+      "note": "CRT1 (price difference) item 34. Matched control (crt_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_difference_035",
+      "family": "crt_difference",
+      "question": "A bottle of bath salts and a pack of diapers together cost $510. The bottle of bath salts costs $500 more than the pack of diapers. How much does the pack of diapers cost?",
+      "correct_answer": "$5.0",
+      "lure_answer": "$10.0",
+      "control_question": "A bottle of bath salts and a pack of diapers together cost $510. The bottle of bath salts costs $500. How much does the pack of diapers cost?",
+      "note": "CRT1 (price difference) item 35. Matched control (crt_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_difference_036",
+      "family": "crt_difference",
+      "question": "A CD and a pan together cost $13. The CD costs $10 more than the pan. How much does the pan cost?",
+      "correct_answer": "$1.5",
+      "lure_answer": "$3.0",
+      "control_question": "A CD and a pan together cost $13. The CD costs $10. How much does the pan cost?",
+      "note": "CRT1 (price difference) item 36. Matched control (crt_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_difference_037",
+      "family": "crt_difference",
+      "question": "A rice cooker and a sculpture together cost $130. The rice cooker costs $100 more than the sculpture. How much does the sculpture cost?",
+      "correct_answer": "$15.0",
+      "lure_answer": "$30.0",
+      "control_question": "A rice cooker and a sculpture together cost $130. The rice cooker costs $100. How much does the sculpture cost?",
+      "note": "CRT1 (price difference) item 37. Matched control (crt_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_difference_038",
+      "family": "crt_difference",
+      "question": "A pair of sunglasses and a toy together cost $13. The pair of sunglasses costs $10 more than the toy. How much does the toy cost?",
+      "correct_answer": "$1.5",
+      "lure_answer": "$3.0",
+      "control_question": "A pair of sunglasses and a toy together cost $13. The pair of sunglasses costs $10. How much does the toy cost?",
+      "note": "CRT1 (price difference) item 38. Matched control (crt_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_difference_039",
+      "family": "crt_difference",
+      "question": "A speaker and a bottle of ouzo together cost $5.20. The speaker costs $5 more than the bottle of ouzo. How much does the bottle of ouzo cost?",
+      "correct_answer": "$0.10",
+      "lure_answer": "$0.20",
+      "control_question": "A speaker and a bottle of ouzo together cost $5.20. The speaker costs $5. How much does the bottle of ouzo cost?",
+      "note": "CRT1 (price difference) item 39. Matched control (crt_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_difference_040",
+      "family": "crt_difference",
+      "question": "A set of crayons and a wallet together cost $5.20. The set of crayons costs $5 more than the wallet. How much does the wallet cost?",
+      "correct_answer": "$0.10",
+      "lure_answer": "$0.20",
+      "control_question": "A set of crayons and a wallet together cost $5.20. The set of crayons costs $5. How much does the wallet cost?",
+      "note": "CRT1 (price difference) item 40. Matched control (crt_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_difference_041",
+      "family": "crt_difference",
+      "question": "A rug and a sculpture together cost $54. The rug costs $50 more than the sculpture. How much does the sculpture cost?",
+      "correct_answer": "$2.0",
+      "lure_answer": "$4.0",
+      "control_question": "A rug and a sculpture together cost $54. The rug costs $50. How much does the sculpture cost?",
+      "note": "CRT1 (price difference) item 41. Matched control (crt_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_difference_042",
+      "family": "crt_difference",
+      "question": "A pair of sunglasses and a light bulb together cost $130. The pair of sunglasses costs $100 more than the light bulb. How much does the light bulb cost?",
+      "correct_answer": "$15.0",
+      "lure_answer": "$30.0",
+      "control_question": "A pair of sunglasses and a light bulb together cost $130. The pair of sunglasses costs $100. How much does the light bulb cost?",
+      "note": "CRT1 (price difference) item 42. Matched control (crt_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_difference_043",
+      "family": "crt_difference",
+      "question": "A scarf and a ring together cost $1.20. The scarf costs $1 more than the ring. How much does the ring cost?",
+      "correct_answer": "$0.10",
+      "lure_answer": "$0.20",
+      "control_question": "A scarf and a ring together cost $1.20. The scarf costs $1. How much does the ring cost?",
+      "note": "CRT1 (price difference) item 43. Matched control (crt_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_difference_044",
+      "family": "crt_difference",
+      "question": "A pair of leggings and a scarf together cost $52. The pair of leggings costs $50 more than the scarf. How much does the scarf cost?",
+      "correct_answer": "$1.0",
+      "lure_answer": "$2.0",
+      "control_question": "A pair of leggings and a scarf together cost $52. The pair of leggings costs $50. How much does the scarf cost?",
+      "note": "CRT1 (price difference) item 44. Matched control (crt_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_difference_045",
+      "family": "crt_difference",
+      "question": "A wall clock and a light bulb together cost $1.30. The wall clock costs $1 more than the light bulb. How much does the light bulb cost?",
+      "correct_answer": "$0.150",
+      "lure_answer": "$0.30",
+      "control_question": "A wall clock and a light bulb together cost $1.30. The wall clock costs $1. How much does the light bulb cost?",
+      "note": "CRT1 (price difference) item 45. Matched control (crt_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_difference_046",
+      "family": "crt_difference",
+      "question": "A blanket and a flashlight together cost $52. The blanket costs $50 more than the flashlight. How much does the flashlight cost?",
+      "correct_answer": "$1.0",
+      "lure_answer": "$2.0",
+      "control_question": "A blanket and a flashlight together cost $52. The blanket costs $50. How much does the flashlight cost?",
+      "note": "CRT1 (price difference) item 46. Matched control (crt_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_difference_047",
+      "family": "crt_difference",
+      "question": "A keyboard and a pair of socks together cost $54. The keyboard costs $50 more than the pair of socks. How much does the pair of socks cost?",
+      "correct_answer": "$2.0",
+      "lure_answer": "$4.0",
+      "control_question": "A keyboard and a pair of socks together cost $54. The keyboard costs $50. How much does the pair of socks cost?",
+      "note": "CRT1 (price difference) item 47. Matched control (crt_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_difference_048",
+      "family": "crt_difference",
+      "question": "A set of wine glasses and a pizza together cost $53. The set of wine glasses costs $50 more than the pizza. How much does the pizza cost?",
+      "correct_answer": "$1.5",
+      "lure_answer": "$3.0",
+      "control_question": "A set of wine glasses and a pizza together cost $53. The set of wine glasses costs $50. How much does the pizza cost?",
+      "note": "CRT1 (price difference) item 48. Matched control (crt_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_difference_049",
+      "family": "crt_difference",
+      "question": "A pear and a bottle of ouzo together cost $54. The pear costs $50 more than the bottle of ouzo. How much does the bottle of ouzo cost?",
+      "correct_answer": "$2.0",
+      "lure_answer": "$4.0",
+      "control_question": "A pear and a bottle of ouzo together cost $54. The pear costs $50. How much does the bottle of ouzo cost?",
+      "note": "CRT1 (price difference) item 49. Matched control (crt_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_difference_050",
+      "family": "crt_difference",
+      "question": "A pizza and a toy together cost $13. The pizza costs $10 more than the toy. How much does the toy cost?",
+      "correct_answer": "$1.5",
+      "lure_answer": "$3.0",
+      "control_question": "A pizza and a toy together cost $13. The pizza costs $10. How much does the toy cost?",
+      "note": "CRT1 (price difference) item 50. Matched control (crt_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_rate_001",
+      "family": "crt_rate",
+      "question": "How long does it take 4 people to tailor 4 jackets, if it takes 7 people 7 hours to tailor 7 jackets?",
+      "correct_answer": "7 hours",
+      "lure_answer": "4 hours",
+      "control_question": "How long does it take 7 people to tailor 4 jackets, if it takes 7 people 7 hours to tailor 7 jackets?",
+      "note": "CRT2 (work rate) item 1. Matched control (crt2_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_rate_002",
+      "family": "crt_rate",
+      "question": "How long does it take 4 washing machines to wash 4 loads of laundry, if it takes 8 washing machines 8 hours to wash 8 loads of laundry?",
+      "correct_answer": "8 hours",
+      "lure_answer": "4 hours",
+      "control_question": "How long does it take 8 washing machines to wash 4 loads of laundry, if it takes 8 washing machines 8 hours to wash 8 loads of laundry?",
+      "note": "CRT2 (work rate) item 2. Matched control (crt2_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_rate_003",
+      "family": "crt_rate",
+      "question": "How long does it take 50 bees to pollinate 50 flowers, if it takes 60 bees 60 minutes to pollinate 60 flowers?",
+      "correct_answer": "60 minutes",
+      "lure_answer": "50 minutes",
+      "control_question": "How long does it take 60 bees to pollinate 50 flowers, if it takes 60 bees 60 minutes to pollinate 60 flowers?",
+      "note": "CRT2 (work rate) item 3. Matched control (crt2_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_rate_004",
+      "family": "crt_rate",
+      "question": "How long does it take 1 carpenter to make 1 chair, if it takes 5 carpenters 5 days to make 5 chairs?",
+      "correct_answer": "5 days",
+      "lure_answer": "1 days",
+      "control_question": "How long does it take 5 carpenter to make 1 chair, if it takes 5 carpenters 5 days to make 5 chairs?",
+      "note": "CRT2 (work rate) item 4. Matched control (crt2_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_rate_005",
+      "family": "crt_rate",
+      "question": "How long does it take 10 ovens to bake 10 lasagnas, if it takes 60 ovens 60 minutes to bake 60 lasagnas?",
+      "correct_answer": "60 minutes",
+      "lure_answer": "10 minutes",
+      "control_question": "How long does it take 60 ovens to bake 10 lasagnas, if it takes 60 ovens 60 minutes to bake 60 lasagnas?",
+      "note": "CRT2 (work rate) item 5. Matched control (crt2_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_rate_006",
+      "family": "crt_rate",
+      "question": "How long does it take 1 researcher to publish 1 paper, if it takes 6 researchers 6 years to publish 6 papers?",
+      "correct_answer": "6 years",
+      "lure_answer": "1 years",
+      "control_question": "How long does it take 6 researcher to publish 1 paper, if it takes 6 researchers 6 years to publish 6 papers?",
+      "note": "CRT2 (work rate) item 6. Matched control (crt2_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_rate_007",
+      "family": "crt_rate",
+      "question": "How long does it take 30 cleaners to clean 30 rooms, if it takes 50 cleaners 50 hours to clean 50 rooms?",
+      "correct_answer": "50 hours",
+      "lure_answer": "30 hours",
+      "control_question": "How long does it take 50 cleaners to clean 30 rooms, if it takes 50 cleaners 50 hours to clean 50 rooms?",
+      "note": "CRT2 (work rate) item 7. Matched control (crt2_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_rate_008",
+      "family": "crt_rate",
+      "question": "How long does it take 40 students to change 40 light bulbs, if it takes 70 students 70 minutes to change 70 light bulbs?",
+      "correct_answer": "70 minutes",
+      "lure_answer": "40 minutes",
+      "control_question": "How long does it take 70 students to change 40 light bulbs, if it takes 70 students 70 minutes to change 70 light bulbs?",
+      "note": "CRT2 (work rate) item 8. Matched control (crt2_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_rate_009",
+      "family": "crt_rate",
+      "question": "How long does it take 40 builders to build 40 houses, if it takes 50 builders 50 weeks to build 50 houses?",
+      "correct_answer": "50 weeks",
+      "lure_answer": "40 weeks",
+      "control_question": "How long does it take 50 builders to build 40 houses, if it takes 50 builders 50 weeks to build 50 houses?",
+      "note": "CRT2 (work rate) item 9. Matched control (crt2_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_rate_010",
+      "family": "crt_rate",
+      "question": "How long does it take 5 people to plant 5 trees, if it takes 6 people 6 minutes to plant 6 trees?",
+      "correct_answer": "6 minutes",
+      "lure_answer": "5 minutes",
+      "control_question": "How long does it take 6 people to plant 5 trees, if it takes 6 people 6 minutes to plant 6 trees?",
+      "note": "CRT2 (work rate) item 10. Matched control (crt2_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_rate_011",
+      "family": "crt_rate",
+      "question": "How long does it take 30 coffee machines to make 30 coffees, if it takes 40 coffee machines 40 minutes to make 40 coffees?",
+      "correct_answer": "40 minutes",
+      "lure_answer": "30 minutes",
+      "control_question": "How long does it take 40 coffee machines to make 30 coffees, if it takes 40 coffee machines 40 minutes to make 40 coffees?",
+      "note": "CRT2 (work rate) item 11. Matched control (crt2_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_rate_012",
+      "family": "crt_rate",
+      "question": "How long does it take 5 machines to pack 5 boxes of chocolates, if it takes 8 machines 8 minutes to pack 8 boxes of chocolates?",
+      "correct_answer": "8 minutes",
+      "lure_answer": "5 minutes",
+      "control_question": "How long does it take 8 machines to pack 5 boxes of chocolates, if it takes 8 machines 8 minutes to pack 8 boxes of chocolates?",
+      "note": "CRT2 (work rate) item 12. Matched control (crt2_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_rate_013",
+      "family": "crt_rate",
+      "question": "How long does it take 10 children to eat 10 boxes of chocolates, if it takes 50 children 50 minutes to eat 50 boxes of chocolates?",
+      "correct_answer": "50 minutes",
+      "lure_answer": "10 minutes",
+      "control_question": "How long does it take 50 children to eat 10 boxes of chocolates, if it takes 50 children 50 minutes to eat 50 boxes of chocolates?",
+      "note": "CRT2 (work rate) item 13. Matched control (crt2_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_rate_014",
+      "family": "crt_rate",
+      "question": "How long does it take 2 people to read 2 books, if it takes 4 people 4 weeks to read 4 books?",
+      "correct_answer": "4 weeks",
+      "lure_answer": "2 weeks",
+      "control_question": "How long does it take 4 people to read 2 books, if it takes 4 people 4 weeks to read 4 books?",
+      "note": "CRT2 (work rate) item 14. Matched control (crt2_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_rate_015",
+      "family": "crt_rate",
+      "question": "How long does it take 5 teams to renovate 5 houses, if it takes 8 teams 8 weeks to renovate 8 houses?",
+      "correct_answer": "8 weeks",
+      "lure_answer": "5 weeks",
+      "control_question": "How long does it take 8 teams to renovate 5 houses, if it takes 8 teams 8 weeks to renovate 8 houses?",
+      "note": "CRT2 (work rate) item 15. Matched control (crt2_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_rate_016",
+      "family": "crt_rate",
+      "question": "How long does it take 30 people to knit 30 pairs of socks, if it takes 40 people 40 weeks to knit 40 pairs of socks?",
+      "correct_answer": "40 weeks",
+      "lure_answer": "30 weeks",
+      "control_question": "How long does it take 40 people to knit 30 pairs of socks, if it takes 40 people 40 weeks to knit 40 pairs of socks?",
+      "note": "CRT2 (work rate) item 16. Matched control (crt2_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_rate_017",
+      "family": "crt_rate",
+      "question": "How long does it take 40 people to pick 40 fields of strawberries, if it takes 70 people 70 hours to pick 70 fields of strawberries?",
+      "correct_answer": "70 hours",
+      "lure_answer": "40 hours",
+      "control_question": "How long does it take 70 people to pick 40 fields of strawberries, if it takes 70 people 70 hours to pick 70 fields of strawberries?",
+      "note": "CRT2 (work rate) item 17. Matched control (crt2_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_rate_018",
+      "family": "crt_rate",
+      "question": "How long does it take 6 programmers to write 6 lines of code, if it takes 7 programmers 7 hours to write 7 lines of code?",
+      "correct_answer": "7 hours",
+      "lure_answer": "6 hours",
+      "control_question": "How long does it take 7 programmers to write 6 lines of code, if it takes 7 programmers 7 hours to write 7 lines of code?",
+      "note": "CRT2 (work rate) item 18. Matched control (crt2_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_rate_019",
+      "family": "crt_rate",
+      "question": "How long does it take 4 photographers to take 4 photos, if it takes 8 photographers 8 hours to take 8 photos?",
+      "correct_answer": "8 hours",
+      "lure_answer": "4 hours",
+      "control_question": "How long does it take 8 photographers to take 4 photos, if it takes 8 photographers 8 hours to take 8 photos?",
+      "note": "CRT2 (work rate) item 19. Matched control (crt2_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_rate_020",
+      "family": "crt_rate",
+      "question": "How long does it take 1 painter to paint 1 painting, if it takes 8 painters 8 hours to paint 8 paintings?",
+      "correct_answer": "8 hours",
+      "lure_answer": "1 hours",
+      "control_question": "How long does it take 8 painter to paint 1 painting, if it takes 8 painters 8 hours to paint 8 paintings?",
+      "note": "CRT2 (work rate) item 20. Matched control (crt2_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_rate_021",
+      "family": "crt_rate",
+      "question": "How long does it take 50 writers to write 50 books, if it takes 70 writers 70 minutes to write 70 books?",
+      "correct_answer": "70 minutes",
+      "lure_answer": "50 minutes",
+      "control_question": "How long does it take 70 writers to write 50 books, if it takes 70 writers 70 minutes to write 70 books?",
+      "note": "CRT2 (work rate) item 21. Matched control (crt2_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_rate_022",
+      "family": "crt_rate",
+      "question": "How long does it take 2 cooks to cook 2 meals, if it takes 8 cooks 8 minutes to cook 8 meals?",
+      "correct_answer": "8 minutes",
+      "lure_answer": "2 minutes",
+      "control_question": "How long does it take 8 cooks to cook 2 meals, if it takes 8 cooks 8 minutes to cook 8 meals?",
+      "note": "CRT2 (work rate) item 22. Matched control (crt2_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_rate_023",
+      "family": "crt_rate",
+      "question": "How long does it take 50 doctors to examine 50 patients, if it takes 60 doctors 60 minutes to examine 60 patients?",
+      "correct_answer": "60 minutes",
+      "lure_answer": "50 minutes",
+      "control_question": "How long does it take 60 doctors to examine 50 patients, if it takes 60 doctors 60 minutes to examine 60 patients?",
+      "note": "CRT2 (work rate) item 23. Matched control (crt2_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_rate_024",
+      "family": "crt_rate",
+      "question": "How long does it take 2 drivers to change 2 tires, if it takes 7 drivers 7 minutes to change 7 tires?",
+      "correct_answer": "7 minutes",
+      "lure_answer": "2 minutes",
+      "control_question": "How long does it take 7 drivers to change 2 tires, if it takes 7 drivers 7 minutes to change 7 tires?",
+      "note": "CRT2 (work rate) item 24. Matched control (crt2_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_rate_025",
+      "family": "crt_rate",
+      "question": "How long does it take 2 farm workers to pick 2 apples, if it takes 8 farm workers 8 seconds to pick 8 apples?",
+      "correct_answer": "8 seconds",
+      "lure_answer": "2 seconds",
+      "control_question": "How long does it take 8 farm workers to pick 2 apples, if it takes 8 farm workers 8 seconds to pick 8 apples?",
+      "note": "CRT2 (work rate) item 25. Matched control (crt2_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_rate_026",
+      "family": "crt_rate",
+      "question": "How long does it take 4 freezers to freeze 4 liters of water, if it takes 6 freezers 6 hours to freeze 6 liters of water?",
+      "correct_answer": "6 hours",
+      "lure_answer": "4 hours",
+      "control_question": "How long does it take 6 freezers to freeze 4 liters of water, if it takes 6 freezers 6 hours to freeze 6 liters of water?",
+      "note": "CRT2 (work rate) item 26. Matched control (crt2_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_rate_027",
+      "family": "crt_rate",
+      "question": "How long does it take 20 bakers to bake 20 cakes, if it takes 80 bakers 80 hours to bake 80 cakes?",
+      "correct_answer": "80 hours",
+      "lure_answer": "20 hours",
+      "control_question": "How long does it take 80 bakers to bake 20 cakes, if it takes 80 bakers 80 hours to bake 80 cakes?",
+      "note": "CRT2 (work rate) item 27. Matched control (crt2_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_rate_028",
+      "family": "crt_rate",
+      "question": "How long does it take 30 hair stylists to finish 30 hairstyles, if it takes 50 hair stylists 50 minutes to finish 50 hairstyles?",
+      "correct_answer": "50 minutes",
+      "lure_answer": "30 minutes",
+      "control_question": "How long does it take 50 hair stylists to finish 30 hairstyles, if it takes 50 hair stylists 50 minutes to finish 50 hairstyles?",
+      "note": "CRT2 (work rate) item 28. Matched control (crt2_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_rate_029",
+      "family": "crt_rate",
+      "question": "How long does it take 2 mechanics to fix 2 cars, if it takes 3 mechanics 3 hours to fix 3 cars?",
+      "correct_answer": "3 hours",
+      "lure_answer": "2 hours",
+      "control_question": "How long does it take 3 mechanics to fix 2 cars, if it takes 3 mechanics 3 hours to fix 3 cars?",
+      "note": "CRT2 (work rate) item 29. Matched control (crt2_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_rate_030",
+      "family": "crt_rate",
+      "question": "How long does it take 20 tailors to make 20 dresses, if it takes 50 tailors 50 hours to make 50 dresses?",
+      "correct_answer": "50 hours",
+      "lure_answer": "20 hours",
+      "control_question": "How long does it take 50 tailors to make 20 dresses, if it takes 50 tailors 50 hours to make 50 dresses?",
+      "note": "CRT2 (work rate) item 30. Matched control (crt2_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_rate_031",
+      "family": "crt_rate",
+      "question": "How long does it take 3 painters to paint 3 rooms, if it takes 4 painters 4 hours to paint 4 rooms?",
+      "correct_answer": "4 hours",
+      "lure_answer": "3 hours",
+      "control_question": "How long does it take 4 painters to paint 3 rooms, if it takes 4 painters 4 hours to paint 4 rooms?",
+      "note": "CRT2 (work rate) item 31. Matched control (crt2_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_rate_032",
+      "family": "crt_rate",
+      "question": "How long does it take 40 trees to grow 40 leaves, if it takes 60 trees 60 days to grow 60 leaves?",
+      "correct_answer": "60 days",
+      "lure_answer": "40 days",
+      "control_question": "How long does it take 60 trees to grow 40 leaves, if it takes 60 trees 60 days to grow 60 leaves?",
+      "note": "CRT2 (work rate) item 32. Matched control (crt2_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_rate_033",
+      "family": "crt_rate",
+      "question": "How long does it take 1 runner to clean 1 shoe, if it takes 5 runners 5 minutes to clean 5 shoes?",
+      "correct_answer": "5 minutes",
+      "lure_answer": "1 minutes",
+      "control_question": "How long does it take 5 runner to clean 1 shoe, if it takes 5 runners 5 minutes to clean 5 shoes?",
+      "note": "CRT2 (work rate) item 33. Matched control (crt2_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_rate_034",
+      "family": "crt_rate",
+      "question": "How long does it take 3 translators to translate 3 pages, if it takes 6 translators 6 hours to translate 6 pages?",
+      "correct_answer": "6 hours",
+      "lure_answer": "3 hours",
+      "control_question": "How long does it take 6 translators to translate 3 pages, if it takes 6 translators 6 hours to translate 6 pages?",
+      "note": "CRT2 (work rate) item 34. Matched control (crt2_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_rate_035",
+      "family": "crt_rate",
+      "question": "How long does it take 2 machines to make 2 smartphones, if it takes 3 machines 3 hours to make 3 smartphones?",
+      "correct_answer": "3 hours",
+      "lure_answer": "2 hours",
+      "control_question": "How long does it take 3 machines to make 2 smartphones, if it takes 3 machines 3 hours to make 3 smartphones?",
+      "note": "CRT2 (work rate) item 35. Matched control (crt2_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_rate_036",
+      "family": "crt_rate",
+      "question": "How long does it take 50 people to smoke 50 cigarettes, if it takes 70 people 70 minutes to smoke 70 cigarettes?",
+      "correct_answer": "70 minutes",
+      "lure_answer": "50 minutes",
+      "control_question": "How long does it take 70 people to smoke 50 cigarettes, if it takes 70 people 70 minutes to smoke 70 cigarettes?",
+      "note": "CRT2 (work rate) item 36. Matched control (crt2_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_rate_037",
+      "family": "crt_rate",
+      "question": "How long does it take 7 opticians to make 7 glasses, if it takes 8 opticians 8 days to make 8 glasses?",
+      "correct_answer": "8 days",
+      "lure_answer": "7 days",
+      "control_question": "How long does it take 8 opticians to make 7 glasses, if it takes 8 opticians 8 days to make 8 glasses?",
+      "note": "CRT2 (work rate) item 37. Matched control (crt2_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_rate_038",
+      "family": "crt_rate",
+      "question": "How long does it take 40 pipes to fill 40 containers, if it takes 60 pipes 60 hours to fill 60 containers?",
+      "correct_answer": "60 hours",
+      "lure_answer": "40 hours",
+      "control_question": "How long does it take 60 pipes to fill 40 containers, if it takes 60 pipes 60 hours to fill 60 containers?",
+      "note": "CRT2 (work rate) item 38. Matched control (crt2_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_rate_039",
+      "family": "crt_rate",
+      "question": "How long does it take 50 people to eat 50 pizzas, if it takes 80 people 80 minutes to eat 80 pizzas?",
+      "correct_answer": "80 minutes",
+      "lure_answer": "50 minutes",
+      "control_question": "How long does it take 80 people to eat 50 pizzas, if it takes 80 people 80 minutes to eat 80 pizzas?",
+      "note": "CRT2 (work rate) item 39. Matched control (crt2_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_rate_040",
+      "family": "crt_rate",
+      "question": "How long does it take 20 kettles to boil 20 liters of water, if it takes 80 kettles 80 hours to boil 80 liters of water?",
+      "correct_answer": "80 hours",
+      "lure_answer": "20 hours",
+      "control_question": "How long does it take 80 kettles to boil 20 liters of water, if it takes 80 kettles 80 hours to boil 80 liters of water?",
+      "note": "CRT2 (work rate) item 40. Matched control (crt2_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_rate_041",
+      "family": "crt_rate",
+      "question": "How long does it take 40 air conditioners to cool 40 rooms, if it takes 80 air conditioners 80 minutes to cool 80 rooms?",
+      "correct_answer": "80 minutes",
+      "lure_answer": "40 minutes",
+      "control_question": "How long does it take 80 air conditioners to cool 40 rooms, if it takes 80 air conditioners 80 minutes to cool 80 rooms?",
+      "note": "CRT2 (work rate) item 41. Matched control (crt2_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_rate_042",
+      "family": "crt_rate",
+      "question": "How long does it take 5 students to finish 5 exams, if it takes 7 students 7 minutes to finish 7 exams?",
+      "correct_answer": "7 minutes",
+      "lure_answer": "5 minutes",
+      "control_question": "How long does it take 7 students to finish 5 exams, if it takes 7 students 7 minutes to finish 7 exams?",
+      "note": "CRT2 (work rate) item 42. Matched control (crt2_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_rate_043",
+      "family": "crt_rate",
+      "question": "How long does it take 40 men to make 40 pies, if it takes 70 men 70 minutes to make 70 pies?",
+      "correct_answer": "70 minutes",
+      "lure_answer": "40 minutes",
+      "control_question": "How long does it take 70 men to make 40 pies, if it takes 70 men 70 minutes to make 70 pies?",
+      "note": "CRT2 (work rate) item 43. Matched control (crt2_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_rate_044",
+      "family": "crt_rate",
+      "question": "How long does it take 1 barista to make 1 coffee, if it takes 8 baristas 8 minutes to make 8 coffees?",
+      "correct_answer": "8 minutes",
+      "lure_answer": "1 minutes",
+      "control_question": "How long does it take 8 barista to make 1 coffee, if it takes 8 baristas 8 minutes to make 8 coffees?",
+      "note": "CRT2 (work rate) item 44. Matched control (crt2_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_rate_045",
+      "family": "crt_rate",
+      "question": "How long does it take 10 people to cook 10 packs of spaghetti, if it takes 70 people 70 minutes to cook 70 packs of spaghetti?",
+      "correct_answer": "70 minutes",
+      "lure_answer": "10 minutes",
+      "control_question": "How long does it take 70 people to cook 10 packs of spaghetti, if it takes 70 people 70 minutes to cook 70 packs of spaghetti?",
+      "note": "CRT2 (work rate) item 45. Matched control (crt2_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_rate_046",
+      "family": "crt_rate",
+      "question": "How long does it take 5 people to renovate 5 bathrooms, if it takes 8 people 8 days to renovate 8 bathrooms?",
+      "correct_answer": "8 days",
+      "lure_answer": "5 days",
+      "control_question": "How long does it take 8 people to renovate 5 bathrooms, if it takes 8 people 8 days to renovate 8 bathrooms?",
+      "note": "CRT2 (work rate) item 46. Matched control (crt2_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_rate_047",
+      "family": "crt_rate",
+      "question": "How long does it take 1 fish to eat 1 worm, if it takes 3 fish 3 days to eat 3 worms?",
+      "correct_answer": "3 days",
+      "lure_answer": "1 days",
+      "control_question": "How long does it take 3 fish to eat 1 worm, if it takes 3 fish 3 days to eat 3 worms?",
+      "note": "CRT2 (work rate) item 47. Matched control (crt2_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_rate_048",
+      "family": "crt_rate",
+      "question": "How long does it take 1 operator to connect 1 phone call, if it takes 3 operators 3 hours to connect 3 phone calls?",
+      "correct_answer": "3 hours",
+      "lure_answer": "1 hours",
+      "control_question": "How long does it take 3 operator to connect 1 phone call, if it takes 3 operators 3 hours to connect 3 phone calls?",
+      "note": "CRT2 (work rate) item 48. Matched control (crt2_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_rate_049",
+      "family": "crt_rate",
+      "question": "How long does it take 20 printers to print 20 documents, if it takes 80 printers 80 minutes to print 80 documents?",
+      "correct_answer": "80 minutes",
+      "lure_answer": "20 minutes",
+      "control_question": "How long does it take 80 printers to print 20 documents, if it takes 80 printers 80 minutes to print 80 documents?",
+      "note": "CRT2 (work rate) item 49. Matched control (crt2_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_rate_050",
+      "family": "crt_rate",
+      "question": "How long does it take 70 husbands to feed 70 babies, if it takes 80 husbands 80 minutes to feed 80 babies?",
+      "correct_answer": "80 minutes",
+      "lure_answer": "70 minutes",
+      "control_question": "How long does it take 80 husbands to feed 70 babies, if it takes 80 husbands 80 minutes to feed 80 babies?",
+      "note": "CRT2 (work rate) item 50. Matched control (crt2_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_growth_001",
+      "family": "crt_growth",
+      "question": "In a city, a virus is spreading, causing the total number of infected individuals to double each day. If it takes 6 days for the entire city's population to be infected, how many days would it require for half of the people to become infected?",
+      "correct_answer": "5 days",
+      "lure_answer": "3 days",
+      "control_question": "In a city, a virus is spreading. If it takes 6 days for the entire city's population to be infected, how many days would it require for half of the people to become infected?",
+      "note": "CRT3 (exponential growth) item 1. Matched control (crt3_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_growth_002",
+      "family": "crt_growth",
+      "question": "A pandemic is occurring in a state where the total number of infected individuals doubles daily. If it takes 10 days for the entire state's population to become infected, how many days would it take for half of the state's population to be infected?",
+      "correct_answer": "9 days",
+      "lure_answer": "5 days",
+      "control_question": "A pandemic is occurring in a state. If it takes 10 days for the entire state's population to become infected, how many days would it take for half of the state's population to be infected?",
+      "note": "CRT3 (exponential growth) item 2. Matched control (crt3_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_growth_003",
+      "family": "crt_growth",
+      "question": "People are escaping from war. Each day, the total count of refugees doubles. If it takes 22 days for the entire population to evacuate, how long would it take for half of the population to do so?",
+      "correct_answer": "21 days",
+      "lure_answer": "11 days",
+      "control_question": "People are escaping from war. If it takes 22 days for the entire population to evacuate, how long would it take for half of the population to do so?",
+      "note": "CRT3 (exponential growth) item 3. Matched control (crt3_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_growth_004",
+      "family": "crt_growth",
+      "question": "A farmer is plowing a field. Each hour, the total plowed area doubles. If it takes 10 hours for the entire field to be plowed, how long would it take for half of the field to be plowed?",
+      "correct_answer": "9 hours",
+      "lure_answer": "5 hours",
+      "control_question": "A farmer is plowing a field. If it takes 10 hours for the entire field to be plowed, how long would it take for half of the field to be plowed?",
+      "note": "CRT3 (exponential growth) item 4. Matched control (crt3_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_growth_005",
+      "family": "crt_growth",
+      "question": "The apples are dropping from an apple tree, with the total count of fallen apples doubling each day. If it requires 16 days for all the apples to drop, how many days would it take for half the apples to fall?",
+      "correct_answer": "15 days",
+      "lure_answer": "8 days",
+      "control_question": "The apples are dropping from an apple tree. If it requires 16 days for all the apples to drop, how many days would it take for half the apples to fall?",
+      "note": "CRT3 (exponential growth) item 5. Matched control (crt3_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_growth_006",
+      "family": "crt_growth",
+      "question": "Fish are migrating and each day, the total distance they cover doubles. If it takes the fish 18 days to reach their destination, how many days would it take for them to cover half the distance?",
+      "correct_answer": "17 days",
+      "lure_answer": "9 days",
+      "control_question": "Fish are migrating. If it takes the fish 18 days to reach their destination, how many days would it take for them to cover half the distance?",
+      "note": "CRT3 (exponential growth) item 6. Matched control (crt3_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_growth_007",
+      "family": "crt_growth",
+      "question": "A tree branch is falling, and with each passing second, the total distance it covered doubles. If it takes 6 seconds for the branch to reach the ground, how long would it take for it to cover one-half of the total distance?",
+      "correct_answer": "5 seconds",
+      "lure_answer": "3 seconds",
+      "control_question": "A tree branch is falling. If it takes 6 seconds for the branch to reach the ground, how long would it take for it to cover one-half of the total distance?",
+      "note": "CRT3 (exponential growth) item 7. Matched control (crt3_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_growth_008",
+      "family": "crt_growth",
+      "question": "A fly is traveling from point A to point B. With each passing hour, the total distance it covered doubles. If the fly reaches point B in 12 hours, how long does it take for the fly to cover half of the distance?",
+      "correct_answer": "11 hours",
+      "lure_answer": "6 hours",
+      "control_question": "A fly is traveling from point A to point B. If the fly reaches point B in 12 hours, how long does it take for the fly to cover half of the distance?",
+      "note": "CRT3 (exponential growth) item 8. Matched control (crt3_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_growth_009",
+      "family": "crt_growth",
+      "question": "A new concrete pavement is drying. The overall area of dried concrete doubles each day. If it requires four days for the entire pavement to dry completely, how many days does it take for half the pavement to become dry?",
+      "correct_answer": "3 days",
+      "lure_answer": "2 days",
+      "control_question": "A new concrete pavement is drying. If it requires four days for the entire pavement to dry completely, how many days does it take for half the pavement to become dry?",
+      "note": "CRT3 (exponential growth) item 9. Matched control (crt3_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_growth_010",
+      "family": "crt_growth",
+      "question": "There is a freezer filled with food, and the total volume of the frozen food doubles every hour. If it takes 16 hours for all the food to become frozen, how long would it take to freeze half of the food?",
+      "correct_answer": "15 hours",
+      "lure_answer": "8 hours",
+      "control_question": "There is a freezer filled with food. If it takes 16 hours for all the food to become frozen, how long would it take to freeze half of the food?",
+      "note": "CRT3 (exponential growth) item 10. Matched control (crt3_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_growth_011",
+      "family": "crt_growth",
+      "question": "A pot of water is boiling on the stove, and with each passing hour, the overall volume of the evaporated water doubles. If the entire pot takes 6 hours to evaporate completely, how long does it take for half of the pot to evaporate?",
+      "correct_answer": "5 hours",
+      "lure_answer": "3 hours",
+      "control_question": "A pot of water is boiling on the stove. If the entire pot takes 6 hours to evaporate completely, how long does it take for half of the pot to evaporate?",
+      "note": "CRT3 (exponential growth) item 11. Matched control (crt3_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_growth_012",
+      "family": "crt_growth",
+      "question": "There is a section of mold on a bread loaf that doubles in size every hour. If it takes 16 hours for the mold to completely cover the bread, how much time is needed for the mold to cover half of the bread?",
+      "correct_answer": "15 hours",
+      "lure_answer": "8 hours",
+      "control_question": "There is a section of mold on a bread loaf. If it takes 16 hours for the mold to completely cover the bread, how much time is needed for the mold to cover half of the bread?",
+      "note": "CRT3 (exponential growth) item 12. Matched control (crt3_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_growth_013",
+      "family": "crt_growth",
+      "question": "A forest is engulfed in flames. Each day, the overall area of the scorched forest doubles in size. If it takes 18 days for the entire forest to be consumed by the fire, how many days would it take for half of the forest to be burnt?",
+      "correct_answer": "17 days",
+      "lure_answer": "9 days",
+      "control_question": "A forest is engulfed in flames. If it takes 18 days for the entire forest to be consumed by the fire, how many days would it take for half of the forest to be burnt?",
+      "note": "CRT3 (exponential growth) item 13. Matched control (crt3_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_growth_014",
+      "family": "crt_growth",
+      "question": "In a cave, there is a colony of bats with a daily population doubling. Given that it takes 60 days for the entire cave to be filled with bats, how many days would it take for the cave to be half-filled with bats?",
+      "correct_answer": "59 days",
+      "lure_answer": "30 days",
+      "control_question": "In a cave, there is a colony of bats. Given that it takes 60 days for the entire cave to be filled with bats, how many days would it take for the cave to be half-filled with bats?",
+      "note": "CRT3 (exponential growth) item 14. Matched control (crt3_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_growth_015",
+      "family": "crt_growth",
+      "question": "A section of grass is expanding within a garden, with the total area it occupies doubling daily. If it requires 12 days for the entire garden to be encompassed by the grass, how many days are needed for the grass to cover half of the garden?",
+      "correct_answer": "11 days",
+      "lure_answer": "6 days",
+      "control_question": "A section of grass is expanding within a garden. If it requires 12 days for the entire garden to be encompassed by the grass, how many days are needed for the grass to cover half of the garden?",
+      "note": "CRT3 (exponential growth) item 15. Matched control (crt3_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_growth_016",
+      "family": "crt_growth",
+      "question": "An investor possesses 1 bitcoin. Each day, their number of bitcoins doubles. If it takes them 30 days to achieve their investment target, how long would it take for them to reach half of that target?",
+      "correct_answer": "29 days",
+      "lure_answer": "15 days",
+      "control_question": "An investor possesses 1 bitcoin. If it takes them 30 days to achieve their investment target, how long would it take for them to reach half of that target?",
+      "note": "CRT3 (exponential growth) item 16. Matched control (crt3_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_growth_017",
+      "family": "crt_growth",
+      "question": "Fish inhabit a creek, and their population doubles each week. If it requires 24 weeks for the entire creek to become completely filled with fish, how long would it take to fill half of the creek with fish?",
+      "correct_answer": "23 weeks",
+      "lure_answer": "12 weeks",
+      "control_question": "Fish inhabit a creek. If it requires 24 weeks for the entire creek to become completely filled with fish, how long would it take to fill half of the creek with fish?",
+      "note": "CRT3 (exponential growth) item 17. Matched control (crt3_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_growth_018",
+      "family": "crt_growth",
+      "question": "A dust cloud hovers above the city, doubling in size each day. If it takes 12 days for the entire city to be engulfed by the cloud, how many days does it take for the cloud to cover half of the city?",
+      "correct_answer": "11 days",
+      "lure_answer": "6 days",
+      "control_question": "A dust cloud hovers above the city. If it takes 12 days for the entire city to be engulfed by the cloud, how many days does it take for the cloud to cover half of the city?",
+      "note": "CRT3 (exponential growth) item 18. Matched control (crt3_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_growth_019",
+      "family": "crt_growth",
+      "question": "There is a sick student in the class. Each day, the number of sick students doubles. If it takes 6 days for the entire class to become sick, how many days does it take for half of the class to become sick?",
+      "correct_answer": "5 days",
+      "lure_answer": "3 days",
+      "control_question": "There is a sick student in the class. If it takes 6 days for the entire class to become sick, how many days does it take for half of the class to become sick?",
+      "note": "CRT3 (exponential growth) item 19. Matched control (crt3_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_growth_020",
+      "family": "crt_growth",
+      "question": "A colony of bacteria is growing on yogurt, and the size of the colony doubles daily. If it takes 4 days for the colony to completely cover the yogurt, how many days does it take for the patch to cover half of the yogurt?",
+      "correct_answer": "3 days",
+      "lure_answer": "2 days",
+      "control_question": "A colony of bacteria is growing on yogurt. If it takes 4 days for the colony to completely cover the yogurt, how many days does it take for the patch to cover half of the yogurt?",
+      "note": "CRT3 (exponential growth) item 20. Matched control (crt3_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_growth_021",
+      "family": "crt_growth",
+      "question": "A moss patch is expanding on a rock, doubling its size each day. It takes 300 days for the moss to completely cover the rock. How many days are required for the moss to cover half of the rock?",
+      "correct_answer": "299 days",
+      "lure_answer": "150 days",
+      "control_question": "A moss patch is expanding on a rock. It takes 300 days for the moss to completely cover the rock. How many days are required for the moss to cover half of the rock?",
+      "note": "CRT3 (exponential growth) item 21. Matched control (crt3_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_growth_022",
+      "family": "crt_growth",
+      "question": "Beneath a tree, there is a heap of leaves that doubles in size every week. If it takes four weeks for the pile to attain a height of 4 meters, how much time is required for it to reach a height of 2 meters?",
+      "correct_answer": "3 weeks",
+      "lure_answer": "2 weeks",
+      "control_question": "Beneath a tree, there is a heap of leaves. If it takes four weeks for the pile to attain a height of 4 meters, how much time is required for it to reach a height of 2 meters?",
+      "note": "CRT3 (exponential growth) item 22. Matched control (crt3_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_growth_023",
+      "family": "crt_growth",
+      "question": "Mushrooms are cultivated in a container, and their quantity doubles daily. Given that it takes 6 days for the mushrooms to fill the entire container, determine the time needed to fill half of the container.",
+      "correct_answer": "5 days",
+      "lure_answer": "3 days",
+      "control_question": "Mushrooms are cultivated in a container. Given that it takes 6 days for the mushrooms to fill the entire container, determine the time needed to fill half of the container.",
+      "note": "CRT3 (exponential growth) item 23. Matched control (crt3_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_growth_024",
+      "family": "crt_growth",
+      "question": "There is a man who raises rabbits in a barn. Each year, the rabbit population doubles. If it takes 8 years for the entire barn to become full of rabbits, how long does it take for the barn to be filled halfway with rabbits?",
+      "correct_answer": "7 years",
+      "lure_answer": "4 years",
+      "control_question": "There is a man who raises rabbits in a barn. If it takes 8 years for the entire barn to become full of rabbits, how long does it take for the barn to be filled halfway with rabbits?",
+      "note": "CRT3 (exponential growth) item 24. Matched control (crt3_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_growth_025",
+      "family": "crt_growth",
+      "question": "Within a forest, there is a growing patch of ramson that doubles in size each week. If it takes 10 weeks for the entire forest to be covered with ramson, how long would it take for the ramson to cover half of the forest?",
+      "correct_answer": "9 weeks",
+      "lure_answer": "5 weeks",
+      "control_question": "Within a forest, there is a growing patch of ramson. If it takes 10 weeks for the entire forest to be covered with ramson, how long would it take for the ramson to cover half of the forest?",
+      "note": "CRT3 (exponential growth) item 25. Matched control (crt3_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_growth_026",
+      "family": "crt_growth",
+      "question": "It is currently raining, causing the lake to fill up with water. The volume of water in the lake doubles every day. If it takes a total of 20 days for the lake to become completely filled, how many days would it take for the lake to reach halfway to being full?",
+      "correct_answer": "19 days",
+      "lure_answer": "10 days",
+      "control_question": "It is currently raining, causing the lake to fill up with water. If it takes a total of 20 days for the lake to become completely filled, how many days would it take for the lake to reach halfway to being full?",
+      "note": "CRT3 (exponential growth) item 26. Matched control (crt3_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_growth_027",
+      "family": "crt_growth",
+      "question": "Within a forest, there exists a tree that doubles its height each year. If the tree attains its maximum height in 10 years, determine the time it would take to achieve half of that maximum height.",
+      "correct_answer": "9 years",
+      "lure_answer": "5 years",
+      "control_question": "Within a forest, there exists a tree. If the tree attains its maximum height in 10 years, determine the time it would take to achieve half of that maximum height.",
+      "note": "CRT3 (exponential growth) item 27. Matched control (crt3_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_growth_028",
+      "family": "crt_growth",
+      "question": "There is a flood occurring in a field. With each passing hour, the size of the flood-stricken area doubles. If it takes 20 hours for the entire field to become submerged, how many hours would it take for half of the field to be inundated?",
+      "correct_answer": "19 hours",
+      "lure_answer": "10 hours",
+      "control_question": "There is a flood occurring in a field. If it takes 20 hours for the entire field to become submerged, how many hours would it take for half of the field to be inundated?",
+      "note": "CRT3 (exponential growth) item 28. Matched control (crt3_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_growth_029",
+      "family": "crt_growth",
+      "question": "A barrel is being filled with whiskey, and the total volume of whiskey doubles every minute. If it takes 12 minutes to completely fill the barrel, how long would it take to fill half of it with whiskey?",
+      "correct_answer": "11 minutes",
+      "lure_answer": "6 minutes",
+      "control_question": "A barrel is being filled with whiskey. If it takes 12 minutes to completely fill the barrel, how long would it take to fill half of it with whiskey?",
+      "note": "CRT3 (exponential growth) item 29. Matched control (crt3_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_growth_030",
+      "family": "crt_growth",
+      "question": "Programmers are in the process of developing new software and each month the total quantity of written code doubles. If it requires 10 months to complete the entire code, how much time is needed to write half of the code?",
+      "correct_answer": "9 months",
+      "lure_answer": "5 months",
+      "control_question": "Programmers are in the process of developing new software. If it requires 10 months to complete the entire code, how much time is needed to write half of the code?",
+      "note": "CRT3 (exponential growth) item 30. Matched control (crt3_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_growth_031",
+      "family": "crt_growth",
+      "question": "A factory is busy filling bags with chocolate cookies. The total number of bags filled doubles with each passing hour. Given that it takes 8 hours to fill all the bags, how much time is required to fill half of the bags?",
+      "correct_answer": "7 hours",
+      "lure_answer": "4 hours",
+      "control_question": "A factory is busy filling bags with chocolate cookies. Given that it takes 8 hours to fill all the bags, how much time is required to fill half of the bags?",
+      "note": "CRT3 (exponential growth) item 31. Matched control (crt3_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_growth_032",
+      "family": "crt_growth",
+      "question": "An orange tree is sprouting leaves. The number of leaves doubles every month. Given that it takes six months for the entire tree to be covered with leaves, how many months does it take for the tree to be half covered with leaves?",
+      "correct_answer": "5 months",
+      "lure_answer": "3 months",
+      "control_question": "An orange tree is sprouting leaves. Given that it takes six months for the entire tree to be covered with leaves, how many months does it take for the tree to be half covered with leaves?",
+      "note": "CRT3 (exponential growth) item 32. Matched control (crt3_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_growth_033",
+      "family": "crt_growth",
+      "question": "An iceberg is forming and its surface doubles every year. If the iceberg takes 10 years to grow to 10 square miles, how many years are required for it to grow to 5 square miles?",
+      "correct_answer": "9 years",
+      "lure_answer": "5 years",
+      "control_question": "An iceberg is forming. If the iceberg takes 10 years to grow to 10 square miles, how many years are required for it to grow to 5 square miles?",
+      "note": "CRT3 (exponential growth) item 33. Matched control (crt3_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_growth_034",
+      "family": "crt_growth",
+      "question": "A woman is in the process of growing her hair. Each year, the length of her hair doubles. If it takes six years for her hair to achieve a length of two meters, how long would it take for it to reach a length of one meter?",
+      "correct_answer": "5 years",
+      "lure_answer": "3 years",
+      "control_question": "A woman is in the process of growing her hair. If it takes six years for her hair to achieve a length of two meters, how long would it take for it to reach a length of one meter?",
+      "note": "CRT3 (exponential growth) item 34. Matched control (crt3_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_growth_035",
+      "family": "crt_growth",
+      "question": "Ants are crawling on a cake, and with each passing minute, their population on the cake doubles. If the entire cake is covered with ants in 30 minutes, how long would it take for half of the cake to be covered with ants?",
+      "correct_answer": "29 minutes",
+      "lure_answer": "15 minutes",
+      "control_question": "Ants are crawling on a cake. If the entire cake is covered with ants in 30 minutes, how long would it take for half of the cake to be covered with ants?",
+      "note": "CRT3 (exponential growth) item 35. Matched control (crt3_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_growth_036",
+      "family": "crt_growth",
+      "question": "In a room, there are rats whose population doubles each month. If it takes 9 months for the rats to completely fill the room, how long would it take for them to occupy half of the room?",
+      "correct_answer": "8 months",
+      "lure_answer": "4.5 months",
+      "control_question": "In a room, there are rats. If it takes 9 months for the rats to completely fill the room, how long would it take for them to occupy half of the room?",
+      "note": "CRT3 (exponential growth) item 36. Matched control (crt3_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_growth_037",
+      "family": "crt_growth",
+      "question": "The wood is burning in a fireplace, and the temperature doubles every minute. If it takes 20 minutes for the fireplace to reach a temperature of 600 degrees, how long does it take for the temperature to reach 300 degrees?",
+      "correct_answer": "19 minutes",
+      "lure_answer": "10 minutes",
+      "control_question": "The wood is burning in a fireplace. If it takes 20 minutes for the fireplace to reach a temperature of 600 degrees, how long does it take for the temperature to reach 300 degrees?",
+      "note": "CRT3 (exponential growth) item 37. Matched control (crt3_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_growth_038",
+      "family": "crt_growth",
+      "question": "In a fish tank, some algae are present. Each day, the quantity of algae multiplies by two. If it requires 30 days for the entire fish tank to become filled with algae, how much time is needed for half of the fish tank to be filled with algae?",
+      "correct_answer": "29 days",
+      "lure_answer": "15 days",
+      "control_question": "In a fish tank, some algae are present. If it requires 30 days for the entire fish tank to become filled with algae, how much time is needed for half of the fish tank to be filled with algae?",
+      "note": "CRT3 (exponential growth) item 38. Matched control (crt3_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_growth_039",
+      "family": "crt_growth",
+      "question": "An elderly woman regularly feeds cats. Each day, the number of cats she feeds doubles. If she feeds 64 cats on the 6th day, on which day does she feed 32 cats?",
+      "correct_answer": "5th day",
+      "lure_answer": "3rd day",
+      "control_question": "An elderly woman regularly feeds cats. Each day, the number of cats she feeds increases. If she feeds 64 cats on the 6th day, on which day does she feed 32 cats?",
+      "note": "CRT3 (exponential growth) item 39. Matched control (crt3_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_growth_040",
+      "family": "crt_growth",
+      "question": "Bamboo is growing in the garden, and its height doubles each day. It takes 5 days to reach a height of 10 meters. How long does it take for the bamboo to attain a height of 5 meters?",
+      "correct_answer": "4 days",
+      "lure_answer": "2.5 days",
+      "control_question": "Bamboo is growing in the garden. It takes 5 days to reach a height of 10 meters. How long does it take for the bamboo to attain a height of 5 meters?",
+      "note": "CRT3 (exponential growth) item 40. Matched control (crt3_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_growth_041",
+      "family": "crt_growth",
+      "question": "A patient has been diagnosed with cancer, and the number of cancer cells doubles each week. If it takes four weeks for the cancer cells to reach a critical amount, how long will it take for the cells to reach half of that critical amount?",
+      "correct_answer": "3 weeks",
+      "lure_answer": "2 weeks",
+      "control_question": "A patient has been diagnosed with cancer. If it takes four weeks for the cancer cells to reach a critical amount, how long will it take for the cells to reach half of that critical amount?",
+      "note": "CRT3 (exponential growth) item 41. Matched control (crt3_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_growth_042",
+      "family": "crt_growth",
+      "question": "There is a heap of fruit that is decaying. The quantity of spoiled fruit doubles daily. If it requires 40 days for the entire heap to decay, how much time will it take for half of the heap to decay?",
+      "correct_answer": "39 days",
+      "lure_answer": "20 days",
+      "control_question": "There is a heap of fruit that is decaying. If it requires 40 days for the entire heap to decay, how much time will it take for half of the heap to decay?",
+      "note": "CRT3 (exponential growth) item 42. Matched control (crt3_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_growth_043",
+      "family": "crt_growth",
+      "question": "During winter, the lake is gradually freezing. Each day, the ice covering the lake's surface doubles in size. If it takes 10 days for the entire surface of the lake to freeze, how long does it take for half of the lake's surface to become frozen?",
+      "correct_answer": "9 days",
+      "lure_answer": "5 days",
+      "control_question": "During winter, the lake is gradually freezing. If it takes 10 days for the entire surface of the lake to freeze, how long does it take for half of the lake's surface to become frozen?",
+      "note": "CRT3 (exponential growth) item 43. Matched control (crt3_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_growth_044",
+      "family": "crt_growth",
+      "question": "During winter, snowfall is occurring and the depth of the snow cover doubles every hour. If it takes 10 hours for the snow depth to reach 2 meters, how much time is required for it to reach a depth of 1 meter?",
+      "correct_answer": "9 hours",
+      "lure_answer": "5 hours",
+      "control_question": "During winter, snowfall is occurring. If it takes 10 hours for the snow depth to reach 2 meters, how much time is required for it to reach a depth of 1 meter?",
+      "note": "CRT3 (exponential growth) item 44. Matched control (crt3_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_growth_045",
+      "family": "crt_growth",
+      "question": "Five individuals are constructing a home. Each week, the cumulative amount of bricks they place doubles. Given that it takes them 8 weeks to lay all the bricks, determine the duration required for them to lay half of the bricks.",
+      "correct_answer": "7 weeks",
+      "lure_answer": "4 weeks",
+      "control_question": "Five individuals are constructing a home. Given that it takes them 8 weeks to lay all the bricks, determine the duration required for them to lay half of the bricks.",
+      "note": "CRT3 (exponential growth) item 45. Matched control (crt3_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_growth_046",
+      "family": "crt_growth",
+      "question": "Two painters are working on painting a house. With every hour that passes, the total area they've painted doubles. If it takes 16 hours to paint the entire house, how many hours would it take for them to paint half of the house?",
+      "correct_answer": "15 hours",
+      "lure_answer": "8 hours",
+      "control_question": "Two painters are working on painting a house. If it takes 16 hours to paint the entire house, how many hours would it take for them to paint half of the house?",
+      "note": "CRT3 (exponential growth) item 46. Matched control (crt3_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_growth_047",
+      "family": "crt_growth",
+      "question": "A grandmother is knitting a scarf for her grandson. Each week, the scarf's length increases twofold. If it takes six weeks to complete the entire scarf, how long would it take to knit half of the scarf?",
+      "correct_answer": "5 weeks",
+      "lure_answer": "3 weeks",
+      "control_question": "A grandmother is knitting a scarf for her grandson. If it takes six weeks to complete the entire scarf, how long would it take to knit half of the scarf?",
+      "note": "CRT3 (exponential growth) item 47. Matched control (crt3_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_growth_048",
+      "family": "crt_growth",
+      "question": "A forest is expanding on an island, with the area occupied by the trees doubling each year. If it takes 140 years for the entire island to be covered with trees, how many years would it take for the forest to cover half of the island?",
+      "correct_answer": "139 years",
+      "lure_answer": "70 years",
+      "control_question": "A forest is expanding on an island. If it takes 140 years for the entire island to be covered with trees, how many years would it take for the forest to cover half of the island?",
+      "note": "CRT3 (exponential growth) item 48. Matched control (crt3_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_growth_049",
+      "family": "crt_growth",
+      "question": "A gas cylinder is experiencing a leak. With each passing hour, the total quantity of leaked gas doubles. If it requires 4 hours for the entire gas to leak out, how much time is needed for half of the gas to escape?",
+      "correct_answer": "3 hours",
+      "lure_answer": "2 hours",
+      "control_question": "A gas cylinder is experiencing a leak. If it requires 4 hours for the entire gas to leak out, how much time is needed for half of the gas to escape?",
+      "note": "CRT3 (exponential growth) item 49. Matched control (crt3_not_hostile) removes the trap so the intuitive answer is correct."
+    },
+    {
+      "case_id": "hagendorff_crt_growth_050",
+      "family": "crt_growth",
+      "question": "People are walking into a theater and taking their seats. The number of people in the room multiplies by two every minute. If it takes 6 minutes for all of the seats to be taken, how long does it take for half of the seats to be taken?",
+      "correct_answer": "5 minutes",
+      "lure_answer": "3 minutes",
+      "control_question": "People are walking into a theater and taking their seats. If it takes 6 minutes for all of the seats to be taken, how long does it take for half of the seats to be taken?",
+      "note": "CRT3 (exponential growth) item 50. Matched control (crt3_not_hostile) removes the trap so the intuitive answer is correct."
+    }
+  ]
+}
