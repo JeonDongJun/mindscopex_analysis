@@ -1,0 +1,25 @@
+[run]
+name = "00_hagendorff_full_qwen35_9b"
+job = "crt_text_responses"
+
+[dataset]
+preset = "hagendorff_full"
+
+[model]
+ids = ["Qwen/Qwen3.5-9B"]
+dtype = "auto"
+device_map = "auto"
+
+[generation]
+protocol = "qwen_native"
+seeds = [42]
+thinking_modes = [false, true]
+max_new_tokens = 4096
+
+[colab]
+gpu = "A100"
+
+[remote]
+source = "archive"
+repo_dir = "/content/mindscopex_analysis"
+output_root = "/content/mindscopex_artifacts"
