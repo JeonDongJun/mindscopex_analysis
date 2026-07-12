@@ -36,13 +36,12 @@ from experiments.runners.config import (  # noqa: E402
 from mindscopex_analysis import (
     CRT_FINAL_ANSWER_SYSTEM_PROMPT,
     DEFAULT_QWEN_CHAT_MODEL_IDS,
-    NATURE_CRT150_DOI,
     QWEN_LARGE_CHAT_MODEL_IDS,
     clear_device_cache,
-    crt_behavior_cases,
     generate_crt_response_suite,
     load_qwen_text_generation_model,
-    nature_crt150_cases,
+    lure_dataset_cases,
+    lure_dataset_info,
     recommended_dtype_name,
     save_crt_markdown_report,
     save_qwen_text_responses,
@@ -51,10 +50,18 @@ from mindscopex_analysis import (
 )  # noqa: E402
 
 
+# preset -> committed dataset id (data/<id>.json) and per-family cap. See docs/datasets.md.
 RUN_PRESETS = {
-    "pilot": {"dataset": "pilot", "nature_limit_per_type": None},
-    "nature_smoke": {"dataset": "nature_crt150", "nature_limit_per_type": 3},
-    "nature_full": {"dataset": "nature_crt150", "nature_limit_per_type": None},
+    "pilot": {"dataset": "crt_pilot", "limit_per_family": None},
+    "hagendorff_smoke": {"dataset": "hagendorff_crt", "limit_per_family": 3},
+    "hagendorff_full": {"dataset": "hagendorff_crt", "limit_per_family": None},
+    "verbal_crt": {"dataset": "verbal_crt", "limit_per_family": None},
+    "crt7_classic": {"dataset": "crt7_classic", "limit_per_family": None},
+    "crt2": {"dataset": "crt2", "limit_per_family": None},
+    "yax_crt_isomorph": {"dataset": "yax_crt_isomorph", "limit_per_family": None},
+    # Back-compat aliases for the pre-rename preset names.
+    "nature_smoke": {"dataset": "hagendorff_crt", "limit_per_family": 3},
+    "nature_full": {"dataset": "hagendorff_crt", "limit_per_family": None},
 }
 
 PROTOCOLS = {
@@ -126,25 +133,24 @@ def _resolve_model_ids(raw: Any) -> list[str]:
     return raw
 
 
-def _load_cases(config: dict[str, Any], output_root: Path) -> tuple[list[Any], str, str, str]:
+def _load_cases(config: dict[str, Any]) -> tuple[list[Any], str, str, str]:
     dataset_cfg = table(config, "dataset")
-    preset_name = str(dataset_cfg.get("preset", "nature_smoke"))
+    preset_name = str(dataset_cfg.get("preset", "hagendorff_smoke"))
     if preset_name not in RUN_PRESETS:
-        raise ValueError(f"Unknown dataset preset: {preset_name!r}")
+        raise ValueError(f"Unknown dataset preset: {preset_name!r}. Options: {sorted(RUN_PRESETS)}")
 
     preset = RUN_PRESETS[preset_name]
     dataset_name = preset["dataset"]
-    if dataset_name == "pilot":
-        return crt_behavior_cases(), preset_name, "pilot", "repository pilot set"
-
-    cache_dir = output_root / "_datasets" / "nature_crt150"
-    cases = nature_crt150_cases(
-        cache_dir=cache_dir,
-        crt_types=tuple(dataset_cfg.get("nature_crt_types", ["crt1", "crt2", "crt3"])),
-        limit_per_type=preset["nature_limit_per_type"],
-        prompt_style=str(dataset_cfg.get("nature_prompt_style", "task_only")),
+    families = dataset_cfg.get("families")
+    limit_per_family = dataset_cfg.get("limit_per_family", preset["limit_per_family"])
+    cases = lure_dataset_cases(
+        dataset_name,
+        families=tuple(families) if families else None,
+        limit_per_family=limit_per_family,
     )
-    return cases, preset_name, "nature_crt150", NATURE_CRT150_DOI
+    source = lure_dataset_info(dataset_name).source
+    dataset_reference = source.get("doi") or source.get("project_url") or dataset_name
+    return cases, preset_name, dataset_name, dataset_reference
 
 
 def _save_figures(
@@ -197,7 +203,7 @@ def run(config_path: Path, output_root: Path) -> Path:
     run_dir = output_root / name
     run_dir.mkdir(parents=True, exist_ok=True)
 
-    dataset_cases, preset_name, dataset_name, dataset_reference = _load_cases(config, output_root)
+    dataset_cases, preset_name, dataset_name, dataset_reference = _load_cases(config)
     model_cfg = table(config, "model")
     generation_cfg = table(config, "generation")
     protocol_name = str(generation_cfg.get("protocol", "qwen_native"))

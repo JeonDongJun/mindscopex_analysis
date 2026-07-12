@@ -1,13 +1,12 @@
 [run]
-name = "00_nature_smoke_qwen35_2b"
+name = "00_hagendorff_full_qwen35_27b"
 job = "crt_text_responses"
 
 [dataset]
-preset = "nature_smoke"
-nature_prompt_style = "task_only"
+preset = "hagendorff_full"
 
 [model]
-ids = ["Qwen/Qwen3.5-2B"]
+ids = ["Qwen/Qwen3.5-27B"]
 dtype = "auto"
 device_map = "auto"
 
@@ -18,7 +17,7 @@ thinking_modes = [false, true]
 max_new_tokens = 4096
 
 [colab]
-gpu = "T4"
+gpu = "A100"
 
 [remote]
 source = "archive"
