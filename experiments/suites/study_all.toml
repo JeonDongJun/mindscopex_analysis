@@ -1,0 +1,12 @@
+# Controlled study across all four model profiles, in order.
+# 2B/9B run the full study (incl. behavioral generation); 27B/35B run margin-only.
+# Very long — launch with a large timeout and expect hours:
+#   ./experiments/run_colab.sh experiments/suites/study_all.toml -s mindscopex --gpu A100 --exec-timeout 18000
+[suite]
+name = "study_all"
+configs = [
+  "../configs/study_2b.toml",
+  "../configs/study_9b.toml",
+  "../configs/study_27b.toml",
+  "../configs/study_35b_a3b.toml",
+]

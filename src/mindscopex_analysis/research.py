@@ -32,7 +32,7 @@ from __future__ import annotations
 import hashlib
 import statistics
 from collections import Counter
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from typing import Any
 
 import torch
@@ -311,6 +311,7 @@ def discover_generalizing_feature(
     coefficient: float = 1.0,
     intervention_mode: InterventionMode = "remove_activation",
     block_path_template: str = DEFAULT_BLOCK_PATH_TEMPLATE,
+    progress: Callable[[str], None] | None = None,
 ) -> list[dict[str, Any]]:
     """Rank features by mean margin delta across ``cases`` (a discovery split).
 
@@ -344,9 +345,11 @@ def discover_generalizing_feature(
 
     candidates = [fid for fid, count in frequency.most_common() if count >= min_active_cases]
     candidates = candidates[: int(max_candidates)]
+    if progress is not None:
+        progress(f"layer {int(layer)}: {len(candidates)} candidates x {len(contexts)} cases")
 
     rows: list[dict[str, Any]] = []
-    for feature_id in candidates:
+    for c_index, feature_id in enumerate(candidates, start=1):
         direction = sae_decoder_direction(sae, [int(feature_id)])
         deltas: list[float] = []
         for case, residual, baseline_margin in contexts:
@@ -376,6 +379,11 @@ def discover_generalizing_feature(
                 "active_in_cases": frequency[int(feature_id)],
             }
         )
+        if progress is not None:
+            progress(
+                f"  [{c_index}/{len(candidates)}] feature {int(feature_id)} "
+                f"mean_delta={rows[-1]['mean_margin_delta']:+.4f}"
+            )
     rows.sort(key=lambda row: row["mean_margin_delta"], reverse=True)
     return rows
 
@@ -550,18 +558,24 @@ def _generate_labels(
     cases: Sequence[LureCase],
     *,
     max_new_tokens: int,
+    progress: Callable[[str], None] | None = None,
+    phase: str = "",
 ) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
-    for case in cases:
+    total = len(cases)
+    for index, case in enumerate(cases, start=1):
         text = _greedy_completion(model, tokenizer, case.prompt, max_new_tokens=max_new_tokens)
+        label = classify_lure_answer(text, case)
         rows.append(
             {
                 "case_id": case.case_id,
                 "family": case.family,
                 "answer": text.strip(),
-                "label": classify_lure_answer(text, case),
+                "label": label,
             }
         )
+        if progress is not None:
+            progress(f"  {phase}gen [{index}/{total}] {case.case_id} -> {label}")
     return rows
 
 
@@ -577,6 +591,7 @@ def steer_generation_labels(
     max_new_tokens: int = 16,
     token_position: str = "all",
     block_path_template: str = DEFAULT_BLOCK_PATH_TEMPLATE,
+    progress: Callable[[str], None] | None = None,
 ) -> dict[str, Any]:
     """Behavioral readout: greedy free generation with vs without feature steering.
 
@@ -587,14 +602,23 @@ def steer_generation_labels(
     model), so the intervention and the readout live in the same network.
     """
 
-    baseline = _generate_labels(model, tokenizer, cases, max_new_tokens=max_new_tokens)
+    baseline = _generate_labels(
+        model, tokenizer, cases, max_new_tokens=max_new_tokens, progress=progress, phase="baseline "
+    )
     block = find_decoder_block(model, int(layer), block_path_template=block_path_template)
     hook = make_feature_steering_hook(
         sae, [int(feature_id)], coefficient=float(coefficient), token_position=token_position
     )
     handle = block.register_forward_hook(hook)
     try:
-        steered = _generate_labels(model, tokenizer, cases, max_new_tokens=max_new_tokens)
+        steered = _generate_labels(
+            model,
+            tokenizer,
+            cases,
+            max_new_tokens=max_new_tokens,
+            progress=progress,
+            phase=f"steer(c={coefficient:g}) ",
+        )
     finally:
         handle.remove()
 

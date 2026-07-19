@@ -1,0 +1,41 @@
+# Controlled study on the 35B-A3B (MoE) profile — MARGIN ONLY (no free-generation).
+# Needs a large runtime; SAEs on CPU; behavioral generation skipped
+# (kind = "study_margin"). Tune [discover] caps down if forward passes are slow.
+[run]
+name = "study_35b_a3b"
+job = "research_experiments"
+
+[experiment]
+kind = "study_margin"
+
+[model]
+profile = "35b-a3b"
+dtype = "auto"
+device_map = "auto"
+sae_device = "cpu"
+sae_dtype = "auto"
+
+[data]
+dataset = "hagendorff_crt"
+limit_per_family = 0
+train_frac = 0.6
+split_seed = 0
+instruction = true
+
+[discover]
+candidate_top_n = 10
+min_active_cases = 3
+max_candidates = 16
+max_cases = 16
+coefficient = 1.0
+intervention_mode = "remove_activation"
+null_samples = 16
+null_seed = 0
+
+[colab]
+gpu = "A100"
+
+[remote]
+source = "archive"
+repo_dir = "/content/mindscopex_analysis"
+output_root = "/content/mindscopex_artifacts"

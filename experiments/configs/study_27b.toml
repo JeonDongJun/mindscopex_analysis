@@ -1,0 +1,42 @@
+# Controlled study on the 27B profile — MARGIN ONLY (no free-generation).
+# 27B needs the largest runtime (A100 80GB / High-RAM); SAEs are kept on CPU, and
+# the behavioral generation stage is skipped (kind = "study_margin") because
+# loading a second 27B generation model + decoding is impractical there.
+[run]
+name = "study_27b"
+job = "research_experiments"
+
+[experiment]
+kind = "study_margin"
+
+[model]
+profile = "27b"
+dtype = "auto"
+device_map = "auto"
+sae_device = "cpu"      # 27B SAEs are large; encode on CPU
+sae_dtype = "auto"
+
+[data]
+dataset = "hagendorff_crt"
+limit_per_family = 0
+train_frac = 0.6
+split_seed = 0
+instruction = true
+
+[discover]
+candidate_top_n = 10
+min_active_cases = 3
+max_candidates = 16     # fewer candidates: 27B forward passes are expensive
+max_cases = 16
+coefficient = 1.0
+intervention_mode = "remove_activation"
+null_samples = 16
+null_seed = 0
+
+[colab]
+gpu = "A100"
+
+[remote]
+source = "archive"
+repo_dir = "/content/mindscopex_analysis"
+output_root = "/content/mindscopex_artifacts"

@@ -265,8 +265,8 @@ def launch_one(
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("config_or_suite", type=Path)
-    parser.add_argument("--session", default="mindscopex")
-    parser.add_argument("--gpu", default=None)
+    parser.add_argument("--session", "-s", default="mindscopex")
+    parser.add_argument("--gpu", "-g", default=None)
     parser.add_argument("--tpu", default=None)
     parser.add_argument("--keep", action="store_true", help="Leave the Colab VM running.")
     parser.add_argument(

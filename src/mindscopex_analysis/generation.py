@@ -7,7 +7,7 @@ import math
 import re
 import time
 import unicodedata
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from dataclasses import asdict, dataclass, replace
 from datetime import UTC, datetime
 from decimal import Decimal
@@ -620,31 +620,38 @@ def generate_crt_response_suite(
     retry_protocol_issues: bool = True,
     retry_both: bool = True,
     retry_seed_step: int = 1,
+    progress_callback: Callable[[int, int, QwenTextResponse], None] | None = None,
 ) -> list[QwenTextResponse]:
-    """Generate all case-by-mode responses for one already-loaded model."""
+    """Generate all case-by-mode responses for one already-loaded model.
+
+    ``progress_callback(done, total, response)`` is called after each response so
+    long remote runs can stream progress and checkpoint partial results.
+    """
 
     results = []
+    total = len(cases) * len(thinking_modes)
     for case in cases:
         for enable_thinking in thinking_modes:
-            results.append(
-                generate_qwen_text_response_with_retries(
-                    model,
-                    tokenizer,
-                    case,
-                    model_id=model_id,
-                    enable_thinking=enable_thinking,
-                    use_chat_template=use_chat_template,
-                    system_prompt=system_prompt,
-                    max_new_tokens=max_new_tokens,
-                    do_sample=do_sample,
-                    seed=seed,
-                    generation_kwargs=generation_kwargs,
-                    max_retries=max_retries,
-                    retry_protocol_issues=retry_protocol_issues,
-                    retry_both=retry_both,
-                    retry_seed_step=retry_seed_step,
-                )
+            response = generate_qwen_text_response_with_retries(
+                model,
+                tokenizer,
+                case,
+                model_id=model_id,
+                enable_thinking=enable_thinking,
+                use_chat_template=use_chat_template,
+                system_prompt=system_prompt,
+                max_new_tokens=max_new_tokens,
+                do_sample=do_sample,
+                seed=seed,
+                generation_kwargs=generation_kwargs,
+                max_retries=max_retries,
+                retry_protocol_issues=retry_protocol_issues,
+                retry_both=retry_both,
+                retry_seed_step=retry_seed_step,
             )
+            results.append(response)
+            if progress_callback is not None:
+                progress_callback(len(results), total, response)
     return results
 
 

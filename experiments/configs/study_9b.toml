@@ -1,0 +1,46 @@
+# Full controlled study on the 9B profile (margin phase + generation phase).
+# Same as study_2b with [model].profile = "9b". Launch with a large timeout.
+[run]
+name = "study_9b"
+job = "research_experiments"
+
+[experiment]
+kind = "study"
+
+[model]
+profile = "9b"
+dtype = "auto"
+device_map = "auto"
+sae_device = "auto"
+sae_dtype = "auto"
+
+[data]
+dataset = "hagendorff_crt"
+limit_per_family = 0
+train_frac = 0.6
+split_seed = 0
+instruction = true
+
+[discover]
+candidate_top_n = 10
+min_active_cases = 3
+max_candidates = 24
+max_cases = 24
+coefficient = 1.0
+intervention_mode = "remove_activation"
+null_samples = 32
+null_seed = 0
+
+[behavioral]
+coefficients = [0.0, -2.0, -4.0, -8.0]
+max_new_tokens = 16
+max_cases = 40
+token_position = "all"
+
+[colab]
+gpu = "A100"
+
+[remote]
+source = "archive"
+repo_dir = "/content/mindscopex_analysis"
+output_root = "/content/mindscopex_artifacts"

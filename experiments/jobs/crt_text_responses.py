@@ -264,7 +264,20 @@ def run(config_path: Path, output_root: Path) -> Path:
     _write_json(manifest_path, manifest)
 
     responses: list[Any] = []
+    save_every = 10
     start = time.time()
+
+    def _on_progress(done: int, total: int, response: Any) -> None:
+        responses.append(response)
+        short = response.model_id.rsplit("/", 1)[-1]
+        print(
+            f"[{done}/{total}] {short} {response.mode} {response.case_id} "
+            f"-> {response.answer_label}/{response.evaluation_label}",
+            flush=True,
+        )
+        if done % save_every == 0:
+            save_qwen_text_responses(responses, output_json)
+
     for model_id in model_ids:
         model, tokenizer = load_qwen_text_generation_model(
             model_id,
@@ -274,7 +287,7 @@ def run(config_path: Path, output_root: Path) -> Path:
         try:
             for seed in seeds:
                 print(f"Running {model_id} seed={seed} cases={len(dataset_cases)}", flush=True)
-                model_responses = generate_crt_response_suite(
+                generate_crt_response_suite(
                     model,
                     tokenizer,
                     dataset_cases,
@@ -290,8 +303,8 @@ def run(config_path: Path, output_root: Path) -> Path:
                     max_retries=max_retries,
                     retry_protocol_issues=retry_protocol_issues,
                     retry_both=retry_both,
+                    progress_callback=_on_progress,
                 )
-                responses.extend(model_responses)
                 save_qwen_text_responses(responses, output_json)
                 save_crt_markdown_report(
                     responses,

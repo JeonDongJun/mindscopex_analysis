@@ -1,4 +1,4 @@
-.PHONY: install git-filters notebook lab lint format test smoke clean help paper paper-preview paper-pdf paper-ko paper-ko-preview paper-ko-pdf
+.PHONY: install git-filters notebook lab lint format test smoke clean help paper paper-preview paper-pdf paper-ko paper-ko-preview paper-ko-pdf analyze-crt
 
 help:  ## 도움말
 	@grep -E '^[a-zA-Z_-]+:.*##' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*##"}; {printf "  \033[36m%-18s\033[0m %s\n", $$1, $$2}'
@@ -28,6 +28,9 @@ test:  ## 단위 테스트 실행
 smoke:  ## import/문법 확인 + 단위 테스트
 	uv run python -m compileall src tests
 	uv run python -m unittest discover -s tests
+
+analyze-crt:  ## 00 CRT 실행 결과 교차 분석 (results/runs -> results/analysis)
+	uv run python scripts/analyze_crt_responses.py results/runs --output results/analysis
 
 paper:  ## Quarto 논문 HTML 렌더
 	uv run quarto render paper/paper.qmd --to html

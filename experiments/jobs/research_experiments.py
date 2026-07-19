@@ -82,10 +82,22 @@ META_KINDS: dict[str, tuple[str, ...]] = {
         "causal_heldout",
         "behavioral",
     ),
+    # Margin-only study (skips free-generation) for large models where loading a
+    # second HF generation model and decoding is impractical.
+    "study_margin": (
+        "phenomenon",
+        "discover",
+        "control_specificity",
+        "causal_heldout",
+    ),
 }
 
 
 # --------------------------------------------------------------------------- io
+
+
+def _log(message: str) -> None:
+    print(f"[study] {message}", flush=True)
 
 
 def _timestamp() -> str:
@@ -234,6 +246,7 @@ def _discover_study_feature(
     best_feature_rows: list[dict[str, Any]] = []
 
     for layer in layers:
+        _log(f"discover: layer {int(layer)} on {len(subset)} train items")
         sae = _load_sae(env, int(layer))
         rows = discover_generalizing_feature(
             lm,
@@ -245,6 +258,7 @@ def _discover_study_feature(
             max_candidates=max_candidates,
             coefficient=coefficient,
             intervention_mode=intervention_mode,
+            progress=_log,
         )
         if not rows:
             del sae
@@ -413,11 +427,14 @@ def run_phenomenon(
     state: dict[str, Any],
 ) -> dict[str, Any]:
     cases = splits["all"]
+    _log(f"phenomenon: baseline margins on {len(cases)} items")
     rows: list[dict[str, Any]] = []
-    for case in cases:
+    for index, case in enumerate(cases, start=1):
         margin = answer_logprob_margin(
             lm, case.prompt, correct_answer=case.correct_answer, lure_answer=case.lure_answer
         )
+        if index % 25 == 0:
+            _log(f"phenomenon: {index}/{len(cases)}")
         rows.append(
             {
                 "case_id": case.case_id,
@@ -519,6 +536,7 @@ def run_causal_heldout(
 ) -> dict[str, Any]:
     info = _ensure_feature(lm, splits, config, env, run_dir, state)
     feature = info["feature"]
+    _log(f"causal_heldout: applying feature to {len(splits['test'])} held-out items")
     effect = aggregate_feature_effect(
         lm,
         splits["test"],
@@ -554,6 +572,7 @@ def run_control_specificity(
 ) -> dict[str, Any]:
     info = _ensure_feature(lm, splits, config, env, run_dir, state)
     feature = info["feature"]
+    _log(f"control_specificity: hostile vs control on {len(splits['test'])} items")
     rows = control_specificity_rows(
         lm,
         splits["test"],
@@ -603,9 +622,11 @@ def run_behavioral(
     token_position = str(bcfg.get("token_position", "all"))
     cases = list(splits["test"])[:max_cases]
 
+    _log(f"behavioral: {len(coefficients)} coefficients x {len(cases)} items (baseline+steered)")
     rows: list[dict[str, Any]] = []
     detail: list[dict[str, Any]] = []
     for coefficient in coefficients:
+        _log(f"behavioral: coefficient {coefficient:g}")
         result = steer_generation_labels(
             model,
             tokenizer,
@@ -616,6 +637,7 @@ def run_behavioral(
             coefficient=float(coefficient),
             max_new_tokens=max_new_tokens,
             token_position=token_position,
+            progress=_log,
         )
         rows.append(
             {
