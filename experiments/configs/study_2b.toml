@@ -1,0 +1,51 @@
+# Full controlled study (2b): phenomenon -> discover -> control_specificity ->
+# causal_heldout (margin phase, nnsight) then behavioral (generation phase, HF).
+# Discovery + coefficient choice happen on the train split only; every effect is
+# reported on held-out items (docs/datasets.md principle 4).
+# NOTE: the full study is long; launch with a larger timeout, e.g.
+#   ./experiments/run_colab.sh experiments/suites/study.toml -s mindscopex --exec-timeout 9000
+[run]
+name = "study_2b"
+job = "research_experiments"
+
+[experiment]
+kind = "study"
+
+[model]
+profile = "2b"          # 2b | 9b | 27b | 35b-a3b
+dtype = "auto"
+device_map = "auto"
+sae_device = "auto"
+sae_dtype = "auto"
+
+[data]
+dataset = "hagendorff_crt"   # 150 items, 3 families, matched controls (docs/datasets.md)
+limit_per_family = 0         # 0 = all; set e.g. 15 to run faster
+train_frac = 0.6             # discovery split fraction (family-stratified)
+split_seed = 0
+instruction = true          # prepend the final-answer instruction
+
+[discover]
+candidate_top_n = 10         # active features considered per item
+min_active_cases = 3         # a candidate must be active in >= this many train items
+max_candidates = 24          # cap scored candidates (speed)
+max_cases = 24               # cap train items used for discovery (speed)
+coefficient = 1.0
+intervention_mode = "remove_activation"
+null_samples = 32            # random-direction null draws for significance
+null_seed = 0
+# layers = [5, 11, 17, 23]   # default = profile.scan_layers
+
+[behavioral]
+coefficients = [0.0, -2.0, -4.0, -8.0]   # negative suppresses the lure feature
+max_new_tokens = 16
+max_cases = 40               # held-out items to generate for
+token_position = "all"
+
+[colab]
+gpu = "A100"
+
+[remote]
+source = "archive"
+repo_dir = "/content/mindscopex_analysis"
+output_root = "/content/mindscopex_artifacts"

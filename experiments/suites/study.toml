@@ -1,0 +1,7 @@
+# The controlled study (2b): phenomenon -> discover -> control -> causal -> behavioral.
+# Long-running; launch with a larger --exec-timeout (e.g. 9000).
+[suite]
+name = "study"
+configs = [
+  "../configs/study_2b.toml",
+]

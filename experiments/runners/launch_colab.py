@@ -23,6 +23,7 @@ from experiments.runners.remote_bootstrap import render_bootstrap  # noqa: E402
 
 JOB_PATHS = {
     "crt_text_responses": "experiments/jobs/crt_text_responses.py",
+    "research_experiments": "experiments/jobs/research_experiments.py",
 }
 
 

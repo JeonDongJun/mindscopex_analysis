@@ -1,0 +1,46 @@
+# E4: specificity — same feature on hostile vs matched-control prompts (2b).
+# A lure feature should move the hostile margin far more than the control margin.
+# Writes control_specificity.csv (hostile_margin_delta, control_margin_delta, gap).
+[run]
+name = "study_control_specificity_2b"
+job = "research_experiments"
+
+[experiment]
+kind = "control_specificity"
+
+[model]
+profile = "2b"
+dtype = "auto"
+device_map = "auto"
+sae_device = "auto"
+sae_dtype = "auto"
+
+[data]
+dataset = "hagendorff_crt"   # has matched controls; required for this stage
+limit_per_family = 0
+train_frac = 0.6
+split_seed = 0
+instruction = true
+
+[discover]
+candidate_top_n = 10
+min_active_cases = 3
+max_candidates = 24
+max_cases = 24
+coefficient = 1.0
+intervention_mode = "remove_activation"
+null_samples = 32
+
+[feature]
+# layer = 11
+# feature_id = 12345
+coefficient = 1.0
+intervention_mode = "remove_activation"
+
+[colab]
+gpu = "A100"
+
+[remote]
+source = "archive"
+repo_dir = "/content/mindscopex_analysis"
+output_root = "/content/mindscopex_artifacts"

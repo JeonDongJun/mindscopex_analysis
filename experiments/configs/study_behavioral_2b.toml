@@ -1,0 +1,52 @@
+# E3 (behavioral): does suppressing the feature during FREE GENERATION shift the
+# answer from lure to correct? Greedy base-model completion, baseline vs steered,
+# across steering coefficients on the held-out split. Writes behavioral.csv.
+# Rediscovers the feature on train first (margin phase) unless pinned below, then
+# loads the HF text-generation model for the steered rollouts.
+[run]
+name = "study_behavioral_2b"
+job = "research_experiments"
+
+[experiment]
+kind = "behavioral"
+
+[model]
+profile = "2b"
+dtype = "auto"
+device_map = "auto"
+sae_device = "auto"
+sae_dtype = "auto"
+
+[data]
+dataset = "hagendorff_crt"
+limit_per_family = 0
+train_frac = 0.6
+split_seed = 0
+instruction = true
+
+[discover]
+candidate_top_n = 10
+min_active_cases = 3
+max_candidates = 24
+max_cases = 24
+coefficient = 1.0
+intervention_mode = "remove_activation"
+null_samples = 32
+
+[feature]
+# layer = 11
+# feature_id = 12345
+
+[behavioral]
+coefficients = [0.0, -2.0, -4.0, -8.0]
+max_new_tokens = 16
+max_cases = 40
+token_position = "all"
+
+[colab]
+gpu = "A100"
+
+[remote]
+source = "archive"
+repo_dir = "/content/mindscopex_analysis"
+output_root = "/content/mindscopex_artifacts"

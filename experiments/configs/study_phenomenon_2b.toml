@@ -1,0 +1,27 @@
+# E1: establish the phenomenon — baseline lure margin over the dataset (2b).
+[run]
+name = "study_phenomenon_2b"
+job = "research_experiments"
+
+[experiment]
+kind = "phenomenon"
+
+[model]
+profile = "2b"
+dtype = "auto"
+device_map = "auto"
+
+[data]
+dataset = "hagendorff_crt"
+limit_per_family = 0
+train_frac = 0.6
+split_seed = 0
+instruction = true
+
+[colab]
+gpu = "A100"
+
+[remote]
+source = "archive"
+repo_dir = "/content/mindscopex_analysis"
+output_root = "/content/mindscopex_artifacts"

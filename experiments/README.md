@@ -9,8 +9,29 @@ same core `mindscopex_analysis` functions as reproducible Colab jobs.
 - `configs/`: one TOML file per experiment setting.
 - `suites/`: ordered groups of config files.
 - `jobs/`: Python entry points that run actual experiments.
+  - `crt_text_responses.py`: behavioral CRT baseline (notebook 00).
+  - `research_experiments.py`: the **controlled study** — train/test split, random-
+    direction null, matched-control specificity, and a free-generation accuracy
+    readout. See [../docs/study_design.md](../docs/study_design.md).
 - `runners/`: local Colab launcher, remote bootstrap renderer, and artifact helpers.
 - `run_colab.sh`: WSL-friendly wrapper around the launcher.
+
+## Controlled study
+
+The study discovers the lure feature on a train split and validates it on held-out
+items — as teacher-forced margin *and* as free-generation accuracy. Which notebooks
+motivated it is reviewed in [../docs/notebook_paper_audit.md](../docs/notebook_paper_audit.md).
+
+```bash
+# whole study (long; raise the timeout)
+./experiments/run_colab.sh experiments/suites/study.toml -s mindscopex --gpu A100 --exec-timeout 9000
+
+# one stage at a time
+./experiments/run_colab.sh experiments/configs/study_discover_2b.toml -s mindscopex
+./experiments/run_colab.sh experiments/configs/study_behavioral_2b.toml -s mindscopex
+```
+
+Design, datasets, and interpretation: [../docs/study_design.md](../docs/study_design.md).
 
 ## First smoke run
 
@@ -61,6 +82,15 @@ Each CRT text-response run writes:
 - `summary.json` and `family_summary.json`: aggregate tables.
 - `figures/*.png`: quick review plots.
 - `manifest.json`: config, environment, GPU, seed, and git metadata.
+
+Each `research_experiments` run writes:
+
+- `<figure>.csv`: paper-ready CSV per kind (`phenomenon.csv`, `discover_localization.csv`,
+  `causal_heldout.csv`, `behavioral.csv`, `control_specificity.csv`) with a matching
+  `<figure>.png` preview. Copy the ones you want into `paper/data/`.
+- `study_feature.json`: the discovered (or pinned) lure feature (layer, id).
+- per-kind `summary.json` / raw rows, and `manifest.json` (config, kinds, split,
+  environment, GPU, git).
 
 The local launcher also writes `launcher_manifest.json`, `colab_log.md`, and
 `colab_log.jsonl` in the corresponding `results/runs/<timestamp>_<run>/` folder.

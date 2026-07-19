@@ -40,7 +40,7 @@ The full Nature run contains 150 cases and produces 1,200 responses with the def
 models and two reasoning modes per seed. Run `nature_smoke` and optionally reduce
 `MODEL_IDS_TO_RUN` before launching the full benchmark. Dataset provenance, licensing notes,
 and the review of newer CRT-related resources are documented in
-[docs/crt_datasets.md](docs/crt_datasets.md).
+[docs/datasets.md](docs/datasets.md).
 The official Qwen-Scope SAE coverage and checkpoint-matching notes are tracked in
 [docs/qwen_scope_sae_catalog.md](docs/qwen_scope_sae_catalog.md).
 

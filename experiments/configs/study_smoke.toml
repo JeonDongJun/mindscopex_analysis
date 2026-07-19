@@ -1,0 +1,38 @@
+# Cheapest end-to-end check of the study path: tiny discovery on one layer (T4).
+# Exercises split -> per-case residual/baseline -> candidate scoring -> null.
+[run]
+name = "study_smoke_2b"
+job = "research_experiments"
+
+[experiment]
+kind = "discover"
+
+[model]
+profile = "2b"
+dtype = "auto"
+device_map = "auto"
+sae_device = "auto"
+sae_dtype = "auto"
+
+[data]
+dataset = "hagendorff_crt"
+limit_per_family = 6         # 18 items total
+train_frac = 0.6
+split_seed = 0
+instruction = true
+
+[discover]
+layers = [11]                # single layer for the smoke
+candidate_top_n = 8
+min_active_cases = 2
+max_candidates = 8
+max_cases = 8
+null_samples = 8
+
+[colab]
+gpu = "T4"
+
+[remote]
+source = "archive"
+repo_dir = "/content/mindscopex_analysis"
+output_root = "/content/mindscopex_artifacts"
