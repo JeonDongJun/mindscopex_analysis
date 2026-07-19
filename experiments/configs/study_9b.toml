@@ -1,5 +1,7 @@
 # Full controlled study on the 9B profile (margin phase + generation phase).
 # Same as study_2b with [model].profile = "9b". Launch with a large timeout.
+# SAEs are encoded on CPU so a 40GB Colab A100 keeps headroom for the model plus
+# the second (generation) load in the behavioral phase.
 [run]
 name = "study_9b"
 job = "research_experiments"
@@ -11,7 +13,7 @@ kind = "study"
 profile = "9b"
 dtype = "auto"
 device_map = "auto"
-sae_device = "auto"
+sae_device = "cpu"
 sae_dtype = "auto"
 
 [data]

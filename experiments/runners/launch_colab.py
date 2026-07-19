@@ -234,7 +234,7 @@ def launch_one(
                 remote_source_archive,
             ]
         )
-    run_cmd(
+    exec_result = run_cmd(
         [
             "colab",
             "exec",
@@ -244,13 +244,20 @@ def launch_one(
             str(exec_timeout),
             "-f",
             str(bootstrap),
-        ]
+        ],
+        check=False,
     )
 
+    # Retrieve artifacts and logs even when the remote job failed: the bootstrap
+    # always archives run_dir (incl. job.log), so partial results and the captured
+    # stdout/stderr survive for diagnosis before we surface the failure.
     remote_zip = f"{remote_output_root}/{name}.zip"
     local_zip = local_run_dir / "artifacts.zip"
-    run_cmd_retry(["colab", "download", "-s", session, remote_zip, str(local_zip)])
-    unpack_archive(local_zip, local_run_dir / "artifacts")
+    try:
+        run_cmd_retry(["colab", "download", "-s", session, remote_zip, str(local_zip)])
+        unpack_archive(local_zip, local_run_dir / "artifacts")
+    except subprocess.CalledProcessError as exc:
+        print(f"[launch] artifact download failed for {name}: {exc}", flush=True)
     run_cmd(
         ["colab", "log", "-s", session, "-o", str(local_run_dir / "colab_log.md")],
         check=False,
@@ -259,6 +266,11 @@ def launch_one(
         ["colab", "log", "-s", session, "-o", str(local_run_dir / "colab_log.jsonl")],
         check=False,
     )
+    if exec_result.returncode != 0:
+        raise RuntimeError(
+            f"remote job {name!r} failed (colab exec returncode={exec_result.returncode}); "
+            f"inspect {local_run_dir}"
+        )
     return local_run_dir
 
 

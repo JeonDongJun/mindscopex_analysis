@@ -29,6 +29,27 @@ def run(cmd, *, cwd=None):
     subprocess.check_call([str(part) for part in cmd], cwd=str(cwd) if cwd else None)
 
 
+def run_capturing(cmd, log_path):
+    """Run a command, teeing stdout+stderr live to our stdout and to log_path."""
+    print("+ " + " ".join(str(part) for part in cmd), flush=True)
+    log_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(log_path, "w", encoding="utf-8") as log:
+        proc = subprocess.Popen(
+            [str(part) for part in cmd],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            bufsize=1,
+        )
+        for line in proc.stdout:
+            sys.stdout.write(line)
+            sys.stdout.flush()
+            log.write(line)
+            log.flush()
+        proc.wait()
+    return proc.returncode
+
+
 def prepare_source():
     repo_dir = Path(PAYLOAD["remote_repo_dir"])
     source = PAYLOAD.get("source", "archive")
@@ -82,21 +103,31 @@ def main():
     ensure_dependencies(repo_dir)
     job_path = repo_dir / PAYLOAD["job_path"]
     output_root = Path(PAYLOAD["remote_output_root"])
-    run([
-        sys.executable,
-        job_path,
-        "--config",
-        PAYLOAD["remote_config_path"],
-        "--output-root",
-        output_root,
-    ])
-
     run_dir = output_root / PAYLOAD["run_name"]
+    run_dir.mkdir(parents=True, exist_ok=True)
+    job_log = run_dir / "job.log"
+    returncode = run_capturing(
+        [
+            sys.executable,
+            job_path,
+            "--config",
+            PAYLOAD["remote_config_path"],
+            "--output-root",
+            output_root,
+        ],
+        job_log,
+    )
+
+    # Always archive whatever exists (incl. job.log) so partial artifacts and the
+    # captured stdout/stderr survive even when the job crashed or OOM-ed.
     archive_base = output_root / PAYLOAD["run_name"]
     if archive_base.with_suffix(".zip").exists():
         archive_base.with_suffix(".zip").unlink()
     shutil.make_archive(str(archive_base), "zip", str(run_dir))
     print(f"REMOTE_ARTIFACT_ZIP={{archive_base.with_suffix('.zip')}}", flush=True)
+    if returncode != 0:
+        print(f"JOB_FAILED returncode={{returncode}}", flush=True)
+        sys.exit(returncode)
 
 
 main()
