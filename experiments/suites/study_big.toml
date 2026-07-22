@@ -1,0 +1,10 @@
+# 27B then 35B-A3B controlled study (margin-only), sequential on one 80GB H100.
+# These need >40GB, so they run on H100 (Colab A100 is 40GB). One session, one
+# model at a time — no concurrent GPU sessions (those triggered runtime resets).
+#   ./experiments/run_colab.sh experiments/suites/study_big.toml -s mindscopex-big -g H100 --exec-timeout 18000
+[suite]
+name = "study_big"
+configs = [
+  "../configs/study_27b.toml",
+  "../configs/study_35b_a3b.toml",
+]

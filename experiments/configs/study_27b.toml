@@ -1,7 +1,8 @@
 # Controlled study on the 27B profile — MARGIN ONLY (no free-generation).
-# 27B needs the largest runtime (A100 80GB / High-RAM); SAEs are kept on CPU, and
-# the behavioral generation stage is skipped (kind = "study_margin") because
-# loading a second 27B generation model + decoding is impractical there.
+# 27B (~54GB in bf16) needs an 80GB GPU. Colab's A100 is 40GB, so use H100 (80GB).
+# SAEs are kept on CPU and behavioral generation is skipped (kind = "study_margin")
+# because loading a second 27B generation model + decoding is impractical here.
+# Run single/sequential (no concurrent GPU sessions — those triggered resets).
 [run]
 name = "study_27b"
 job = "research_experiments"
@@ -34,7 +35,7 @@ null_samples = 16
 null_seed = 0
 
 [colab]
-gpu = "A100"
+gpu = "H100"
 
 [remote]
 source = "archive"

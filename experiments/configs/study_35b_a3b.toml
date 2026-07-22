@@ -1,6 +1,7 @@
 # Controlled study on the 35B-A3B (MoE) profile — MARGIN ONLY (no free-generation).
-# Needs a large runtime; SAEs on CPU; behavioral generation skipped
-# (kind = "study_margin"). Tune [discover] caps down if forward passes are slow.
+# ~70GB in bf16: needs an 80GB GPU (H100). Tight but fits since behavioral is
+# skipped (kind = "study_margin") so peak is a single model load; SAEs on CPU.
+# Tune [discover] caps down if forward passes are slow. Run single/sequential.
 [run]
 name = "study_35b_a3b"
 job = "research_experiments"
@@ -33,7 +34,7 @@ null_samples = 16
 null_seed = 0
 
 [colab]
-gpu = "A100"
+gpu = "H100"
 
 [remote]
 source = "archive"
