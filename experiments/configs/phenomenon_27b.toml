@@ -1,0 +1,30 @@
+# 27B phenomenon (baseline lure margin) on a 40GB A100 via device_map offload.
+# 27B (~54GB bf16) does not fit 40GB GPU-only; accelerate offloads the overflow
+# to CPU RAM. Phenomenon is forward-pass-only (no SAE/discover), so offload stays
+# tolerable (~30-90 min). Completes the 2B->9B->27B->35B scale curve without H100.
+[run]
+name = "phenomenon_27b"
+job = "research_experiments"
+
+[experiment]
+kind = "phenomenon"
+
+[model]
+profile = "27b"
+dtype = "auto"
+device_map = "auto"
+
+[data]
+dataset = "hagendorff_crt"
+limit_per_family = 0
+train_frac = 0.6
+split_seed = 0
+instruction = true
+
+[colab]
+gpu = "A100"
+
+[remote]
+source = "archive"
+repo_dir = "/content/mindscopex_analysis"
+output_root = "/content/mindscopex_artifacts"

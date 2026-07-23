@@ -1,0 +1,10 @@
+# 27B then 35B-A3B phenomenon-only (baseline lure margin) on one 40GB A100 via
+# device_map CPU offload. Forward-pass-only, so it fits without H100 and completes
+# the 2B->9B->27B->35B scale curve. One session, one model at a time.
+#   ./experiments/run_colab.sh experiments/suites/phenomenon_big.toml -s mindscopex-phen -g A100 --exec-timeout 10800
+[suite]
+name = "phenomenon_big"
+configs = [
+  "../configs/phenomenon_27b.toml",
+  "../configs/phenomenon_35b_a3b.toml",
+]

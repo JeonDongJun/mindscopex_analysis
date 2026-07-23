@@ -1,0 +1,30 @@
+# 35B-A3B (MoE) phenomenon (baseline lure margin) on a 40GB A100 via device_map
+# offload. ~70GB bf16 does not fit 40GB GPU-only; accelerate offloads the overflow
+# to CPU RAM. Phenomenon is forward-pass-only (no SAE/discover), so offload stays
+# tolerable (~1-2 h). Completes the 2B->9B->27B->35B scale curve without H100.
+[run]
+name = "phenomenon_35b_a3b"
+job = "research_experiments"
+
+[experiment]
+kind = "phenomenon"
+
+[model]
+profile = "35b-a3b"
+dtype = "auto"
+device_map = "auto"
+
+[data]
+dataset = "hagendorff_crt"
+limit_per_family = 0
+train_frac = 0.6
+split_seed = 0
+instruction = true
+
+[colab]
+gpu = "A100"
+
+[remote]
+source = "archive"
+repo_dir = "/content/mindscopex_analysis"
+output_root = "/content/mindscopex_artifacts"
