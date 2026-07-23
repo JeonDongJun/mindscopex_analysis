@@ -13,6 +13,10 @@ kind = "phenomenon"
 profile = "35b-a3b"
 dtype = "auto"
 device_map = "auto"
+# Cap GPU at 30GiB (of 40) so accelerate keeps headroom for activations and for
+# streaming CPU-offloaded expert weights during the forward pass; "auto" alone
+# packs the GPU ~100% and OOMs mid-forward. ~40GB spills to CPU RAM for 35B.
+gpu_max_memory_gib = 30
 
 [data]
 dataset = "hagendorff_crt"

@@ -169,12 +169,21 @@ def _resolve_env(config: dict[str, Any]) -> dict[str, Any]:
     sae_device = default_sae_device() if sae_device == "auto" else str(sae_device)
     sae_dtype = model_cfg.get("sae_dtype", "auto")
     sae_dtype = dtype if sae_dtype == "auto" else str(sae_dtype)
+    # Cap GPU memory so accelerate leaves headroom for activations and for
+    # streaming CPU-offloaded weights during the forward pass. Without this,
+    # device_map="auto" packs the GPU ~100% full and big models OOM mid-forward.
+    max_memory = None
+    gpu_gib = model_cfg.get("gpu_max_memory_gib")
+    if gpu_gib is not None:
+        cpu_gib = int(model_cfg.get("cpu_max_memory_gib", 100))
+        max_memory = {0: f"{int(gpu_gib)}GiB", "cpu": f"{cpu_gib}GiB"}
     return {
         "profile": profile,
         "model_id": profile.analysis_model_id,
         "repo_id": profile.sae_repo_id,
         "dtype": dtype,
         "device_map": model_cfg.get("device_map", "auto"),
+        "max_memory": max_memory,
         "sae_device": sae_device,
         "sae_dtype": sae_dtype,
     }
@@ -757,8 +766,15 @@ def run(config_path: Path, output_root: Path) -> Path:
 
     if margin_kinds:
         print(f"[margin phase] loading {env['model_id']}", flush=True)
+        load_kwargs: dict[str, Any] = {}
+        if env.get("max_memory"):
+            load_kwargs["max_memory"] = env["max_memory"]
         lm = load_qwen_language_model(
-            env["model_id"], device_map=env["device_map"], dtype=env["dtype"], dispatch=True
+            env["model_id"],
+            device_map=env["device_map"],
+            dtype=env["dtype"],
+            dispatch=True,
+            **load_kwargs,
         )
         try:
             for current in margin_kinds:
