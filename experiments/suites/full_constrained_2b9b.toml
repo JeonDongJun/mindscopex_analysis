@@ -1,0 +1,13 @@
+# Constrained (binary_choice) 00 across the feasible scales: 2B then 9B on one
+# A100 session, sequential. Every label is correct/lure (no "other").
+#
+# 27B/35B are excluded on purpose: the 00 job is autoregressive *generation*, which
+# needs the whole model resident on-GPU. They don't fit a 40GB A100 and Colab H100
+# (80GB) is capacity-locked, so CPU-offloaded generation would be impractically slow.
+#   ./experiments/run_colab.sh experiments/suites/full_constrained_2b9b.toml -s mindscopex-00c -g A100 --exec-timeout 18000
+[suite]
+name = "full_constrained_2b9b"
+configs = [
+  "../configs/00_hagendorff_full_2b.toml",
+  "../configs/00_hagendorff_full_9b.toml",
+]

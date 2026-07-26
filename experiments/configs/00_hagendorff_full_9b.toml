@@ -14,7 +14,11 @@ device_map = "auto"
 protocol = "qwen_native"
 seeds = [42]
 thinking_modes = [false, true]
-max_new_tokens = 4096
+# Option B: reason freely, then prefix-constrain the final answer to correct/lure
+# (never "other"). max_new_tokens is the reasoning budget; truncation still yields
+# a forced answer (thinking_completed records whether reasoning finished).
+output_mode = "binary_choice"
+max_new_tokens = 2048
 
 [colab]
 gpu = "A100"
