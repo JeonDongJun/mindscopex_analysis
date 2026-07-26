@@ -1,0 +1,29 @@
+# Smoke test for Option B (constrained binary_choice): reason freely, then force
+# the final answer to correct/lure so the label is never "other". 9 cases x
+# {non_thinking, thinking} = 18 generations. Verifies the constrained decode path.
+[run]
+name = "00_constrained_smoke_2b"
+job = "crt_text_responses"
+
+[dataset]
+preset = "hagendorff_smoke"
+
+[model]
+ids = ["Qwen/Qwen3.5-2B"]
+dtype = "auto"
+device_map = "auto"
+
+[generation]
+protocol = "qwen_native"
+seeds = [42]
+thinking_modes = [false, true]
+output_mode = "binary_choice"
+max_new_tokens = 1024
+
+[colab]
+gpu = "G4"
+
+[remote]
+source = "archive"
+repo_dir = "/content/mindscopex_analysis"
+output_root = "/content/mindscopex_artifacts"

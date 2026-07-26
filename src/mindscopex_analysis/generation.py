@@ -55,6 +55,9 @@ class QwenTextResponse:
     generation_attempts: int = 1
     retry_reasons: tuple[str, ...] = ()
     attempt_history: tuple[dict[str, Any], ...] = ()
+    # For constrained (binary_choice) generation: whether the free reasoning stage
+    # emitted a complete </think> before the forced answer. None for free generation.
+    thinking_completed: bool | None = None
 
     @property
     def mode(self) -> str:
@@ -499,6 +502,194 @@ def generate_qwen_text_response(
     )
 
 
+def _find_subsequence(seq: list[int], sub: list[int]) -> int | None:
+    if not sub or len(sub) > len(seq):
+        return None
+    for i in range(len(seq) - len(sub) + 1):
+        if seq[i : i + len(sub)] == sub:
+            return i
+    return None
+
+
+def _constrained_answer_ids(
+    model: Any,
+    text_tokenizer: Any,
+    context_ids: torch.Tensor,
+    candidate_id_lists: list[list[int]],
+    *,
+    max_answer_tokens: int,
+) -> list[int]:
+    """Prefix-constrained greedy decode that must emit one of the candidate answers."""
+
+    prompt_length = int(context_ids.shape[-1])
+    eos = text_tokenizer.eos_token_id
+    if eos is None:
+        raise ValueError("constrained generation requires an eos_token_id")
+    eos_ids = [int(t) for t in eos] if isinstance(eos, (list, tuple)) else [int(eos)]
+
+    def allowed_tokens(_batch_id: int, sequence: torch.Tensor) -> list[int]:
+        generated = sequence[prompt_length:].tolist()
+        allowed: set[int] = set()
+        for ids in candidate_id_lists:
+            if generated == ids[: len(generated)]:
+                if len(generated) < len(ids):
+                    allowed.add(int(ids[len(generated)]))
+                else:
+                    allowed.update(eos_ids)
+        if not allowed:
+            raise RuntimeError(f"constrained generation left the answer trie: {generated!r}")
+        return sorted(allowed)
+
+    longest = max(len(ids) for ids in candidate_id_lists)
+    gen_kwargs: dict[str, Any] = {
+        "input_ids": context_ids,
+        "max_new_tokens": max(int(max_answer_tokens), longest + 1),
+        "do_sample": False,
+        "prefix_allowed_tokens_fn": allowed_tokens,
+        "renormalize_logits": True,
+        "eos_token_id": eos_ids,
+    }
+    pad_id = text_tokenizer.pad_token_id
+    gen_kwargs["pad_token_id"] = int(pad_id if pad_id is not None else eos_ids[0])
+    with torch.inference_mode():
+        output = model.generate(**gen_kwargs)
+    generated = output[0, prompt_length:].tolist()
+    while generated and generated[-1] in eos_ids:
+        generated.pop()
+    return generated
+
+
+_THINK_CLOSE = "</think>"
+
+
+def generate_constrained_choice_response(
+    model: Any,
+    tokenizer: Any,
+    case: LureCase,
+    *,
+    model_id: str,
+    enable_thinking: bool | None = False,
+    think_max_tokens: int = 2048,
+    answer_max_tokens: int = 24,
+    use_chat_template: bool = True,
+    system_prompt: str = "",
+    seed: int = 42,
+) -> QwenTextResponse:
+    """Free reasoning (optional), then a prefix-constrained final answer.
+
+    The final answer is forced to be exactly the case's correct or lure string, so
+    the outcome is always ``correct`` or ``lure`` — never ``other``. When thinking is
+    enabled the reasoning is sampled freely up to ``think_max_tokens``; if it does not
+    finish (no ``</think>``) we cap it, close the block, and still force the answer.
+    ``thinking_completed`` records whether the reasoning finished on its own.
+    """
+
+    text_tok = getattr(tokenizer, "tokenizer", tokenizer)
+    candidates = [case.correct_answer.strip(), case.lure_answer.strip()]
+    candidate_ids = [
+        list(text_tok.encode(answer, add_special_tokens=False)) for answer in candidates
+    ]
+    if any(not ids for ids in candidate_ids):
+        raise ValueError(f"case {case.case_id!r} has an answer with no tokenizer tokens")
+    if candidate_ids[0] == candidate_ids[1]:
+        raise ValueError(f"case {case.case_id!r} has token-identical correct/lure answers")
+
+    inputs = _prepare_inputs(
+        tokenizer,
+        case.prompt,
+        system_prompt=system_prompt,
+        enable_thinking=enable_thinking,
+        use_chat_template=use_chat_template,
+    )
+    device = _input_device(model)
+    prompt_ids = inputs["input_ids"].to(device)
+    input_tokens = int(prompt_ids.shape[-1])
+    eos = text_tok.eos_token_id
+    if eos is None:
+        eos_ids = []
+    elif isinstance(eos, (list, tuple)):
+        eos_ids = [int(t) for t in eos]
+    else:
+        eos_ids = [int(eos)]
+
+    thinking_text = ""
+    thinking_completed: bool | None = None
+    thinking_hit_max = False
+
+    started = time.perf_counter()
+    if enable_thinking:
+        torch.manual_seed(seed)
+        if torch.cuda.is_available():
+            torch.cuda.manual_seed_all(seed)
+        think_kwargs: dict[str, Any] = {
+            "max_new_tokens": int(think_max_tokens),
+            "do_sample": True,
+            **qwen_recommended_sampling_kwargs(True),
+        }
+        if text_tok.pad_token_id is not None:
+            think_kwargs["pad_token_id"] = text_tok.pad_token_id
+        attn = inputs.get("attention_mask")
+        if attn is not None:
+            think_kwargs["attention_mask"] = attn.to(device)
+        with torch.inference_mode():
+            think_out = model.generate(input_ids=prompt_ids, **think_kwargs)
+        reason_ids = think_out[0, input_tokens:].tolist()
+        thinking_hit_max = len(reason_ids) >= int(think_max_tokens) and not (
+            reason_ids and reason_ids[-1] in eos_ids
+        )
+        close_ids = list(text_tok.encode(_THINK_CLOSE, add_special_tokens=False))
+        idx = _find_subsequence(reason_ids, close_ids)
+        if idx is not None:
+            thinking_completed = True
+            kept = reason_ids[: idx + len(close_ids)]
+        else:
+            thinking_completed = False
+            kept = [t for t in reason_ids if t not in eos_ids] + close_ids
+        context_ids = torch.tensor([prompt_ids[0].tolist() + kept], device=device)
+        thinking_text = text_tok.decode(kept, skip_special_tokens=False)
+    else:
+        context_ids = prompt_ids
+
+    answer_ids = _constrained_answer_ids(
+        model, text_tok, context_ids, candidate_ids, max_answer_tokens=answer_max_tokens
+    )
+    elapsed = time.perf_counter() - started
+
+    label: AnswerLabel | None = None
+    answer_text = ""
+    for index, ids in enumerate(candidate_ids):
+        if answer_ids == ids:
+            answer_text = candidates[index]
+            label = "correct" if index == 0 else "lure"
+            break
+    if label is None:
+        raise RuntimeError(
+            f"constrained answer did not match a candidate for {case.case_id!r}: {answer_ids!r}"
+        )
+
+    prefix = f"<think>\n{thinking_text}\n" if enable_thinking else ""
+    raw_text = f"{prefix}{answer_text}"
+    return QwenTextResponse(
+        model_id=model_id,
+        case_id=case.case_id,
+        family=case.family,
+        enable_thinking=enable_thinking,
+        prompt=case.prompt,
+        correct_answer=candidates[0],
+        lure_answer=candidates[1],
+        raw_text=raw_text,
+        thinking=thinking_text,
+        answer=answer_text,
+        answer_label=label,
+        input_tokens=input_tokens,
+        output_tokens=len(answer_ids),
+        elapsed_seconds=elapsed,
+        seed=int(seed),
+        hit_max_tokens=thinking_hit_max,
+        thinking_completed=thinking_completed,
+    )
+
+
 def response_retry_reason(
     response: QwenTextResponse,
     *,
@@ -620,35 +811,51 @@ def generate_crt_response_suite(
     retry_protocol_issues: bool = True,
     retry_both: bool = True,
     retry_seed_step: int = 1,
+    constrained: bool = False,
     progress_callback: Callable[[int, int, QwenTextResponse], None] | None = None,
 ) -> list[QwenTextResponse]:
     """Generate all case-by-mode responses for one already-loaded model.
 
     ``progress_callback(done, total, response)`` is called after each response so
-    long remote runs can stream progress and checkpoint partial results.
+    long remote runs can stream progress and checkpoint partial results. When
+    ``constrained`` is set, the final answer is prefix-constrained to correct/lure
+    (Option B: free reasoning, forced answer) so the outcome is never ``other``.
     """
 
     results = []
     total = len(cases) * len(thinking_modes)
     for case in cases:
         for enable_thinking in thinking_modes:
-            response = generate_qwen_text_response_with_retries(
-                model,
-                tokenizer,
-                case,
-                model_id=model_id,
-                enable_thinking=enable_thinking,
-                use_chat_template=use_chat_template,
-                system_prompt=system_prompt,
-                max_new_tokens=max_new_tokens,
-                do_sample=do_sample,
-                seed=seed,
-                generation_kwargs=generation_kwargs,
-                max_retries=max_retries,
-                retry_protocol_issues=retry_protocol_issues,
-                retry_both=retry_both,
-                retry_seed_step=retry_seed_step,
-            )
+            if constrained:
+                response = generate_constrained_choice_response(
+                    model,
+                    tokenizer,
+                    case,
+                    model_id=model_id,
+                    enable_thinking=enable_thinking,
+                    think_max_tokens=max_new_tokens,
+                    use_chat_template=use_chat_template,
+                    system_prompt=system_prompt,
+                    seed=seed,
+                )
+            else:
+                response = generate_qwen_text_response_with_retries(
+                    model,
+                    tokenizer,
+                    case,
+                    model_id=model_id,
+                    enable_thinking=enable_thinking,
+                    use_chat_template=use_chat_template,
+                    system_prompt=system_prompt,
+                    max_new_tokens=max_new_tokens,
+                    do_sample=do_sample,
+                    seed=seed,
+                    generation_kwargs=generation_kwargs,
+                    max_retries=max_retries,
+                    retry_protocol_issues=retry_protocol_issues,
+                    retry_both=retry_both,
+                    retry_seed_step=retry_seed_step,
+                )
             results.append(response)
             if progress_callback is not None:
                 progress_callback(len(results), total, response)

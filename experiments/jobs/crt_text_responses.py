@@ -220,6 +220,10 @@ def run(config_path: Path, output_root: Path) -> Path:
     dtype = model_cfg.get("dtype", "auto")
     dtype = recommended_dtype_name() if dtype == "auto" else dtype
     max_new_tokens = int(generation_cfg.get("max_new_tokens", 4096))
+    output_mode = str(generation_cfg.get("output_mode", "free"))
+    if output_mode not in {"free", "binary_choice"}:
+        raise ValueError(f"Unknown [generation].output_mode={output_mode!r}")
+    constrained = output_mode == "binary_choice"
     max_retries = int(generation_cfg.get("max_retries", protocol["max_retries"]))
     do_sample = bool(generation_cfg.get("do_sample", protocol["do_sample"]))
     retry_protocol_issues = bool(
@@ -251,6 +255,7 @@ def run(config_path: Path, output_root: Path) -> Path:
         "seeds": seeds,
         "thinking_modes": thinking_modes,
         "generation_protocol": protocol_name,
+        "output_mode": output_mode,
         "max_new_tokens": max_new_tokens,
         "max_retries": max_retries,
         "dtype": dtype,
@@ -303,6 +308,7 @@ def run(config_path: Path, output_root: Path) -> Path:
                     max_retries=max_retries,
                     retry_protocol_issues=retry_protocol_issues,
                     retry_both=retry_both,
+                    constrained=constrained,
                     progress_callback=_on_progress,
                 )
                 save_qwen_text_responses(responses, output_json)

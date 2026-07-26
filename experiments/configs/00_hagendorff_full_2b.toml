@@ -14,7 +14,12 @@ device_map = "auto"
 protocol = "qwen_native"
 seeds = [42]
 thinking_modes = [false, true]
-max_new_tokens = 4096
+# Option B: reason freely, then prefix-constrain the final answer to correct/lure
+# so the outcome is never "other". max_new_tokens is the *reasoning* budget; if the
+# reasoning does not finish within it the answer is still forced (thinking_completed
+# records whether reasoning finished), so 2048 is fine here and keeps it fast.
+output_mode = "binary_choice"
+max_new_tokens = 2048
 
 [colab]
 gpu = "A100"
