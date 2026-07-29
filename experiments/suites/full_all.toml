@@ -1,8 +1,0 @@
-[suite]
-name = "full_all"
-configs = [
-  "../configs/00_hagendorff_full_2b.toml",
-  "../configs/00_hagendorff_full_9b.toml",
-  "../configs/00_hagendorff_full_27b.toml",
-  "../configs/00_hagendorff_full_35b_a3b.toml",
-]

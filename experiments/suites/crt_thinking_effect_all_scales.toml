@@ -1,0 +1,21 @@
+# CRT thinking-effect across scales (renamed from "full_all").
+#
+# What this experiment is: on the Hagendorff CRT lure set, generate each item with
+# reasoning OFF (non_thinking) and reasoning ON (thinking), for every model scale
+# (2B -> 9B -> 27B -> 35B-A3B), and force the final answer to correct-or-lure
+# (output_mode="binary_choice", so there is no "other"). It measures how much
+# reasoning reduces the intuitive lure and lifts accuracy as the model scales.
+#
+# Runs sequentially on one G4 session (96GB fits every scale). Use --continue-on-error
+# so one model's flaky artifact download doesn't abort the rest (labels still stream
+# to the launcher log and can be salvaged).
+#   ./experiments/run_colab.sh experiments/suites/crt_thinking_effect_all_scales.toml \
+#       -s mindscopex-crt -g G4 --exec-timeout 21600 --continue-on-error
+[suite]
+name = "crt_thinking_effect_all_scales"
+configs = [
+  "../configs/00_hagendorff_full_2b.toml",
+  "../configs/00_hagendorff_full_9b.toml",
+  "../configs/00_hagendorff_full_27b.toml",
+  "../configs/00_hagendorff_full_35b_a3b.toml",
+]
