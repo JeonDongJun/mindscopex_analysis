@@ -1,0 +1,11 @@
+# Verify the fresh synthetic CRT set (crt_fresh_v2) reproduces the thinking-effect
+# scale pattern seen on hagendorff_crt: 2B then 9B, reasoning OFF/ON, forced
+# correct-vs-lure. One G4 session, sequential.
+#   ./experiments/run_colab.sh experiments/suites/crt_fresh_v2_thinking_2b9b.toml \
+#       -s mindscopex-fresh -g G4 --exec-timeout 14400 --continue-on-error
+[suite]
+name = "crt_fresh_v2_thinking_2b9b"
+configs = [
+  "../configs/00_crt_fresh_v2_2b.toml",
+  "../configs/00_crt_fresh_v2_9b.toml",
+]

@@ -1,0 +1,29 @@
+# CRT thinking-effect on the FRESH synthetic set (crt_fresh_v2, 150 items) — 2B.
+# Verifies the fresh dataset behaves like hagendorff_crt (no pretraining exposure).
+# Reasoning OFF/ON, forced correct-vs-lure (output_mode="binary_choice", no "other").
+[run]
+name = "00_crt_fresh_v2_2b"
+job = "crt_text_responses"
+
+[dataset]
+preset = "crt_fresh_v2"
+
+[model]
+ids = ["Qwen/Qwen3.5-2B"]
+dtype = "auto"
+device_map = "auto"
+
+[generation]
+protocol = "qwen_native"
+seeds = [42]
+thinking_modes = [false, true]
+output_mode = "binary_choice"
+max_new_tokens = 2048
+
+[colab]
+gpu = "G4"
+
+[remote]
+source = "archive"
+repo_dir = "/content/mindscopex_analysis"
+output_root = "/content/mindscopex_artifacts"

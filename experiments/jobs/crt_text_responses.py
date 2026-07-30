@@ -59,6 +59,9 @@ RUN_PRESETS = {
     "crt7_classic": {"dataset": "crt7_classic", "limit_per_family": None},
     "crt2": {"dataset": "crt2", "limit_per_family": None},
     "yax_crt_isomorph": {"dataset": "yax_crt_isomorph", "limit_per_family": None},
+    # Fresh synthetic CRT (same schema/families as hagendorff_crt; no pretraining exposure).
+    "crt_fresh_v1": {"dataset": "crt_fresh_v1", "limit_per_family": None},
+    "crt_fresh_v2": {"dataset": "crt_fresh_v2", "limit_per_family": None},
     # Back-compat aliases for the pre-rename preset names.
     "nature_smoke": {"dataset": "hagendorff_crt", "limit_per_family": 3},
     "nature_full": {"dataset": "hagendorff_crt", "limit_per_family": None},
