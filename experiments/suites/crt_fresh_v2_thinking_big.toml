@@ -1,0 +1,11 @@
+# Extend the crt_fresh_v2 thinking-effect run to the big scales: 27B then 35B-A3B
+# on one G4 (2B/9B already ran). Completes the fresh-set scale curve for direct
+# comparison with the hagendorff crt_thinking_effect_all_scales run.
+#   ./experiments/run_colab.sh experiments/suites/crt_fresh_v2_thinking_big.toml \
+#       -s mindscopex-fresh-big -g G4 --exec-timeout 21600 --continue-on-error
+[suite]
+name = "crt_fresh_v2_thinking_big"
+configs = [
+  "../configs/00_crt_fresh_v2_27b.toml",
+  "../configs/00_crt_fresh_v2_35b_a3b.toml",
+]

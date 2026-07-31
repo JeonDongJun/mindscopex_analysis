@@ -1,0 +1,29 @@
+# CRT thinking-effect on the FRESH synthetic set (crt_fresh_v2, 150 items) — 35B-A3B.
+# Reasoning OFF/ON, forced correct-vs-lure (output_mode="binary_choice", no "other").
+# Runs on G4 (96GB) which fits 35B-A3B (~70GB) fully on-GPU.
+[run]
+name = "00_crt_fresh_v2_35b_a3b"
+job = "crt_text_responses"
+
+[dataset]
+preset = "crt_fresh_v2"
+
+[model]
+ids = ["Qwen/Qwen3.5-35B-A3B"]
+dtype = "auto"
+device_map = "auto"
+
+[generation]
+protocol = "qwen_native"
+seeds = [42]
+thinking_modes = [false, true]
+output_mode = "binary_choice"
+max_new_tokens = 2048
+
+[colab]
+gpu = "G4"
+
+[remote]
+source = "archive"
+repo_dir = "/content/mindscopex_analysis"
+output_root = "/content/mindscopex_artifacts"
