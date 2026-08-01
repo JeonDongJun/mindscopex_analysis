@@ -123,8 +123,19 @@ def main():
     archive_base = output_root / PAYLOAD["run_name"]
     if archive_base.with_suffix(".zip").exists():
         archive_base.with_suffix(".zip").unlink()
-    shutil.make_archive(str(archive_base), "zip", str(run_dir))
-    print(f"REMOTE_ARTIFACT_ZIP={{archive_base.with_suffix('.zip')}}", flush=True)
+    archive_path = Path(shutil.make_archive(str(archive_base), "zip", str(run_dir)))
+    fallback_path = Path("/content") / f"{{PAYLOAD['run_name']}}_artifacts.zip"
+    shutil.copy2(archive_path, fallback_path)
+    print(
+        f"REMOTE_ARTIFACT_ZIP={{archive_path}} "
+        f"size={{archive_path.stat().st_size}}",
+        flush=True,
+    )
+    print(
+        f"REMOTE_ARTIFACT_FALLBACK={{fallback_path}} "
+        f"size={{fallback_path.stat().st_size}}",
+        flush=True,
+    )
     if returncode != 0:
         print(f"JOB_FAILED returncode={{returncode}}", flush=True)
         sys.exit(returncode)

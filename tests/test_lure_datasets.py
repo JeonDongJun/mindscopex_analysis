@@ -17,8 +17,11 @@ from mindscopex_analysis import (
 
 _EXPECTED = {
     "crt2": 4,
+    "crt_fresh_v1": 30,
+    "crt_fresh_v2": 150,
     "crt7_classic": 7,
     "crt_pilot": 9,
+    "goal_affordance_traps_v1": 240,
     "hagendorff_crt": 150,
     "hagendorff_semantic_illusion": 50,
     "verbal_crt": 10,
@@ -54,6 +57,30 @@ class LureDatasetLoaderTests(unittest.TestCase):
         self.assertTrue(first.control_prompt.endswith("\nAnswer:"))
         self.assertNotEqual(first.prompt, first.control_prompt)
 
+    def test_crt_fresh_v1_is_balanced_and_has_validated_controls(self) -> None:
+        info = lure_dataset_info("crt_fresh_v1")
+        self.assertEqual(
+            info.family_counts,
+            {"crt_difference": 10, "crt_growth": 10, "crt_rate": 10},
+        )
+        cases = load_lure_dataset("crt_fresh_v1")
+        self.assertTrue(all(case.control_prompt for case in cases))
+        self.assertTrue(all("validation=closed_form" in case.note for case in cases))
+        self.assertTrue(all("control_answer_equals_lure=true" in case.note for case in cases))
+
+    def test_crt_fresh_v2_is_balanced_and_preserves_pair_metadata(self) -> None:
+        info = lure_dataset_info("crt_fresh_v2")
+        self.assertEqual(
+            info.family_counts,
+            {"crt_difference": 50, "crt_growth": 50, "crt_rate": 50},
+        )
+        cases = load_lure_dataset("crt_fresh_v2")
+        self.assertEqual(len({case.pair_id for case in cases}), 150)
+        self.assertTrue(all(case.template_id for case in cases))
+        self.assertTrue(all(case.condition == "hostile" for case in cases))
+        self.assertTrue(all(case.control_prompt for case in cases))
+        self.assertTrue(all("validation=closed_form" in case.note for case in cases))
+
     def test_semantic_illusions_are_premise_rejection(self) -> None:
         info = lure_dataset_info("hagendorff_semantic_illusion")
         self.assertEqual(info.scoring, "premise_rejection")
@@ -61,6 +88,19 @@ class LureDatasetLoaderTests(unittest.TestCase):
         self.assertEqual(cases[0].correct_answer, "")
         self.assertEqual(cases[0].lure_answer, "")
         self.assertIn("reference_answer:", cases[0].note)
+
+    def test_goal_affordance_dataset_is_balanced_and_paired(self) -> None:
+        info = lure_dataset_info("goal_affordance_traps_v1")
+        self.assertEqual(info.scoring, "binary_choice")
+        self.assertEqual(set(info.family_counts.values()), {40})
+        cases = load_lure_dataset("goal_affordance_traps_v1")
+        self.assertEqual(len({case.pair_id for case in cases}), 60)
+        self.assertEqual(
+            {case.condition for case in cases},
+            {"counterfactual", "explicit", "hostile", "neutral"},
+        )
+        self.assertTrue(all(case.correct_answer.startswith(" ") for case in cases))
+        self.assertTrue(all(case.lure_answer.startswith(" ") for case in cases))
 
     def test_all_case_ids_globally_unique(self) -> None:
         ids = [case.case_id for cases in load_all_lure_cases().values() for case in cases]

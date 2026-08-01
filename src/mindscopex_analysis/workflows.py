@@ -10,13 +10,12 @@ from typing import Any
 
 import torch
 
-from mindscopex_analysis.activations import capture_layer_residuals
+from mindscopex_analysis.activations import capture_layer_residuals, capture_residual_stream
 from mindscopex_analysis.cases import LureCase
 from mindscopex_analysis.effects import (
     InterventionMode,
     active_prompt_features,
     answer_logprob_margin,
-    continuation_token_span,
     rank_lure_feature_effects,
 )
 from mindscopex_analysis.qwen_scope import QwenScopeSAE, load_qwen_scope_sae, sae_decoder_direction
@@ -38,12 +37,6 @@ class FeatureHandle:
 
     def as_row(self) -> dict[str, Any]:
         return asdict(self)
-
-
-def margin_row(case: LureCase, margin: Any, *, label: str = "baseline") -> dict[str, Any]:
-    row = margin.as_row()
-    row.update({"case_id": case.case_id, "family": case.family, "label": label})
-    return row
 
 
 def candidate_feature_rows(
@@ -79,27 +72,40 @@ def layer_feature_search_rows(
     coefficient: float = 1.0,
     intervention_mode: InterventionMode = "remove_activation",
 ) -> list[dict[str, Any]]:
+    layer_ids = tuple(dict.fromkeys(int(layer) for layer in layers))
+    if not layer_ids:
+        raise ValueError("layers must not be empty")
+
+    residuals = capture_residual_stream(
+        lm,
+        [case.prompt],
+        layer_ids,
+        token_position="last",
+    )
+    baseline = answer_logprob_margin(
+        lm,
+        case.prompt,
+        correct_answer=case.correct_answer,
+        lure_answer=case.lure_answer,
+    )
     rows: list[dict[str, Any]] = []
-    for layer in layers:
-        residual, _, candidates = candidate_feature_rows(
-            lm,
-            case,
-            layer=int(layer),
-            sae=sae_by_layer[int(layer)],
-            top_n=top_n,
-        )
+    for layer in layer_ids:
+        sae = sae_by_layer[layer]
+        residual = residuals[layer]
+        candidates = active_prompt_features(residual, sae, top_n=top_n)
         _baseline, results = rank_lure_feature_effects(
             lm,
             case.prompt,
             correct_answer=case.correct_answer,
             lure_answer=case.lure_answer,
-            layer=int(layer),
-            sae=sae_by_layer[int(layer)],
+            layer=layer,
+            sae=sae,
             residual=residual,
             candidate_features=candidates,
             top_n_candidates=top_n,
             coefficient=coefficient,
             intervention_mode=intervention_mode,
+            baseline=baseline,
         )
         for rank, result in enumerate(results, start=1):
             row = result.as_row()
@@ -145,6 +151,8 @@ def discover_feature_handle(
     coefficient: float = 1.0,
     intervention_mode: InterventionMode = "remove_activation",
 ) -> tuple[FeatureHandle, list[dict[str, Any]]]:
+    if top_n < 1:
+        raise ValueError("top_n must be positive")
     residual, _candidate_rows, candidates = candidate_feature_rows(
         lm,
         case,
@@ -165,6 +173,8 @@ def discover_feature_handle(
         coefficient=coefficient,
         intervention_mode=intervention_mode,
     )
+    if not ranked:
+        raise ValueError("Feature discovery produced no candidates")
     rows = [result.as_row() for result in ranked]
     return feature_handle_from_result(case, ranked[0]), rows
 
@@ -260,6 +270,31 @@ def coefficient_sweep_rows(
         correct_answer=case.correct_answer,
         lure_answer=case.lure_answer,
     )
+    return _coefficient_sweep_rows(
+        lm,
+        case,
+        layer=layer,
+        feature_id=feature_id,
+        feature_value=feature_value,
+        coefficients=coefficients,
+        intervention_mode=intervention_mode,
+        direction=direction,
+        baseline=baseline,
+    )
+
+
+def _coefficient_sweep_rows(
+    lm: Any,
+    case: LureCase,
+    *,
+    layer: int,
+    feature_id: int,
+    feature_value: float,
+    coefficients: Iterable[float],
+    intervention_mode: InterventionMode,
+    direction: torch.Tensor,
+    baseline: Any,
+) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
     for coefficient in coefficients:
         margin = answer_logprob_margin(
@@ -323,18 +358,26 @@ def intervention_mode_rows(
     modes: Sequence[InterventionMode],
     coefficient: float = 1.0,
 ) -> list[dict[str, Any]]:
+    direction = sae_decoder_direction(sae, [int(feature_id)])
+    baseline = answer_logprob_margin(
+        lm,
+        case.prompt,
+        correct_answer=case.correct_answer,
+        lure_answer=case.lure_answer,
+    )
     rows: list[dict[str, Any]] = []
     for mode in modes:
         rows.extend(
-            coefficient_sweep_rows(
+            _coefficient_sweep_rows(
                 lm,
                 case,
                 layer=layer,
-                sae=sae,
                 feature_id=feature_id,
                 feature_value=feature_value,
                 coefficients=[coefficient],
                 intervention_mode=mode,
+                direction=direction,
+                baseline=baseline,
             )
         )
     rows.sort(key=lambda row: row["margin_delta"], reverse=True)
@@ -443,9 +486,8 @@ def prompt_token_window_rows(
     *,
     window: int = 8,
 ) -> list[dict[str, Any]]:
-    input_ids, answer_start = continuation_token_span(tokenizer, prompt, " x")
-    del input_ids
     prompt_ids = tokenizer(prompt, return_tensors="pt", add_special_tokens=True)["input_ids"][0]
+    answer_start = int(prompt_ids.numel())
     start = max(0, int(prompt_ids.numel()) - int(window))
     rows = []
     for idx in range(start, int(prompt_ids.numel())):
@@ -557,19 +599,23 @@ def decoder_cosine_rows(
     sae: QwenScopeSAE,
     feature_ids: Sequence[int],
 ) -> list[dict[str, Any]]:
+    ids = list(dict.fromkeys(int(feature_id) for feature_id in feature_ids))
+    if not ids:
+        return []
+    directions = torch.stack(
+        [sae_decoder_direction(sae, [feature_id]).detach().float().cpu() for feature_id in ids]
+    )
+    directions = torch.nn.functional.normalize(directions, dim=1, eps=1e-12)
+    cosine = directions @ directions.T
+
     rows: list[dict[str, Any]] = []
-    directions = {
-        int(feature_id): sae_decoder_direction(sae, [int(feature_id)]).detach().float().cpu()
-        for feature_id in feature_ids
-    }
-    for left_id, left in directions.items():
-        for right_id, right in directions.items():
-            denom = left.norm().clamp_min(1e-12) * right.norm().clamp_min(1e-12)
+    for left_index, left_id in enumerate(ids):
+        for right_index, right_id in enumerate(ids):
             rows.append(
                 {
                     "feature_i": left_id,
                     "feature_j": right_id,
-                    "decoder_cosine": float((left @ right) / denom),
+                    "decoder_cosine": float(cosine[left_index, right_index]),
                 }
             )
     return rows

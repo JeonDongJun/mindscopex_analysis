@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import shutil
 import subprocess
 import sys
@@ -25,6 +26,7 @@ JOB_PATHS = {
     "crt_text_responses": "experiments/jobs/crt_text_responses.py",
     "research_experiments": "experiments/jobs/research_experiments.py",
 }
+HARDWARE_RE = re.compile(r"\bHardware:\s*([^|]+)", re.IGNORECASE)
 
 
 def repo_root() -> Path:
@@ -119,7 +121,23 @@ def resolve_configs(path: Path) -> list[Path]:
     ]
 
 
-def ensure_session(session: str, gpu: str | None, tpu: str | None) -> None:
+def session_hardware(status_output: str) -> str | None:
+    match = HARDWARE_RE.search(status_output)
+    return match.group(1).strip().upper() if match else None
+
+
+def requested_hardware(gpu: str | None, tpu: str | None) -> str:
+    return (gpu or tpu or "CPU").upper()
+
+
+def ensure_session(
+    session: str,
+    gpu: str | None,
+    tpu: str | None,
+    *,
+    allocation_attempts: int,
+    allocation_retry_delay: float,
+) -> None:
     cmd = ["colab", "status", "-s", session]
     print("+ " + " ".join(cmd), flush=True)
     status = subprocess.run(
@@ -132,14 +150,39 @@ def ensure_session(session: str, gpu: str | None, tpu: str | None) -> None:
     if status.stdout:
         print(status.stdout, end="" if status.stdout.endswith("\n") else "\n", flush=True)
     if status.returncode == 0 and "not found" not in status.stdout.lower():
-        return
+        actual = session_hardware(status.stdout)
+        requested = requested_hardware(gpu, tpu)
+        if actual == requested:
+            return
+        print(
+            f"[launch] session {session!r} has {actual or 'unknown hardware'}, "
+            f"but this run requires {requested}; replacing the session.",
+            flush=True,
+        )
+        run_cmd(["colab", "stop", "-s", session])
 
     cmd = ["colab", "new", "-s", session]
     if gpu:
         cmd.extend(["--gpu", gpu])
     if tpu:
         cmd.extend(["--tpu", tpu])
-    run_cmd(cmd)
+    result: subprocess.CompletedProcess | None = None
+    for attempt in range(1, allocation_attempts + 1):
+        print(
+            f"+ {' '.join(cmd)}  (allocation attempt {attempt}/{allocation_attempts})",
+            flush=True,
+        )
+        result = subprocess.run(cmd, check=False, text=True)
+        if result.returncode == 0:
+            return
+        if attempt < allocation_attempts:
+            print(
+                f"[launch] accelerator allocation failed (exit {result.returncode}); "
+                f"retrying in {allocation_retry_delay:.0f}s",
+                flush=True,
+            )
+            time.sleep(allocation_retry_delay)
+    raise subprocess.CalledProcessError(result.returncode if result else 1, cmd)
 
 
 def write_local_manifest(path: Path, payload: dict[str, Any]) -> None:
@@ -155,6 +198,8 @@ def launch_one(
     default_gpu: str | None,
     default_tpu: str | None,
     exec_timeout: float,
+    allocation_attempts: int,
+    allocation_retry_delay: float,
     dry_run: bool,
 ) -> Path:
     config = load_toml(config_path)
@@ -221,7 +266,13 @@ def launch_one(
         print(f"Dry run prepared {local_run_dir}")
         return local_run_dir
 
-    ensure_session(session, str(gpu) if gpu else None, str(tpu) if tpu else None)
+    ensure_session(
+        session,
+        str(gpu) if gpu else None,
+        str(tpu) if tpu else None,
+        allocation_attempts=allocation_attempts,
+        allocation_retry_delay=allocation_retry_delay,
+    )
     run_cmd_retry(["colab", "upload", "-s", session, str(local_config), remote_config_path])
     if source == "archive":
         run_cmd_retry(
@@ -252,12 +303,24 @@ def launch_one(
     # always archives run_dir (incl. job.log), so partial results and the captured
     # stdout/stderr survive for diagnosis before we surface the failure.
     remote_zip = f"{remote_output_root}/{name}.zip"
+    remote_fallback_zip = f"/content/{name}_artifacts.zip"
     local_zip = local_run_dir / "artifacts.zip"
-    try:
-        run_cmd_retry(["colab", "download", "-s", session, remote_zip, str(local_zip)])
-        unpack_archive(local_zip, local_run_dir / "artifacts")
-    except subprocess.CalledProcessError as exc:
-        print(f"[launch] artifact download failed for {name}: {exc}", flush=True)
+    artifact_downloaded = False
+    for candidate in (remote_zip, remote_fallback_zip):
+        try:
+            run_cmd_retry(
+                ["colab", "download", "-s", session, candidate, str(local_zip)],
+                attempts=12,
+                delay=10.0,
+            )
+            unpack_archive(local_zip, local_run_dir / "artifacts")
+            artifact_downloaded = True
+            break
+        except subprocess.CalledProcessError as exc:
+            print(
+                f"[launch] artifact download failed for {name} from {candidate}: {exc}",
+                flush=True,
+            )
     run_cmd(
         ["colab", "log", "-s", session, "-o", str(local_run_dir / "colab_log.md")],
         check=False,
@@ -269,6 +332,11 @@ def launch_one(
     if exec_result.returncode != 0:
         raise RuntimeError(
             f"remote job {name!r} failed (colab exec returncode={exec_result.returncode}); "
+            f"inspect {local_run_dir}"
+        )
+    if not artifact_downloaded:
+        raise RuntimeError(
+            f"remote job {name!r} finished but no artifact archive could be downloaded; "
             f"inspect {local_run_dir}"
         )
     return local_run_dir
@@ -288,11 +356,35 @@ def main() -> None:
         help="Seconds to wait for `colab exec` to finish.",
     )
     parser.add_argument(
+        "--allocation-attempts",
+        default=6,
+        type=int,
+        help="Attempts to allocate the requested Colab accelerator.",
+    )
+    parser.add_argument(
+        "--allocation-retry-delay",
+        default=30.0,
+        type=float,
+        help="Seconds between Colab accelerator allocation attempts.",
+    )
+    parser.add_argument(
         "--dry-run",
         action="store_true",
         help="Prepare files but do not call Colab.",
     )
+    parser.add_argument(
+        "--continue-on-error",
+        action="store_true",
+        help=(
+            "In a suite, keep going to the next config if one fails "
+            "(log it, reset the session, and continue instead of aborting)."
+        ),
+    )
     args = parser.parse_args()
+    if args.allocation_attempts < 1:
+        parser.error("--allocation-attempts must be at least 1")
+    if args.allocation_retry_delay < 0:
+        parser.error("--allocation-retry-delay must be non-negative")
 
     root = repo_root()
     configs = resolve_configs(args.config_or_suite.resolve())
@@ -300,20 +392,33 @@ def main() -> None:
         check_colab_cli()
 
     launched: list[Path] = []
+    failed: list[str] = []
     try:
         for config_path in configs:
-            launched.append(
-                launch_one(
-                    config_path,
-                    root=root,
-                    session=args.session,
-                    keep_session=args.keep,
-                    default_gpu=args.gpu,
-                    default_tpu=args.tpu,
-                    exec_timeout=args.exec_timeout,
-                    dry_run=args.dry_run,
+            try:
+                launched.append(
+                    launch_one(
+                        config_path,
+                        root=root,
+                        session=args.session,
+                        keep_session=args.keep,
+                        default_gpu=args.gpu,
+                        default_tpu=args.tpu,
+                        exec_timeout=args.exec_timeout,
+                        allocation_attempts=args.allocation_attempts,
+                        allocation_retry_delay=args.allocation_retry_delay,
+                        dry_run=args.dry_run,
+                    )
                 )
-            )
+            except Exception as exc:  # noqa: BLE001
+                if not args.continue_on_error:
+                    raise
+                print(f"[launch] config {config_path.name} failed: {exc}", flush=True)
+                print("[launch] --continue-on-error: resetting session, moving on", flush=True)
+                failed.append(config_path.name)
+                if not args.dry_run:
+                    # Drop the (possibly dead) session so the next config gets a fresh VM.
+                    run_cmd(["colab", "stop", "-s", args.session], check=False)
     finally:
         if not args.keep and not args.dry_run:
             run_cmd(["colab", "stop", "-s", args.session], check=False)
@@ -321,6 +426,10 @@ def main() -> None:
     print("Prepared runs:")
     for path in launched:
         print(f"- {path}")
+    if failed:
+        print("Failed configs (see per-run dirs / streamed log):")
+        for name in failed:
+            print(f"- {name}")
 
 
 if __name__ == "__main__":

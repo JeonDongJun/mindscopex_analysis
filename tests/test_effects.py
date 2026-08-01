@@ -87,6 +87,10 @@ class ContinuationLogprobTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             continuation_logprob_from_logits(torch.zeros(2, 4), torch.tensor([0, 1, 2]), 1)
 
+    def test_rejects_empty_target_span(self) -> None:
+        with self.assertRaises(ValueError):
+            continuation_logprob_from_logits(torch.zeros(2, 4), torch.tensor([0, 1]), 2)
+
 
 class DirectionEditTests(unittest.TestCase):
     def setUp(self) -> None:

@@ -185,9 +185,35 @@ def encode_qwen_scope_topk(
 
     if residual.shape[-1] != sae.d_model:
         raise ValueError(f"residual d_model={residual.shape[-1]} != SAE d_model={sae.d_model}")
+    if not 0 < sae.top_k <= sae.d_sae:
+        raise ValueError(f"SAE top_k must be in [1, {sae.d_sae}], got {sae.top_k}")
     x = residual.to(device=sae.W_enc.device, dtype=sae.W_enc.dtype)
     pre_acts = x @ sae.W_enc.T + sae.b_enc
     return pre_acts.topk(sae.top_k, dim=-1)
+
+
+def qwen_scope_feature_values(
+    residual: torch.Tensor,
+    sae: QwenScopeSAE,
+    feature_ids: Sequence[int],
+) -> torch.Tensor:
+    """Encode only selected SAE features instead of the full feature dictionary."""
+
+    if residual.shape[-1] != sae.d_model:
+        raise ValueError(f"residual d_model={residual.shape[-1]} != SAE d_model={sae.d_model}")
+
+    ids = torch.as_tensor(feature_ids, device=sae.W_enc.device, dtype=torch.long)
+    if ids.dim() != 1:
+        raise ValueError("feature_ids must be one-dimensional")
+    x = residual.to(device=sae.W_enc.device, dtype=sae.W_enc.dtype)
+    if ids.numel() == 0:
+        return x.new_empty((*residual.shape[:-1], 0))
+    if int(ids.min()) < 0 or int(ids.max()) >= sae.d_sae:
+        raise IndexError(f"feature_ids must be in [0, {sae.d_sae})")
+
+    weights = sae.W_enc.index_select(0, ids)
+    biases = sae.b_enc.index_select(0, ids)
+    return x @ weights.T + biases
 
 
 def summarize_qwen_scope_features(
@@ -200,6 +226,8 @@ def summarize_qwen_scope_features(
 
     if residuals.dim() != 2:
         residuals = residuals.reshape(-1, residuals.shape[-1])
+    if batch_size < 1:
+        raise ValueError("batch_size must be positive")
     n_tokens = int(residuals.shape[0])
     device = sae.W_enc.device
     sums = torch.zeros(sae.d_sae, device=device, dtype=torch.float32)
@@ -243,6 +271,8 @@ def top_qwen_scope_features(
     if not isinstance(scores, torch.Tensor):
         raise TypeError(f"summary[{metric!r}] must be a tensor")
 
+    if top_n < 0:
+        raise ValueError("top_n must be non-negative")
     n = min(int(top_n), int(scores.numel()))
     _, indices = scores.topk(n)
     means = summary["mean"]
@@ -356,41 +386,6 @@ def scan_qwen_scope_layers(
 
     reports.sort(key=lambda report: report.score, reverse=True)
     return LayerScanResult(reports=reports, residuals=residuals)
-
-
-def format_qwen_chat(
-    tokenizer: Any,
-    prompt: str,
-    *,
-    system_prompt: str = "",
-    enable_thinking: bool | None = None,
-) -> str:
-    """Format a Qwen chat prompt with an optional Qwen3.5 thinking switch."""
-
-    messages = []
-    if system_prompt:
-        messages.append({"role": "system", "content": system_prompt})
-    messages.append({"role": "user", "content": prompt})
-    if hasattr(tokenizer, "apply_chat_template"):
-        kwargs: dict[str, Any] = {
-            "tokenize": False,
-            "add_generation_prompt": True,
-        }
-        if enable_thinking is not None:
-            kwargs["enable_thinking"] = enable_thinking
-        try:
-            return tokenizer.apply_chat_template(messages, **kwargs)
-        except TypeError:
-            kwargs.pop("enable_thinking", None)
-            text = tokenizer.apply_chat_template(messages, **kwargs)
-            if enable_thinking is True:
-                return text + "\n/think"
-            if enable_thinking is False:
-                return text + "\n/no_think"
-            return text
-    if system_prompt:
-        return f"{system_prompt}\n\nUser: {prompt}\nAssistant:"
-    return f"User: {prompt}\nAssistant:"
 
 
 def split_qwen_thinking(text: str) -> tuple[str, str]:

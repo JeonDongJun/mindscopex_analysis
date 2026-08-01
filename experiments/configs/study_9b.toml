@@ -27,7 +27,7 @@ instruction = true
 candidate_top_n = 10
 min_active_cases = 3
 max_candidates = 24
-max_cases = 24
+max_cases = 24               # family-balanced cap on train items used for discovery
 coefficient = 1.0
 intervention_mode = "remove_activation"
 null_samples = 32
@@ -36,8 +36,9 @@ null_seed = 0
 [behavioral]
 coefficients = [0.0, -2.0, -4.0, -8.0]
 max_new_tokens = 16
-max_cases = 40
+max_cases = 40               # deterministic family-balanced held-out subset
 token_position = "all"
+output_mode = "binary_choice" # hard-constrain output to correct or lure; no <think>/other
 
 [colab]
 gpu = "A100"

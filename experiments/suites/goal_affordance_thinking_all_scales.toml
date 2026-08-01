@@ -1,0 +1,13 @@
+# Goal-affordance traps thinking-effect across Qwen scales (2B/9B/27B/35B) on one G4.
+# Reasoning OFF/ON, forced correct-vs-lure. 240 cases x 2 modes per model; the
+# condition (hostile/explicit/neutral/counterfactual) is recoverable from case_id.
+#   ./experiments/run_colab.sh experiments/suites/goal_affordance_thinking_all_scales.toml \
+#       -s mindscopex-goal -g G4 --exec-timeout 21600 --continue-on-error
+[suite]
+name = "goal_affordance_thinking_all_scales"
+configs = [
+  "../configs/00_goal_affordance_2b.toml",
+  "../configs/00_goal_affordance_9b.toml",
+  "../configs/00_goal_affordance_27b.toml",
+  "../configs/00_goal_affordance_35b_a3b.toml",
+]

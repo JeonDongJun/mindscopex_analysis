@@ -1,17 +1,20 @@
 from __future__ import annotations
 
 import unittest
+from collections import Counter
 
 import torch
 from torch import nn
 
 from mindscopex_analysis import (
+    family_balanced_subset,
     find_decoder_block,
     null_summary,
     split_lure_cases,
     summarize_answer_labels,
 )
 from mindscopex_analysis.cases import LureCase
+from mindscopex_analysis.research import _binary_choice_completion, _generate_labels
 
 
 def _case(case_id: str, family: str) -> LureCase:
@@ -67,6 +70,24 @@ class SplitLureCasesTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 split_lure_cases(self.cases, train_frac=bad)
 
+    def test_family_balanced_subset_round_robins_families(self) -> None:
+        subset = family_balanced_subset(self.cases, max_cases=24)
+        counts = Counter(case.family for case in subset)
+
+        self.assertEqual(counts, {"difference": 8, "growth": 8, "rate": 8})
+        self.assertEqual(
+            [case.family for case in subset[:6]],
+            ["difference", "growth", "rate", "difference", "growth", "rate"],
+        )
+
+    def test_family_balanced_subset_uses_all_when_uncapped(self) -> None:
+        self.assertEqual(family_balanced_subset(self.cases, max_cases=0), self.cases)
+        self.assertEqual(family_balanced_subset(self.cases, max_cases=100), self.cases)
+
+    def test_family_balanced_subset_rejects_negative_limit(self) -> None:
+        with self.assertRaises(ValueError):
+            family_balanced_subset(self.cases, max_cases=-1)
+
 
 class NullSummaryTests(unittest.TestCase):
     def test_zero_variance_null(self) -> None:
@@ -99,6 +120,95 @@ class SummarizeAnswerLabelsTests(unittest.TestCase):
         summary = summarize_answer_labels([])
         self.assertEqual(summary["accuracy"], 0.0)
         self.assertEqual(summary["lure_rate"], 0.0)
+
+
+class _ChoiceTokenizer:
+    pad_token_id = 0
+    eos_token_id = 9
+
+    def __call__(self, _prompt: str, *, return_tensors: str):
+        self.assert_return_tensors = return_tensors
+        return {
+            "input_ids": torch.tensor([[1, 2]]),
+            "attention_mask": torch.tensor([[1, 1]]),
+        }
+
+    def encode(self, answer: str, *, add_special_tokens: bool):
+        self.assert_add_special_tokens = add_special_tokens
+        return {" a": [3, 5], " b": [3, 6]}[answer]
+
+
+class _ChoiceModel(nn.Module):
+    def __init__(self, final_choice_token: int) -> None:
+        super().__init__()
+        self.anchor = nn.Parameter(torch.zeros(1))
+        self.final_choice_token = final_choice_token
+
+    def generate(self, input_ids, prefix_allowed_tokens_fn, **kwargs):
+        self.generate_kwargs = kwargs
+        sequence = input_ids.clone()
+
+        first_allowed = prefix_allowed_tokens_fn(0, sequence[0])
+        self.assert_first_allowed = first_allowed
+        sequence = torch.cat([sequence, torch.tensor([[3]], device=sequence.device)], dim=1)
+
+        choice_allowed = prefix_allowed_tokens_fn(0, sequence[0])
+        self.assert_choice_allowed = choice_allowed
+        if self.final_choice_token not in choice_allowed:
+            raise AssertionError("test model's selected answer was not allowed")
+        sequence = torch.cat(
+            [sequence, torch.tensor([[self.final_choice_token]], device=sequence.device)],
+            dim=1,
+        )
+
+        eos_allowed = prefix_allowed_tokens_fn(0, sequence[0])
+        self.assert_eos_allowed = eos_allowed
+        return torch.cat([sequence, torch.tensor([[9]], device=sequence.device)], dim=1)
+
+
+class BehavioralBinaryChoiceTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self.case = _case("choice", "difference")
+        self.tokenizer = _ChoiceTokenizer()
+
+    def test_constrains_completion_to_correct_or_lure_trie(self) -> None:
+        model = _ChoiceModel(final_choice_token=6)
+
+        answer = _binary_choice_completion(
+            model,
+            self.tokenizer,
+            self.case,
+            max_new_tokens=1,
+        )
+
+        self.assertEqual(answer, "b")
+        self.assertEqual(model.assert_first_allowed, [3])
+        self.assertEqual(model.assert_choice_allowed, [5, 6])
+        self.assertEqual(model.assert_eos_allowed, [9])
+        self.assertGreaterEqual(model.generate_kwargs["max_new_tokens"], 3)
+        self.assertTrue(model.generate_kwargs["renormalize_logits"])
+
+    def test_binary_mode_never_emits_other(self) -> None:
+        rows = _generate_labels(
+            _ChoiceModel(final_choice_token=5),
+            self.tokenizer,
+            [self.case],
+            max_new_tokens=1,
+            output_mode="binary_choice",
+        )
+
+        self.assertEqual(rows[0]["answer"], "a")
+        self.assertEqual(rows[0]["label"], "correct")
+
+    def test_rejects_unknown_output_mode(self) -> None:
+        with self.assertRaisesRegex(ValueError, "output_mode"):
+            _generate_labels(
+                _ChoiceModel(final_choice_token=5),
+                self.tokenizer,
+                [self.case],
+                max_new_tokens=1,
+                output_mode="unknown",
+            )
 
 
 class _Inner(nn.Module):

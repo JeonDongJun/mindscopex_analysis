@@ -18,8 +18,8 @@ skeptical reviewer needs:
   prompts; a lure feature should move the hostile margin far more than the
   control margin.
 * ``steer_generation_labels`` — the behavioral readout: does suppressing the
-  feature during *free generation* actually shift the answer from lure to
-  correct, not just the teacher-forced logprob margin?
+  feature during constrained correct-vs-lure generation shift the selected
+  answer, not just the teacher-forced logprob margin?
 
 Every model-dependent function is a thin wrapper over the already-tested
 :func:`~mindscopex_analysis.effects.answer_logprob_margin`,
@@ -33,7 +33,7 @@ import hashlib
 import statistics
 from collections import Counter
 from collections.abc import Callable, Sequence
-from typing import Any
+from typing import Any, Literal
 
 import torch
 
@@ -49,6 +49,7 @@ from mindscopex_analysis.models import DEFAULT_BLOCK_PATH_TEMPLATE
 from mindscopex_analysis.qwen_scope import (
     QwenScopeSAE,
     make_feature_steering_hook,
+    qwen_scope_feature_values,
     sae_decoder_direction,
 )
 
@@ -100,6 +101,42 @@ def split_lure_cases(
         train.extend(family_train)
         test.extend(family_test)
     return train, test
+
+
+def family_balanced_subset(
+    cases: Sequence[LureCase],
+    *,
+    max_cases: int,
+) -> list[LureCase]:
+    """Take a deterministic round-robin subset balanced across case families."""
+
+    if max_cases < 0:
+        raise ValueError("max_cases must be non-negative")
+    if max_cases == 0 or max_cases >= len(cases):
+        return list(cases)
+
+    by_family: dict[str, list[LureCase]] = {}
+    for case in cases:
+        by_family.setdefault(case.family, []).append(case)
+
+    families = sorted(by_family)
+    offsets = {family: 0 for family in families}
+    subset: list[LureCase] = []
+    while len(subset) < max_cases:
+        added = False
+        for family in families:
+            offset = offsets[family]
+            rows = by_family[family]
+            if offset >= len(rows):
+                continue
+            subset.append(rows[offset])
+            offsets[family] += 1
+            added = True
+            if len(subset) == max_cases:
+                break
+        if not added:
+            break
+    return subset
 
 
 # ----------------------------------------------------------------- null model
@@ -216,9 +253,8 @@ def null_summary(observed_delta: float, null_deltas: Sequence[float]) -> dict[st
 
 def _feature_activation(residual: torch.Tensor, sae: QwenScopeSAE, feature_id: int) -> float:
     vector = residual if residual.dim() > 1 else residual.unsqueeze(0)
-    x = vector.to(device=sae.W_enc.device, dtype=sae.W_enc.dtype)
-    pre_acts = x @ sae.W_enc.T + sae.b_enc
-    return float(pre_acts[0, int(feature_id)])
+    values = qwen_scope_feature_values(vector, sae, [int(feature_id)])
+    return float(values[0, 0])
 
 
 def aggregate_feature_effect(
@@ -348,12 +384,16 @@ def discover_generalizing_feature(
     if progress is not None:
         progress(f"layer {int(layer)}: {len(candidates)} candidates x {len(contexts)} cases")
 
+    activation_rows = [
+        qwen_scope_feature_values(residual, sae, candidates)[0].detach().float().cpu()
+        for _case, residual, _baseline in contexts
+    ]
     rows: list[dict[str, Any]] = []
-    for c_index, feature_id in enumerate(candidates, start=1):
+    for candidate_index, feature_id in enumerate(candidates):
         direction = sae_decoder_direction(sae, [int(feature_id)])
         deltas: list[float] = []
-        for case, residual, baseline_margin in contexts:
-            value = _feature_activation(residual, sae, int(feature_id))
+        for case_index, (case, _residual, baseline_margin) in enumerate(contexts):
+            value = float(activation_rows[case_index][candidate_index])
             ablated = answer_logprob_margin(
                 lm,
                 case.prompt,
@@ -381,7 +421,7 @@ def discover_generalizing_feature(
         )
         if progress is not None:
             progress(
-                f"  [{c_index}/{len(candidates)}] feature {int(feature_id)} "
+                f"  [{candidate_index + 1}/{len(candidates)}] feature {int(feature_id)} "
                 f"mean_delta={rows[-1]['mean_margin_delta']:+.4f}"
             )
     rows.sort(key=lambda row: row["mean_margin_delta"], reverse=True)
@@ -470,6 +510,8 @@ def control_specificity_rows(
 
 # --------------------------------------------------------- behavioral readout
 
+BehavioralOutputMode = Literal["binary_choice", "free"]
+
 
 def find_decoder_block(
     model: Any,
@@ -552,20 +594,123 @@ def _greedy_completion(model: Any, tokenizer: Any, prompt: str, *, max_new_token
     return text_tokenizer.decode(generated, skip_special_tokens=True)
 
 
+def _binary_choice_completion(
+    model: Any,
+    tokenizer: Any,
+    case: LureCase,
+    *,
+    max_new_tokens: int,
+) -> str:
+    """Generate exactly one of a case's correct/lure answer strings.
+
+    Qwen's ``enable_thinking=False`` is a chat-template switch, not a
+    ``model.generate`` argument.  The SAE study deliberately generates from the
+    same Base checkpoint used for feature discovery, which has no applicable
+    chat template.  Prefix-constrained decoding is therefore the hard,
+    checkpoint-preserving way to prevent ``<think>`` and third-answer outputs.
+    """
+
+    text_tokenizer = getattr(tokenizer, "tokenizer", tokenizer)
+    candidates = [case.correct_answer, case.lure_answer]
+    candidate_ids = [
+        list(text_tokenizer.encode(answer, add_special_tokens=False)) for answer in candidates
+    ]
+    if any(not ids for ids in candidate_ids):
+        raise ValueError(f"Case {case.case_id!r} has an answer with no tokenizer tokens")
+    if candidate_ids[0] == candidate_ids[1]:
+        raise ValueError(f"Case {case.case_id!r} has token-identical correct/lure answers")
+
+    encoded = text_tokenizer(case.prompt, return_tensors="pt")
+    device = next(model.parameters()).device
+    input_ids = encoded["input_ids"].to(device)
+    prompt_length = int(input_ids.shape[-1])
+
+    eos = text_tokenizer.eos_token_id
+    if eos is None:
+        raise ValueError("Binary constrained generation requires an eos_token_id")
+    eos_ids = [int(token_id) for token_id in eos] if isinstance(eos, (list, tuple)) else [int(eos)]
+
+    def allowed_tokens(_batch_id: int, sequence: torch.Tensor) -> list[int]:
+        generated = sequence[prompt_length:].tolist()
+        allowed: set[int] = set()
+        for ids in candidate_ids:
+            if generated == ids[: len(generated)]:
+                if len(generated) < len(ids):
+                    allowed.add(int(ids[len(generated)]))
+                else:
+                    allowed.update(eos_ids)
+        if not allowed:
+            raise RuntimeError(
+                f"Constrained generation left the answer trie for case {case.case_id!r}: "
+                f"{generated!r}"
+            )
+        return sorted(allowed)
+
+    gen_kwargs: dict[str, Any] = {
+        "input_ids": input_ids,
+        "max_new_tokens": max(int(max_new_tokens), max(map(len, candidate_ids)) + 1),
+        "do_sample": False,
+        "prefix_allowed_tokens_fn": allowed_tokens,
+        "renormalize_logits": True,
+        "eos_token_id": eos_ids,
+    }
+    if "attention_mask" in encoded:
+        gen_kwargs["attention_mask"] = encoded["attention_mask"].to(device)
+    pad_id = text_tokenizer.pad_token_id
+    if pad_id is None:
+        pad_id = eos_ids[0]
+    gen_kwargs["pad_token_id"] = int(pad_id)
+
+    with torch.inference_mode():
+        output = model.generate(**gen_kwargs)
+    generated = output[0, prompt_length:].tolist()
+    while generated and generated[-1] in eos_ids:
+        generated.pop()
+
+    for answer, ids in zip(candidates, candidate_ids, strict=True):
+        if generated == ids:
+            return answer.strip()
+    raise RuntimeError(
+        f"Constrained generation did not finish a valid answer for case {case.case_id!r}: "
+        f"{generated!r}"
+    )
+
+
 def _generate_labels(
     model: Any,
     tokenizer: Any,
     cases: Sequence[LureCase],
     *,
     max_new_tokens: int,
+    output_mode: BehavioralOutputMode = "binary_choice",
     progress: Callable[[str], None] | None = None,
     phase: str = "",
 ) -> list[dict[str, Any]]:
+    if output_mode not in {"binary_choice", "free"}:
+        raise ValueError(f"Unknown behavioral output_mode={output_mode!r}")
+
     rows: list[dict[str, Any]] = []
     total = len(cases)
     for index, case in enumerate(cases, start=1):
-        text = _greedy_completion(model, tokenizer, case.prompt, max_new_tokens=max_new_tokens)
+        if output_mode == "binary_choice":
+            text = _binary_choice_completion(
+                model,
+                tokenizer,
+                case,
+                max_new_tokens=max_new_tokens,
+            )
+        else:
+            text = _greedy_completion(
+                model,
+                tokenizer,
+                case.prompt,
+                max_new_tokens=max_new_tokens,
+            )
         label = classify_lure_answer(text, case)
+        if output_mode == "binary_choice" and label not in {"correct", "lure"}:
+            raise RuntimeError(
+                f"Binary choice produced unexpected label {label!r} for case {case.case_id!r}"
+            )
         rows.append(
             {
                 "case_id": case.case_id,
@@ -590,10 +735,11 @@ def steer_generation_labels(
     coefficient: float,
     max_new_tokens: int = 16,
     token_position: str = "all",
+    output_mode: BehavioralOutputMode = "binary_choice",
     block_path_template: str = DEFAULT_BLOCK_PATH_TEMPLATE,
     progress: Callable[[str], None] | None = None,
 ) -> dict[str, Any]:
-    """Behavioral readout: greedy free generation with vs without feature steering.
+    """Behavioral readout: correct-vs-lure generation with vs without steering.
 
     Registers :func:`make_feature_steering_hook` (use a negative ``coefficient``
     to suppress the lure feature) on the layer block and re-generates. Returns
@@ -603,7 +749,13 @@ def steer_generation_labels(
     """
 
     baseline = _generate_labels(
-        model, tokenizer, cases, max_new_tokens=max_new_tokens, progress=progress, phase="baseline "
+        model,
+        tokenizer,
+        cases,
+        max_new_tokens=max_new_tokens,
+        output_mode=output_mode,
+        progress=progress,
+        phase="baseline ",
     )
     block = find_decoder_block(model, int(layer), block_path_template=block_path_template)
     hook = make_feature_steering_hook(
@@ -616,6 +768,7 @@ def steer_generation_labels(
             tokenizer,
             cases,
             max_new_tokens=max_new_tokens,
+            output_mode=output_mode,
             progress=progress,
             phase=f"steer(c={coefficient:g}) ",
         )
@@ -628,6 +781,7 @@ def steer_generation_labels(
         "coefficient": float(coefficient),
         "layer": int(layer),
         "feature_id": int(feature_id),
+        "output_mode": output_mode,
         "baseline_summary": baseline_summary,
         "steered_summary": steered_summary,
         "accuracy_delta": steered_summary["accuracy"] - baseline_summary["accuracy"],

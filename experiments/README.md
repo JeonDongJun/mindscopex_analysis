@@ -3,6 +3,8 @@
 This directory is the batch-experiment layer next to the exploratory notebooks.
 The notebooks remain useful for inspection and explanation; files here run the
 same core `mindscopex_analysis` functions as reproducible Colab jobs.
+Repository-wide module boundaries are documented in
+[../docs/architecture.md](../docs/architecture.md).
 
 ## Layout
 
@@ -26,10 +28,19 @@ motivated it is reviewed in [../docs/notebook_paper_audit.md](../docs/notebook_p
 # whole study (long; raise the timeout)
 ./experiments/run_colab.sh experiments/suites/study.toml -s mindscopex --gpu A100 --exec-timeout 9000
 
+# all model sizes; switches from A100 to H100 before 27B
+./experiments/run_colab.sh experiments/suites/study_all.toml -s mindscopex-all --exec-timeout 18000
+
 # one stage at a time
 ./experiments/run_colab.sh experiments/configs/study_discover_2b.toml -s mindscopex
 ./experiments/run_colab.sh experiments/configs/study_behavioral_2b.toml -s mindscopex
 ```
+
+For mixed-accelerator suites such as `study_all.toml`, do not pass `--gpu`: a
+command-line override applies to every config. The launcher verifies the current
+session hardware and replaces the runtime when the next config requires a
+different accelerator. Transient allocation failures are retried; tune this with
+`--allocation-attempts` and `--allocation-retry-delay`.
 
 Design, datasets, and interpretation: [../docs/study_design.md](../docs/study_design.md).
 

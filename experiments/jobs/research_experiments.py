@@ -3,14 +3,14 @@
 Where the `notebooks/` explore one case at a time, this job runs the controlled
 study: discover the lure feature on a *discovery split* of a real CRT dataset,
 then apply it to *held-out* items, measured against a random-direction null and
-read out both as teacher-forced margin and as actual free-generation accuracy.
+read out both as teacher-forced margin and as constrained binary-choice accuracy.
 
 Kinds:
     phenomenon          baseline lure margin over a dataset (establish the effect)
     discover            train-split localization + generalizing feature + null
     causal_heldout      apply the discovered feature to the held-out split (margin)
     control_specificity hostile vs matched-control margin delta (specificity)
-    behavioral          free-generation accuracy with vs without feature steering
+    behavioral          constrained correct-vs-lure accuracy with/without feature steering
     study               all of the above (margin phase, then generation phase)
 
 Datasets follow docs/datasets.md (default hagendorff_crt: 150 items, 3 families,
@@ -54,6 +54,7 @@ from mindscopex_analysis import (
     default_sae_device,
     discover_generalizing_feature,
     dtype_from_name,
+    family_balanced_subset,
     get_qwen35_analysis_profile,
     instruct_lure_cases,
     load_qwen_language_model,
@@ -248,7 +249,7 @@ def _discover_study_feature(
     null_samples = int(dcfg.get("null_samples", 32))
     null_seed = int(dcfg.get("null_seed", 0))
 
-    subset = list(train_cases)[:max_cases]
+    subset = family_balanced_subset(train_cases, max_cases=max_cases)
     localization: list[dict[str, Any]] = []
     best: dict[str, Any] | None = None
     best_sae = None
@@ -629,9 +630,13 @@ def run_behavioral(
     max_new_tokens = int(bcfg.get("max_new_tokens", 16))
     max_cases = int(bcfg.get("max_cases", 40))
     token_position = str(bcfg.get("token_position", "all"))
-    cases = list(splits["test"])[:max_cases]
+    output_mode = str(bcfg.get("output_mode", "binary_choice"))
+    cases = family_balanced_subset(splits["test"], max_cases=max_cases)
 
-    _log(f"behavioral: {len(coefficients)} coefficients x {len(cases)} items (baseline+steered)")
+    _log(
+        f"behavioral: {len(coefficients)} coefficients x {len(cases)} items "
+        f"(baseline+steered, output_mode={output_mode})"
+    )
     rows: list[dict[str, Any]] = []
     detail: list[dict[str, Any]] = []
     for coefficient in coefficients:
@@ -646,6 +651,7 @@ def run_behavioral(
             coefficient=float(coefficient),
             max_new_tokens=max_new_tokens,
             token_position=token_position,
+            output_mode=output_mode,
             progress=_log,
         )
         rows.append(
@@ -659,7 +665,14 @@ def run_behavioral(
                 "lure_rate_delta": result["lure_rate_delta"],
             }
         )
-        detail.append({"coefficient": float(coefficient), "steered_rows": result["steered_rows"]})
+        detail.append(
+            {
+                "coefficient": float(coefficient),
+                "output_mode": output_mode,
+                "baseline_rows": result["baseline_rows"],
+                "steered_rows": result["steered_rows"],
+            }
+        )
 
     _write_csv(
         run_dir / "behavioral.csv",
@@ -683,6 +696,7 @@ def run_behavioral(
         "paper_csv": str(run_dir / "behavioral.csv"),
         "png": png,
         "n_cases": len(cases),
+        "output_mode": output_mode,
     }
 
 

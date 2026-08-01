@@ -1,0 +1,298 @@
+{
+  "dataset_id": "crt_fresh_v1",
+  "schema_version": 1,
+  "title": "MindScopeX CRT Fresh Isomorphs v1",
+  "description": "A deterministic 30-item synthetic pilot with 10 fresh surface isomorphs for each of difference, parallel-rate, and exponential-growth CRT families. Every hostile item has a matched control where the hostile lure becomes the correct answer. Answers and control relations are verified by closed-form assertions during generation; the set is not filtered on model failures.",
+  "task_kind": "crt",
+  "scoring": "logprob_margin",
+  "source": {
+    "authors": "MindScopeX project",
+    "year": 2026,
+    "title": "CRT Fresh Isomorphs v1",
+    "venue": "Repository-generated synthetic benchmark",
+    "doi": "",
+    "project_url": "",
+    "download_url": "",
+    "license": "Apache-2.0 (repository-generated content)",
+    "license_note": "Deterministically generated from closed-form CRT templates in this builder. No model outputs were used to define the questions, correct answers, lure answers, or matched controls. Cite the repository version and generation date."
+  },
+  "generated_by": "scripts/build_datasets.py",
+  "n_cases": 30,
+  "family_counts": {
+    "crt_difference": 10,
+    "crt_growth": 10,
+    "crt_rate": 10
+  },
+  "cases": [
+    {
+      "case_id": "crt_fresh_v1_difference_001",
+      "family": "crt_difference",
+      "question": "At a shop, the combined price of a portable projector and a wireless presenter is $40. The portable projector costs $26 more than the wireless presenter. What is the price of the wireless presenter? Answer in dollars.",
+      "correct_answer": "$7",
+      "lure_answer": "$14",
+      "control_question": "At a shop, the combined price of a portable projector and a wireless presenter is $40. The portable projector costs $26. What is the price of the wireless presenter? Answer in dollars.",
+      "note": "template=difference; validation=closed_form; control_answer_equals_lure=true"
+    },
+    {
+      "case_id": "crt_fresh_v1_difference_002",
+      "family": "crt_difference",
+      "question": "At a shop, the combined price of a camping stove and a metal cup is $51. The camping stove costs $31 more than the metal cup. What is the price of the metal cup? Answer in dollars.",
+      "correct_answer": "$10",
+      "lure_answer": "$20",
+      "control_question": "At a shop, the combined price of a camping stove and a metal cup is $51. The camping stove costs $31. What is the price of the metal cup? Answer in dollars.",
+      "note": "template=difference; validation=closed_form; control_answer_equals_lure=true"
+    },
+    {
+      "case_id": "crt_fresh_v1_difference_003",
+      "family": "crt_difference",
+      "question": "At a shop, the combined price of a museum annual pass and a audio guide rental is $62. The museum annual pass costs $36 more than the audio guide rental. What is the price of the audio guide rental? Answer in dollars.",
+      "correct_answer": "$13",
+      "lure_answer": "$26",
+      "control_question": "At a shop, the combined price of a museum annual pass and a audio guide rental is $62. The museum annual pass costs $36. What is the price of the audio guide rental? Answer in dollars.",
+      "note": "template=difference; validation=closed_form; control_answer_equals_lure=true"
+    },
+    {
+      "case_id": "crt_fresh_v1_difference_004",
+      "family": "crt_difference",
+      "question": "At a shop, the combined price of a mechanical keyboard and a mouse pad is $73. The mechanical keyboard costs $41 more than the mouse pad. What is the price of the mouse pad? Answer in dollars.",
+      "correct_answer": "$16",
+      "lure_answer": "$32",
+      "control_question": "At a shop, the combined price of a mechanical keyboard and a mouse pad is $73. The mechanical keyboard costs $41. What is the price of the mouse pad? Answer in dollars.",
+      "note": "template=difference; validation=closed_form; control_answer_equals_lure=true"
+    },
+    {
+      "case_id": "crt_fresh_v1_difference_005",
+      "family": "crt_difference",
+      "question": "At a shop, the combined price of a bicycle helmet and a water bottle cage is $84. The bicycle helmet costs $46 more than the water bottle cage. What is the price of the water bottle cage? Answer in dollars.",
+      "correct_answer": "$19",
+      "lure_answer": "$38",
+      "control_question": "At a shop, the combined price of a bicycle helmet and a water bottle cage is $84. The bicycle helmet costs $46. What is the price of the water bottle cage? Answer in dollars.",
+      "note": "template=difference; validation=closed_form; control_answer_equals_lure=true"
+    },
+    {
+      "case_id": "crt_fresh_v1_difference_006",
+      "family": "crt_difference",
+      "question": "At a shop, the combined price of a chef's knife and a vegetable peeler is $95. The chef's knife costs $51 more than the vegetable peeler. What is the price of the vegetable peeler? Answer in dollars.",
+      "correct_answer": "$22",
+      "lure_answer": "$44",
+      "control_question": "At a shop, the combined price of a chef's knife and a vegetable peeler is $95. The chef's knife costs $51. What is the price of the vegetable peeler? Answer in dollars.",
+      "note": "template=difference; validation=closed_form; control_answer_equals_lure=true"
+    },
+    {
+      "case_id": "crt_fresh_v1_difference_007",
+      "family": "crt_difference",
+      "question": "At a shop, the combined price of a desk lamp and a cable organizer is $106. The desk lamp costs $56 more than the cable organizer. What is the price of the cable organizer? Answer in dollars.",
+      "correct_answer": "$25",
+      "lure_answer": "$50",
+      "control_question": "At a shop, the combined price of a desk lamp and a cable organizer is $106. The desk lamp costs $56. What is the price of the cable organizer? Answer in dollars.",
+      "note": "template=difference; validation=closed_form; control_answer_equals_lure=true"
+    },
+    {
+      "case_id": "crt_fresh_v1_difference_008",
+      "family": "crt_difference",
+      "question": "At a shop, the combined price of a telescope and a tripod adapter is $117. The telescope costs $61 more than the tripod adapter. What is the price of the tripod adapter? Answer in dollars.",
+      "correct_answer": "$28",
+      "lure_answer": "$56",
+      "control_question": "At a shop, the combined price of a telescope and a tripod adapter is $117. The telescope costs $61. What is the price of the tripod adapter? Answer in dollars.",
+      "note": "template=difference; validation=closed_form; control_answer_equals_lure=true"
+    },
+    {
+      "case_id": "crt_fresh_v1_difference_009",
+      "family": "crt_difference",
+      "question": "At a shop, the combined price of a hiking backpack and a rain cover is $128. The hiking backpack costs $66 more than the rain cover. What is the price of the rain cover? Answer in dollars.",
+      "correct_answer": "$31",
+      "lure_answer": "$62",
+      "control_question": "At a shop, the combined price of a hiking backpack and a rain cover is $128. The hiking backpack costs $66. What is the price of the rain cover? Answer in dollars.",
+      "note": "template=difference; validation=closed_form; control_answer_equals_lure=true"
+    },
+    {
+      "case_id": "crt_fresh_v1_difference_010",
+      "family": "crt_difference",
+      "question": "At a shop, the combined price of a board game and a card sleeve pack is $139. The board game costs $71 more than the card sleeve pack. What is the price of the card sleeve pack? Answer in dollars.",
+      "correct_answer": "$34",
+      "lure_answer": "$68",
+      "control_question": "At a shop, the combined price of a board game and a card sleeve pack is $139. The board game costs $71. What is the price of the card sleeve pack? Answer in dollars.",
+      "note": "template=difference; validation=closed_form; control_answer_equals_lure=true"
+    },
+    {
+      "case_id": "crt_fresh_v1_rate_001",
+      "family": "crt_rate",
+      "question": "If 3 3D printers can print 3 prototype shells in 3 minutes, how many minutes would 18 3D printers need to print 18 prototype shells?",
+      "correct_answer": "3 minutes",
+      "lure_answer": "18 minutes",
+      "control_question": "If 3 3D printers can print 3 prototype shells in 3 minutes, how many minutes would the same 3 3D printers need to print 18 prototype shells?",
+      "note": "template=parallel_rate; validation=closed_form; control_answer_equals_lure=true"
+    },
+    {
+      "case_id": "crt_fresh_v1_rate_002",
+      "family": "crt_rate",
+      "question": "If 4 laser cutters can cut 4 acrylic panels in 4 minutes, how many minutes would 22 laser cutters need to cut 22 acrylic panels?",
+      "correct_answer": "4 minutes",
+      "lure_answer": "22 minutes",
+      "control_question": "If 4 laser cutters can cut 4 acrylic panels in 4 minutes, how many minutes would the same 4 laser cutters need to cut 22 acrylic panels?",
+      "note": "template=parallel_rate; validation=closed_form; control_answer_equals_lure=true"
+    },
+    {
+      "case_id": "crt_fresh_v1_rate_003",
+      "family": "crt_rate",
+      "question": "If 5 baristas can prepare 5 iced drinks in 5 minutes, how many minutes would 26 baristas need to prepare 26 iced drinks?",
+      "correct_answer": "5 minutes",
+      "lure_answer": "26 minutes",
+      "control_question": "If 5 baristas can prepare 5 iced drinks in 5 minutes, how many minutes would the same 5 baristas need to prepare 26 iced drinks?",
+      "note": "template=parallel_rate; validation=closed_form; control_answer_equals_lure=true"
+    },
+    {
+      "case_id": "crt_fresh_v1_rate_004",
+      "family": "crt_rate",
+      "question": "If 6 packing robots can seal 6 shipping boxes in 6 minutes, how many minutes would 30 packing robots need to seal 30 shipping boxes?",
+      "correct_answer": "6 minutes",
+      "lure_answer": "30 minutes",
+      "control_question": "If 6 packing robots can seal 6 shipping boxes in 6 minutes, how many minutes would the same 6 packing robots need to seal 30 shipping boxes?",
+      "note": "template=parallel_rate; validation=closed_form; control_answer_equals_lure=true"
+    },
+    {
+      "case_id": "crt_fresh_v1_rate_005",
+      "family": "crt_rate",
+      "question": "If 7 document scanners can scan 7 folders in 7 minutes, how many minutes would 34 document scanners need to scan 34 folders?",
+      "correct_answer": "7 minutes",
+      "lure_answer": "34 minutes",
+      "control_question": "If 7 document scanners can scan 7 folders in 7 minutes, how many minutes would the same 7 document scanners need to scan 34 folders?",
+      "note": "template=parallel_rate; validation=closed_form; control_answer_equals_lure=true"
+    },
+    {
+      "case_id": "crt_fresh_v1_rate_006",
+      "family": "crt_rate",
+      "question": "If 8 textile looms can weave 8 scarves in 8 minutes, how many minutes would 38 textile looms need to weave 38 scarves?",
+      "correct_answer": "8 minutes",
+      "lure_answer": "38 minutes",
+      "control_question": "If 8 textile looms can weave 8 scarves in 8 minutes, how many minutes would the same 8 textile looms need to weave 38 scarves?",
+      "note": "template=parallel_rate; validation=closed_form; control_answer_equals_lure=true"
+    },
+    {
+      "case_id": "crt_fresh_v1_rate_007",
+      "family": "crt_rate",
+      "question": "If 9 labeling machines can label 9 bottles in 9 minutes, how many minutes would 42 labeling machines need to label 42 bottles?",
+      "correct_answer": "9 minutes",
+      "lure_answer": "42 minutes",
+      "control_question": "If 9 labeling machines can label 9 bottles in 9 minutes, how many minutes would the same 9 labeling machines need to label 42 bottles?",
+      "note": "template=parallel_rate; validation=closed_form; control_answer_equals_lure=true"
+    },
+    {
+      "case_id": "crt_fresh_v1_rate_008",
+      "family": "crt_rate",
+      "question": "If 10 engraving stations can engrave 10 nameplates in 10 minutes, how many minutes would 46 engraving stations need to engrave 46 nameplates?",
+      "correct_answer": "10 minutes",
+      "lure_answer": "46 minutes",
+      "control_question": "If 10 engraving stations can engrave 10 nameplates in 10 minutes, how many minutes would the same 10 engraving stations need to engrave 46 nameplates?",
+      "note": "template=parallel_rate; validation=closed_form; control_answer_equals_lure=true"
+    },
+    {
+      "case_id": "crt_fresh_v1_rate_009",
+      "family": "crt_rate",
+      "question": "If 11 test benches can test 11 circuit boards in 11 minutes, how many minutes would 50 test benches need to test 50 circuit boards?",
+      "correct_answer": "11 minutes",
+      "lure_answer": "50 minutes",
+      "control_question": "If 11 test benches can test 11 circuit boards in 11 minutes, how many minutes would the same 11 test benches need to test 50 circuit boards?",
+      "note": "template=parallel_rate; validation=closed_form; control_answer_equals_lure=true"
+    },
+    {
+      "case_id": "crt_fresh_v1_rate_010",
+      "family": "crt_rate",
+      "question": "If 12 photo printers can print 12 photo books in 12 minutes, how many minutes would 54 photo printers need to print 54 photo books?",
+      "correct_answer": "12 minutes",
+      "lure_answer": "54 minutes",
+      "control_question": "If 12 photo printers can print 12 photo books in 12 minutes, how many minutes would the same 12 photo printers need to print 54 photo books?",
+      "note": "template=parallel_rate; validation=closed_form; control_answer_equals_lure=true"
+    },
+    {
+      "case_id": "crt_fresh_v1_growth_001",
+      "family": "crt_growth",
+      "question": "A duckweed patch on a pond doubles in covered area every day. It takes 20 days to cover the entire available area. How many days does it take to cover half of the area?",
+      "correct_answer": "19 days",
+      "lure_answer": "10 days",
+      "control_question": "A duckweed patch on a pond increases by the same amount of covered area every day. It takes 20 days to cover the entire available area. How many days does it take to cover half of the area?",
+      "note": "template=exponential_growth; validation=closed_form; control_answer_equals_lure=true"
+    },
+    {
+      "case_id": "crt_fresh_v1_growth_002",
+      "family": "crt_growth",
+      "question": "A mold culture on a plate doubles in covered area every day. It takes 22 days to cover the entire available area. How many days does it take to cover half of the area?",
+      "correct_answer": "21 days",
+      "lure_answer": "11 days",
+      "control_question": "A mold culture on a plate increases by the same amount of covered area every day. It takes 22 days to cover the entire available area. How many days does it take to cover half of the area?",
+      "note": "template=exponential_growth; validation=closed_form; control_answer_equals_lure=true"
+    },
+    {
+      "case_id": "crt_fresh_v1_growth_003",
+      "family": "crt_growth",
+      "question": "A blue algae patch in a tank doubles in covered area every day. It takes 24 days to cover the entire available area. How many days does it take to cover half of the area?",
+      "correct_answer": "23 days",
+      "lure_answer": "12 days",
+      "control_question": "A blue algae patch in a tank increases by the same amount of covered area every day. It takes 24 days to cover the entire available area. How many days does it take to cover half of the area?",
+      "note": "template=exponential_growth; validation=closed_form; control_answer_equals_lure=true"
+    },
+    {
+      "case_id": "crt_fresh_v1_growth_004",
+      "family": "crt_growth",
+      "question": "A digital tile pattern on a display doubles in covered area every day. It takes 26 days to cover the entire available area. How many days does it take to cover half of the area?",
+      "correct_answer": "25 days",
+      "lure_answer": "13 days",
+      "control_question": "A digital tile pattern on a display increases by the same amount of covered area every day. It takes 26 days to cover the entire available area. How many days does it take to cover half of the area?",
+      "note": "template=exponential_growth; validation=closed_form; control_answer_equals_lure=true"
+    },
+    {
+      "case_id": "crt_fresh_v1_growth_005",
+      "family": "crt_growth",
+      "question": "A ground-cover plant in a greenhouse bed doubles in covered area every day. It takes 28 days to cover the entire available area. How many days does it take to cover half of the area?",
+      "correct_answer": "27 days",
+      "lure_answer": "14 days",
+      "control_question": "A ground-cover plant in a greenhouse bed increases by the same amount of covered area every day. It takes 28 days to cover the entire available area. How many days does it take to cover half of the area?",
+      "note": "template=exponential_growth; validation=closed_form; control_answer_equals_lure=true"
+    },
+    {
+      "case_id": "crt_fresh_v1_growth_006",
+      "family": "crt_growth",
+      "question": "A bacterial colony on an agar tray doubles in covered area every day. It takes 30 days to cover the entire available area. How many days does it take to cover half of the area?",
+      "correct_answer": "29 days",
+      "lure_answer": "15 days",
+      "control_question": "A bacterial colony on an agar tray increases by the same amount of covered area every day. It takes 30 days to cover the entire available area. How many days does it take to cover half of the area?",
+      "note": "template=exponential_growth; validation=closed_form; control_answer_equals_lure=true"
+    },
+    {
+      "case_id": "crt_fresh_v1_growth_007",
+      "family": "crt_growth",
+      "question": "A floating fern patch in a reservoir doubles in covered area every day. It takes 32 days to cover the entire available area. How many days does it take to cover half of the area?",
+      "correct_answer": "31 days",
+      "lure_answer": "16 days",
+      "control_question": "A floating fern patch in a reservoir increases by the same amount of covered area every day. It takes 32 days to cover the entire available area. How many days does it take to cover half of the area?",
+      "note": "template=exponential_growth; validation=closed_form; control_answer_equals_lure=true"
+    },
+    {
+      "case_id": "crt_fresh_v1_growth_008",
+      "family": "crt_growth",
+      "question": "A simulated wildfire region on a map doubles in covered area every day. It takes 34 days to cover the entire available area. How many days does it take to cover half of the area?",
+      "correct_answer": "33 days",
+      "lure_answer": "17 days",
+      "control_question": "A simulated wildfire region on a map increases by the same amount of covered area every day. It takes 34 days to cover the entire available area. How many days does it take to cover half of the area?",
+      "note": "template=exponential_growth; validation=closed_form; control_answer_equals_lure=true"
+    },
+    {
+      "case_id": "crt_fresh_v1_growth_009",
+      "family": "crt_growth",
+      "question": "A crystal pattern in a lab dish doubles in covered area every day. It takes 36 days to cover the entire available area. How many days does it take to cover half of the area?",
+      "correct_answer": "35 days",
+      "lure_answer": "18 days",
+      "control_question": "A crystal pattern in a lab dish increases by the same amount of covered area every day. It takes 36 days to cover the entire available area. How many days does it take to cover half of the area?",
+      "note": "template=exponential_growth; validation=closed_form; control_answer_equals_lure=true"
+    },
+    {
+      "case_id": "crt_fresh_v1_growth_010",
+      "family": "crt_growth",
+      "question": "A lichen patch on a test surface doubles in covered area every day. It takes 38 days to cover the entire available area. How many days does it take to cover half of the area?",
+      "correct_answer": "37 days",
+      "lure_answer": "19 days",
+      "control_question": "A lichen patch on a test surface increases by the same amount of covered area every day. It takes 38 days to cover the entire available area. How many days does it take to cover half of the area?",
+      "note": "template=exponential_growth; validation=closed_form; control_answer_equals_lure=true"
+    }
+  ]
+}

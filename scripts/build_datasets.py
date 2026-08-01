@@ -1,5 +1,5 @@
-"""One-time build scripts that fetch public reasoning-lure datasets and
-normalize them into the repository's uniform lure-case JSON schema.
+"""Build public and project-generated reasoning-lure datasets and normalize
+them into the repository's uniform lure-case JSON schema.
 
 Run all builders::
 
@@ -21,14 +21,15 @@ Schema (one object per file)::
       "title": str,
       "description": str,
       "task_kind": "crt" | "semantic_illusion",
-      "scoring": "logprob_margin" | "premise_rejection",
+      "scoring": "logprob_margin" | "premise_rejection" | "binary_choice",
       "source": {authors, year, title, venue, doi, project_url,
                  download_url, source_sha256, license, license_note},
       "generated_by": "scripts/build_datasets.py",
       "n_cases": int,
       "family_counts": {family: count},
       "cases": [
-        {case_id, family, question, correct_answer, lure_answer,
+        {case_id, pair_id?, template_id?, condition?, family,
+         question, correct_answer, lure_answer,
          control_question?, reference_answer?, note?}
       ]
     }
@@ -46,6 +47,7 @@ from __future__ import annotations
 
 import argparse
 import ast
+import difflib
 import json
 import re
 import sys
@@ -65,12 +67,17 @@ GENERATED_BY = "scripts/build_datasets.py"
 
 _CASE_KEY_ORDER = (
     "case_id",
+    "pair_id",
+    "template_id",
+    "condition",
     "family",
     "question",
     "correct_answer",
     "lure_answer",
     "control_question",
     "reference_answer",
+    "rationale",
+    "revision",
     "note",
 )
 
@@ -97,11 +104,11 @@ def _validate_cases(cases: list[dict[str, Any]], *, scoring: str) -> None:
         for field in ("family", "question"):
             if not isinstance(case.get(field), str) or not case[field].strip():
                 raise ValueError(f"case {cid!r} has empty {field!r}")
-        if scoring == "logprob_margin":
+        if scoring in {"binary_choice", "logprob_margin"}:
             correct = case.get("correct_answer", "")
             lure = case.get("lure_answer", "")
             if not correct.strip() or not lure.strip():
-                raise ValueError(f"case {cid!r} needs non-empty correct/lure for logprob_margin")
+                raise ValueError(f"case {cid!r} needs non-empty correct/lure for {scoring}")
             if correct.strip().casefold() == lure.strip().casefold():
                 raise ValueError(f"case {cid!r} has identical correct and lure answers")
 
@@ -115,17 +122,18 @@ def write_dataset(
     scoring: str,
     source: dict[str, Any],
     cases: list[dict[str, Any]],
+    schema_version: int = SCHEMA_VERSION,
 ) -> Path:
     """Validate and write one normalized dataset file; return its path."""
 
-    if scoring not in {"logprob_margin", "premise_rejection"}:
+    if scoring not in {"binary_choice", "logprob_margin", "premise_rejection"}:
         raise ValueError(f"unknown scoring {scoring!r}")
     _validate_cases(cases, scoring=scoring)
 
     family_counts = dict(sorted(Counter(case["family"] for case in cases).items()))
     payload = {
         "dataset_id": dataset_id,
-        "schema_version": SCHEMA_VERSION,
+        "schema_version": int(schema_version),
         "title": title,
         "description": description,
         "task_kind": task_kind,
@@ -658,6 +666,683 @@ def build_yax_crt_isomorph() -> Path:
 
 
 # --------------------------------------------------------------------------
+# MindScopeX fresh synthetic CRT isomorph pilot (2026)
+# --------------------------------------------------------------------------
+CRT_FRESH_V1_SOURCE = {
+    "authors": "MindScopeX project",
+    "year": 2026,
+    "title": "CRT Fresh Isomorphs v1",
+    "venue": "Repository-generated synthetic benchmark",
+    "doi": "",
+    "project_url": "",
+    "download_url": "",
+    "license": "Apache-2.0 (repository-generated content)",
+    "license_note": (
+        "Deterministically generated from closed-form CRT templates in this builder. "
+        "No model outputs were used to define the questions, correct answers, lure "
+        "answers, or matched controls. Cite the repository version and generation date."
+    ),
+}
+
+_FRESH_DIFFERENCE_PAIRS = (
+    ("portable projector", "wireless presenter"),
+    ("camping stove", "metal cup"),
+    ("museum annual pass", "audio guide rental"),
+    ("mechanical keyboard", "mouse pad"),
+    ("bicycle helmet", "water bottle cage"),
+    ("chef's knife", "vegetable peeler"),
+    ("desk lamp", "cable organizer"),
+    ("telescope", "tripod adapter"),
+    ("hiking backpack", "rain cover"),
+    ("board game", "card sleeve pack"),
+)
+
+_FRESH_RATE_PROCESSES = (
+    ("3D printers", "print", "prototype shells"),
+    ("laser cutters", "cut", "acrylic panels"),
+    ("baristas", "prepare", "iced drinks"),
+    ("packing robots", "seal", "shipping boxes"),
+    ("document scanners", "scan", "folders"),
+    ("textile looms", "weave", "scarves"),
+    ("labeling machines", "label", "bottles"),
+    ("engraving stations", "engrave", "nameplates"),
+    ("test benches", "test", "circuit boards"),
+    ("photo printers", "print", "photo books"),
+)
+
+_FRESH_GROWTH_SUBJECTS = (
+    "duckweed patch on a pond",
+    "mold culture on a plate",
+    "blue algae patch in a tank",
+    "digital tile pattern on a display",
+    "ground-cover plant in a greenhouse bed",
+    "bacterial colony on an agar tray",
+    "floating fern patch in a reservoir",
+    "simulated wildfire region on a map",
+    "crystal pattern in a lab dish",
+    "lichen patch on a test surface",
+)
+
+
+def _fresh_crt_cases() -> list[dict[str, Any]]:
+    """Create a deterministic, closed-form-validated 30-item CRT pilot."""
+
+    cases: list[dict[str, Any]] = []
+
+    # If total = 2 * small + difference, the reflective answer is ``small``.
+    # The subtraction lure is total - difference = 2 * small. In the control,
+    # the expensive item's price is stated directly, so the same lure becomes
+    # the correct answer.
+    for index, (expensive, inexpensive) in enumerate(_FRESH_DIFFERENCE_PAIRS, start=1):
+        small = 7 + 3 * (index - 1)
+        difference = 26 + 5 * (index - 1)
+        total = 2 * small + difference
+        lure = total - difference
+        control_expensive = difference
+        control_answer = total - control_expensive
+        assert lure == 2 * small
+        assert control_answer == lure
+        cases.append(
+            {
+                "case_id": f"crt_fresh_v1_difference_{index:03d}",
+                "family": "crt_difference",
+                "question": (
+                    f"At a shop, the combined price of a {expensive} and a {inexpensive} "
+                    f"is ${total}. The {expensive} costs ${difference} more than the "
+                    f"{inexpensive}. What is the price of the {inexpensive}? Answer in dollars."
+                ),
+                "correct_answer": f"${small}",
+                "lure_answer": f"${lure}",
+                "control_question": (
+                    f"At a shop, the combined price of a {expensive} and a {inexpensive} "
+                    f"is ${total}. The {expensive} costs ${control_expensive}. What is the "
+                    f"price of the {inexpensive}? Answer in dollars."
+                ),
+                "note": (
+                    "template=difference; validation=closed_form; "
+                    "control_answer_equals_lure=true"
+                ),
+            }
+        )
+
+    # ``base`` agents make ``base`` outputs in ``base`` minutes. Therefore each
+    # agent makes one output in ``base`` minutes: target agents make target
+    # outputs in base minutes. Keeping only base agents makes target outputs in
+    # target minutes, which turns the lure into the matched-control answer.
+    for index, (agents, verb, outputs) in enumerate(_FRESH_RATE_PROCESSES, start=1):
+        base = 3 + index - 1
+        target = 18 + 4 * (index - 1)
+        correct = base
+        lure = target
+        control_answer = target
+        assert control_answer == lure
+        assert correct != lure
+        cases.append(
+            {
+                "case_id": f"crt_fresh_v1_rate_{index:03d}",
+                "family": "crt_rate",
+                "question": (
+                    f"If {base} {agents} can {verb} {base} {outputs} in {base} minutes, "
+                    f"how many minutes would {target} {agents} need to {verb} "
+                    f"{target} {outputs}?"
+                ),
+                "correct_answer": f"{correct} minutes",
+                "lure_answer": f"{lure} minutes",
+                "control_question": (
+                    f"If {base} {agents} can {verb} {base} {outputs} in {base} minutes, "
+                    f"how many minutes would the same {base} {agents} need to {verb} "
+                    f"{target} {outputs}?"
+                ),
+                "note": (
+                    "template=parallel_rate; validation=closed_form; "
+                    "control_answer_equals_lure=true"
+                ),
+            }
+        )
+
+    # With doubling, half coverage occurs exactly one day before full coverage.
+    # The matched control changes only the growth law to equal daily increments,
+    # making half of the total time the correct answer.
+    for index, subject in enumerate(_FRESH_GROWTH_SUBJECTS, start=1):
+        full_day = 20 + 2 * (index - 1)
+        correct = full_day - 1
+        lure = full_day // 2
+        control_answer = full_day // 2
+        assert full_day % 2 == 0
+        assert control_answer == lure
+        assert correct != lure
+        cases.append(
+            {
+                "case_id": f"crt_fresh_v1_growth_{index:03d}",
+                "family": "crt_growth",
+                "question": (
+                    f"A {subject} doubles in covered area every day. It takes {full_day} "
+                    "days to cover the entire available area. How many days does it take "
+                    "to cover half of the area?"
+                ),
+                "correct_answer": f"{correct} days",
+                "lure_answer": f"{lure} days",
+                "control_question": (
+                    f"A {subject} increases by the same amount of covered area every day. "
+                    f"It takes {full_day} days to cover the entire available area. How many "
+                    "days does it take to cover half of the area?"
+                ),
+                "note": (
+                    "template=exponential_growth; validation=closed_form; "
+                    "control_answer_equals_lure=true"
+                ),
+            }
+        )
+
+    if len(cases) != 30:
+        raise AssertionError(f"crt_fresh_v1 expected 30 cases, got {len(cases)}")
+    if len({case["question"] for case in cases}) != len(cases):
+        raise AssertionError("crt_fresh_v1 contains duplicate hostile questions")
+    if len({case["control_question"] for case in cases}) != len(cases):
+        raise AssertionError("crt_fresh_v1 contains duplicate control questions")
+    return cases
+
+
+def build_crt_fresh_v1() -> Path:
+    return write_dataset(
+        dataset_id="crt_fresh_v1",
+        title="MindScopeX CRT Fresh Isomorphs v1",
+        description=(
+            "A deterministic 30-item synthetic pilot with 10 fresh surface isomorphs "
+            "for each of difference, parallel-rate, and exponential-growth CRT families. "
+            "Every hostile item has a matched control where the hostile lure becomes the "
+            "correct answer. Answers and control relations are verified by closed-form "
+            "assertions during generation; the set is not filtered on model failures."
+        ),
+        task_kind="crt",
+        scoring="logprob_margin",
+        source=CRT_FRESH_V1_SOURCE,
+        cases=_fresh_crt_cases(),
+    )
+
+
+# --------------------------------------------------------------------------
+# MindScopeX fresh synthetic CRT isomorph expansion (2026)
+# --------------------------------------------------------------------------
+CRT_FRESH_V2_SOURCE = {
+    **CRT_FRESH_V1_SOURCE,
+    "title": "CRT Fresh Isomorphs v2",
+    "license_note": (
+        "A 150-item deterministic expansion generated from closed-form CRT templates. "
+        "The set supersedes rather than supplements crt_fresh_v1 in evaluation; do not "
+        "pool the two versions. No model failures were used for item inclusion."
+    ),
+}
+
+_FRESH_V2_DIFFERENCE_PAIRS = (
+    ("portable projector", "wireless presenter"),
+    ("mechanical keyboard", "mouse pad"),
+    ("noise-canceling headphones", "audio cable"),
+    ("webcam", "privacy cover"),
+    ("external monitor", "HDMI adapter"),
+    ("camping stove", "metal cup"),
+    ("hiking backpack", "rain cover"),
+    ("bicycle helmet", "water bottle cage"),
+    ("climbing harness", "chalk bag"),
+    ("sleeping bag", "camping pillow"),
+    ("chef's knife", "vegetable peeler"),
+    ("stand mixer", "silicone spatula"),
+    ("espresso machine", "milk pitcher"),
+    ("cast-iron pan", "wooden spoon"),
+    ("food processor", "measuring cup"),
+    ("desk lamp", "cable organizer"),
+    ("ergonomic chair", "footrest"),
+    ("whiteboard", "marker set"),
+    ("document scanner", "stapler"),
+    ("filing cabinet", "label pack"),
+    ("telescope", "tripod adapter"),
+    ("board game", "card sleeve pack"),
+    ("electric guitar", "pick pack"),
+    ("sewing machine", "thread set"),
+    ("model train engine", "track connector"),
+    ("hard-shell suitcase", "luggage tag"),
+    ("travel backpack", "passport holder"),
+    ("camera bag", "lens cloth"),
+    ("portable charger", "charging cable"),
+    ("train pass", "seat reservation"),
+    ("tennis racket", "ball tube"),
+    ("yoga mat", "stretching strap"),
+    ("football boots", "lace set"),
+    ("ski helmet", "goggle case"),
+    ("baseball glove", "practice ball"),
+    ("digital piano", "sustain pedal"),
+    ("studio microphone", "pop filter"),
+    ("violin", "rosin block"),
+    ("drum stool", "drum key"),
+    ("guitar amplifier", "instrument cable"),
+    ("precision scale", "sample tray"),
+    ("microscope", "slide box"),
+    ("centrifuge", "tube rack"),
+    ("soldering station", "tip cleaner"),
+    ("thermal camera", "protective pouch"),
+    ("vacuum cleaner", "dusting brush"),
+    ("air purifier", "filter cover"),
+    ("floor lamp", "extension cord"),
+    ("toolbox", "measuring tape"),
+    ("electric drill", "bit set"),
+)
+
+_FRESH_V2_RATE_PROCESSES = (
+    ("prototype printers", "print", "prototype shells"),
+    ("laser cutters", "cut", "acrylic panels"),
+    ("baristas", "prepare", "iced drinks"),
+    ("packing robots", "seal", "shipping boxes"),
+    ("document scanners", "scan", "folders"),
+    ("textile looms", "weave", "scarves"),
+    ("labeling machines", "label", "bottles"),
+    ("engraving stations", "engrave", "nameplates"),
+    ("test benches", "test", "circuit boards"),
+    ("photo printers", "print", "photo books"),
+    ("bakers", "decorate", "cupcakes"),
+    ("editors", "proofread", "articles"),
+    ("inspection drones", "inspect", "solar panels"),
+    ("water pumps", "fill", "storage tanks"),
+    ("sorting robots", "sort", "parcels"),
+    ("ceramic kilns", "fire", "tile batches"),
+    ("CNC mills", "shape", "metal brackets"),
+    ("sewing stations", "stitch", "tote bags"),
+    ("dishwashers", "wash", "serving trays"),
+    ("charging docks", "charge", "handheld scanners"),
+    ("lab technicians", "prepare", "sample vials"),
+    ("binding machines", "bind", "manuals"),
+    ("paint booths", "coat", "cabinet doors"),
+    ("coffee roasters", "roast", "bean batches"),
+    ("packaging lines", "wrap", "gift boxes"),
+    ("quality inspectors", "inspect", "helmets"),
+    ("copy machines", "copy", "booklets"),
+    ("wood lathes", "turn", "table legs"),
+    ("mixing stations", "mix", "paint cans"),
+    ("recycling sorters", "sort", "material bins"),
+    ("medical imagers", "scan", "test phantoms"),
+    ("translation teams", "translate", "short notices"),
+    ("greenhouse robots", "water", "plant rows"),
+    ("mail clerks", "stamp", "envelopes"),
+    ("screen-printing presses", "print", "shirts"),
+    ("assembly cells", "assemble", "sensor modules"),
+    ("data encoders", "encode", "archive files"),
+    ("cutting tables", "cut", "fabric panels"),
+    ("polishing machines", "polish", "glass discs"),
+    ("filling nozzles", "fill", "sample tubes"),
+    ("carton sealers", "seal", "cartons"),
+    ("proofing ovens", "proof", "bread trays"),
+    ("robot welders", "weld", "frame joints"),
+    ("optical readers", "read", "answer sheets"),
+    ("seed planters", "plant", "garden rows"),
+    ("audio processors", "render", "sound clips"),
+    ("map plotters", "print", "survey maps"),
+    ("sterilizers", "sterilize", "instrument trays"),
+    ("badge printers", "print", "visitor badges"),
+    ("parcel lockers", "process", "pickup orders"),
+)
+
+_FRESH_V2_GROWTH_SUBJECTS = (
+    "duckweed patch on a pond",
+    "mold culture on a plate",
+    "blue algae patch in a tank",
+    "digital tile pattern on a display",
+    "ground-cover plant in a greenhouse bed",
+    "bacterial colony on an agar tray",
+    "floating fern patch in a reservoir",
+    "simulated wildfire region on a map",
+    "crystal pattern in a lab dish",
+    "lichen patch on a test surface",
+    "yeast colony on a culture plate",
+    "water-lily patch in a garden pool",
+    "pixelated stain in an image simulation",
+    "moss patch on a greenhouse wall",
+    "coral model in a reef simulation",
+    "fungal mat in a sealed container",
+    "grass patch in an ecology model",
+    "oil-film simulation on a water surface",
+    "ivy patch on a training wall",
+    "snow-cover region in a climate model",
+    "cell colony in a microscopy dish",
+    "foam patch in a mixing tank",
+    "rust patch on a test panel",
+    "biofilm patch in a flow chamber",
+    "colored region in a diffusion display",
+    "leaf-canopy patch in a growth simulation",
+    "mineral deposit on a lab tile",
+    "ice patch in a freezing experiment",
+    "spore colony on a nutrient sheet",
+    "shadow region in a graphics demo",
+    "plankton patch in a marine model",
+    "salt-crystal patch on an evaporation tray",
+    "heat-affected region in a material simulation",
+    "ink patch on absorbent paper",
+    "clover patch in a field model",
+    "condensation patch on a cooling plate",
+    "lichen colony in an enclosure",
+    "reaction front in a chemistry simulation",
+    "root-mat patch in a growth chamber",
+    "colored-cell region in a spreadsheet model",
+    "microbe colony on a nutrient pad",
+    "floating-leaf patch in a wetland model",
+    "surface crack region in a stress simulation",
+    "fermentation culture in a shallow tray",
+    "pollen patch on a collection slide",
+    "water stain on a test fabric",
+    "coverage mask in a mapping program",
+    "seedling patch in a nursery bed",
+    "luminescent region in a sensor test",
+    "paint-spread region in a coating simulation",
+)
+
+
+def _difference_wording(
+    variant: int,
+    expensive: str,
+    inexpensive: str,
+    total: int,
+    difference: int,
+    *,
+    control: bool,
+) -> str:
+    relation = (
+        f"The price of the {expensive} is ${difference}."
+        if control
+        else (
+            f"The price of the {expensive} is ${difference} more than the price of "
+            f"the {inexpensive}."
+        )
+    )
+    stems = (
+        f"The combined prices of the {expensive} and the {inexpensive} total ${total}.",
+        f"A receipt lists the {expensive} and the {inexpensive} for ${total} in total.",
+        f"Together, the {expensive} and the {inexpensive} cost ${total}.",
+        f"Buying the {expensive} with the {inexpensive} costs ${total} altogether.",
+        f"The total for the {expensive} and the {inexpensive} comes to ${total}.",
+    )
+    return (
+        f"{stems[variant]} {relation} What is the price of the {inexpensive}? "
+        "Answer in dollars."
+    )
+
+
+def _rate_wording(
+    variant: int,
+    agents: str,
+    verb: str,
+    outputs: str,
+    base: int,
+    target: int,
+    *,
+    control: bool,
+) -> str:
+    target_agents = f"the same {base} {agents}" if control else f"{target} {agents}"
+    stems = (
+        f"If {base} {agents} can {verb} {base} {outputs} in {base} minutes,",
+        f"A group of {base} {agents} needs {base} minutes to {verb} {base} {outputs}.",
+        f"In {base} minutes, {base} {agents} {verb} {base} {outputs}.",
+        f"Suppose {base} {agents} {verb} {base} {outputs} during a {base}-minute run.",
+        f"It takes {base} {agents} exactly {base} minutes to {verb} {base} {outputs}.",
+    )
+    question_word = "how" if stems[variant].endswith(",") else "How"
+    return (
+        f"{stems[variant]} {question_word} many minutes would {target_agents} need to "
+        f"{verb} {target} {outputs}?"
+    )
+
+
+def _growth_wording(variant: int, subject: str, full_day: int, *, control: bool) -> str:
+    article = "an" if subject[0].casefold() in "aeiou" else "a"
+    if control:
+        stems = (
+            f"{article.title()} {subject} adds the same amount of covered area every day.",
+            f"The area covered by {article} {subject} increases by the same amount every day.",
+            f"In an observation, {article} {subject} expands by the same area every day.",
+            f"Researchers track {article} {subject} whose covered area grows equally each day.",
+            f"Consider {article} {subject} that increases its covered area equally each day.",
+        )
+    else:
+        stems = (
+            f"{article.title()} {subject} doubles its covered area every day.",
+            f"The area covered by {article} {subject} doubles every day.",
+            f"In an observation, the covered area of {article} {subject} doubles every day.",
+            f"Researchers track {article} {subject} whose covered area doubles every day.",
+            f"Consider {article} {subject} that doubles its covered area every day.",
+        )
+    return (
+        f"{stems[variant]} It covers the entire available area after {full_day} days. "
+        "After how many days does it cover half of that area?"
+    )
+
+
+def _normalized_question(text: str) -> str:
+    return " ".join(re.findall(r"[a-z0-9]+", text.casefold()))
+
+
+def _validate_fresh_question_novelty(
+    cases: list[dict[str, Any]],
+    *,
+    similarity_limit: float = 0.92,
+) -> dict[str, Any]:
+    """Reject exact/near copies of committed non-synthetic benchmark questions."""
+
+    reference_rows: list[tuple[str, str]] = []
+    for path in sorted(DATA_DIR.glob("*.json")):
+        if path.stem.startswith("crt_fresh"):
+            continue
+        payload = json.loads(path.read_text(encoding="utf-8"))
+        for row in payload.get("cases", []):
+            question = str(row.get("question", "")).strip()
+            if question:
+                reference_rows.append((str(row.get("case_id", path.stem)), question))
+
+    reference_normalized = {
+        _normalized_question(question): case_id for case_id, question in reference_rows
+    }
+    closest = {"ratio": 0.0, "case_id": "", "reference_case_id": ""}
+    for case in cases:
+        normalized = _normalized_question(case["question"])
+        if normalized in reference_normalized:
+            raise ValueError(
+                f"{case['case_id']} exactly duplicates {reference_normalized[normalized]}"
+            )
+        for reference_case_id, reference_question in reference_rows:
+            ratio = difflib.SequenceMatcher(
+                None,
+                normalized,
+                _normalized_question(reference_question),
+                autojunk=False,
+            ).ratio()
+            if ratio > closest["ratio"]:
+                closest = {
+                    "ratio": ratio,
+                    "case_id": case["case_id"],
+                    "reference_case_id": reference_case_id,
+                }
+            if ratio >= similarity_limit:
+                raise ValueError(
+                    f"{case['case_id']} is too similar to {reference_case_id}: {ratio:.3f}"
+                )
+    return closest
+
+
+def _validate_fresh_surface_quality(cases: list[dict[str, Any]]) -> None:
+    """Catch deterministic grammar/format defects before committing generated JSON."""
+
+    invalid_patterns = {
+        "lowercase sentence start": re.compile(r"\.\s+[a-z]"),
+        "a before vowel": re.compile(r"\ba\s+[aeiou][a-z-]*\b", re.IGNORECASE),
+        "an before consonant": re.compile(
+            r"\ban\s+[b-df-hj-np-tv-z][a-z-]*\b",
+            re.IGNORECASE,
+        ),
+        "double space": re.compile(r" {2,}"),
+    }
+    for case in cases:
+        for field in ("question", "control_question"):
+            text = case[field]
+            for label, pattern in invalid_patterns.items():
+                match = pattern.search(text)
+                if match:
+                    raise ValueError(
+                        f"{case['case_id']} {field} has {label}: {match.group(0)!r}"
+                    )
+
+
+def _fresh_crt_v2_cases() -> list[dict[str, Any]]:
+    """Create 150 closed-form-validated CRT cases with five wording templates."""
+
+    if not (
+        len(_FRESH_V2_DIFFERENCE_PAIRS)
+        == len(_FRESH_V2_RATE_PROCESSES)
+        == len(_FRESH_V2_GROWTH_SUBJECTS)
+        == 50
+    ):
+        raise AssertionError("crt_fresh_v2 source banks must contain 50 entries per family")
+
+    cases: list[dict[str, Any]] = []
+    for index, (expensive, inexpensive) in enumerate(_FRESH_V2_DIFFERENCE_PAIRS, start=1):
+        small = 5 + index
+        difference = 24 + 3 * index
+        total = 2 * small + difference
+        lure = total - difference
+        assert lure == 2 * small
+        cases.append(
+            {
+                "case_id": f"crt_fresh_v2_difference_{index:03d}",
+                "pair_id": f"crt_fresh_v2_difference_{index:03d}",
+                "template_id": f"difference_wording_{(index - 1) % 5 + 1}",
+                "condition": "hostile",
+                "family": "crt_difference",
+                "question": _difference_wording(
+                    (index - 1) % 5,
+                    expensive,
+                    inexpensive,
+                    total,
+                    difference,
+                    control=False,
+                ),
+                "correct_answer": f"${small}",
+                "lure_answer": f"${lure}",
+                "control_question": _difference_wording(
+                    (index - 1) % 5,
+                    expensive,
+                    inexpensive,
+                    total,
+                    difference,
+                    control=True,
+                ),
+                "note": (
+                    "validation=closed_form; control_answer_equals_lure=true; "
+                    f"parameters=small:{small},difference:{difference},total:{total}"
+                ),
+            }
+        )
+
+    for index, (agents, verb, outputs) in enumerate(_FRESH_V2_RATE_PROCESSES, start=1):
+        base = 3 + (index - 1) % 12
+        target = 20 + 3 * (index - 1)
+        assert base != target
+        cases.append(
+            {
+                "case_id": f"crt_fresh_v2_rate_{index:03d}",
+                "pair_id": f"crt_fresh_v2_rate_{index:03d}",
+                "template_id": f"rate_wording_{(index - 1) % 5 + 1}",
+                "condition": "hostile",
+                "family": "crt_rate",
+                "question": _rate_wording(
+                    (index - 1) % 5,
+                    agents,
+                    verb,
+                    outputs,
+                    base,
+                    target,
+                    control=False,
+                ),
+                "correct_answer": f"{base} minutes",
+                "lure_answer": f"{target} minutes",
+                "control_question": _rate_wording(
+                    (index - 1) % 5,
+                    agents,
+                    verb,
+                    outputs,
+                    base,
+                    target,
+                    control=True,
+                ),
+                "note": (
+                    "validation=closed_form; control_answer_equals_lure=true; "
+                    f"parameters=base:{base},target:{target}"
+                ),
+            }
+        )
+
+    for index, subject in enumerate(_FRESH_V2_GROWTH_SUBJECTS, start=1):
+        full_day = 20 + 2 * (index - 1)
+        correct = full_day - 1
+        lure = full_day // 2
+        assert full_day % 2 == 0
+        assert correct != lure
+        cases.append(
+            {
+                "case_id": f"crt_fresh_v2_growth_{index:03d}",
+                "pair_id": f"crt_fresh_v2_growth_{index:03d}",
+                "template_id": f"growth_wording_{(index - 1) % 5 + 1}",
+                "condition": "hostile",
+                "family": "crt_growth",
+                "question": _growth_wording(
+                    (index - 1) % 5,
+                    subject,
+                    full_day,
+                    control=False,
+                ),
+                "correct_answer": f"{correct} days",
+                "lure_answer": f"{lure} days",
+                "control_question": _growth_wording(
+                    (index - 1) % 5,
+                    subject,
+                    full_day,
+                    control=True,
+                ),
+                "note": (
+                    "validation=closed_form; control_answer_equals_lure=true; "
+                    f"parameters=full_day:{full_day}"
+                ),
+            }
+        )
+
+    if len(cases) != 150:
+        raise AssertionError(f"crt_fresh_v2 expected 150 cases, got {len(cases)}")
+    for field in ("case_id", "pair_id", "question", "control_question"):
+        if len({case[field] for case in cases}) != len(cases):
+            raise AssertionError(f"crt_fresh_v2 contains duplicate {field}")
+    template_counts = Counter(case["template_id"] for case in cases)
+    if set(template_counts.values()) != {10}:
+        raise AssertionError(f"crt_fresh_v2 template imbalance: {dict(template_counts)}")
+    _validate_fresh_surface_quality(cases)
+    _validate_fresh_question_novelty(cases)
+    return cases
+
+
+def build_crt_fresh_v2() -> Path:
+    return write_dataset(
+        dataset_id="crt_fresh_v2",
+        title="MindScopeX CRT Fresh Isomorphs v2",
+        description=(
+            "A 150-item deterministic synthetic core set with 50 independently named "
+            "scenarios in each of difference, parallel-rate, and exponential-growth "
+            "families. Five wording templates per family reduce single-template "
+            "dependence. Every hostile item has a matched control where its lure becomes "
+            "correct. Closed-form assertions and public-benchmark near-duplicate checks "
+            "run at build time; model failures do not determine inclusion."
+        ),
+        task_kind="crt",
+        scoring="logprob_margin",
+        source=CRT_FRESH_V2_SOURCE,
+        cases=_fresh_crt_v2_cases(),
+        schema_version=2,
+    )
+
+
+# --------------------------------------------------------------------------
 # registry + entrypoint
 # --------------------------------------------------------------------------
 BUILDERS: dict[str, Callable[[], Path]] = {
@@ -667,6 +1352,8 @@ BUILDERS: dict[str, Callable[[], Path]] = {
     "verbal_crt": build_verbal_crt,
     "crt7_classic": build_crt7_classic,
     "yax_crt_isomorph": build_yax_crt_isomorph,
+    "crt_fresh_v1": build_crt_fresh_v1,
+    "crt_fresh_v2": build_crt_fresh_v2,
 }
 
 

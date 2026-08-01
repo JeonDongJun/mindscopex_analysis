@@ -27,12 +27,12 @@ from functools import cache
 from importlib.resources import files
 from typing import Any
 
-from mindscopex_analysis.cases import LureCase
+from mindscopex_analysis.cases import LureCase, _answer_prompt
 
 _DATA_PACKAGE = "mindscopex_analysis"
 _DATA_SUBDIR = "data"
 
-_VALID_SCORING = {"logprob_margin", "premise_rejection"}
+_VALID_SCORING = {"binary_choice", "logprob_margin", "premise_rejection"}
 
 
 @dataclass(frozen=True)
@@ -113,10 +113,6 @@ def lure_dataset_catalog() -> list[LureDatasetInfo]:
     return [lure_dataset_info(name) for name in available_lure_datasets()]
 
 
-def _answer_prompt(text: str) -> str:
-    return text.strip() + "\nAnswer:"
-
-
 def _case_from_row(row: dict[str, Any], *, scoring: str, index: int) -> LureCase:
     case_id = row.get("case_id")
     if not isinstance(case_id, str) or not case_id.strip():
@@ -128,9 +124,11 @@ def _case_from_row(row: dict[str, Any], *, scoring: str, index: int) -> LureCase
 
     correct = str(row.get("correct_answer", "")).strip()
     lure = str(row.get("lure_answer", "")).strip()
-    if scoring == "logprob_margin":
+    if scoring in {"binary_choice", "logprob_margin"}:
         if not correct or not lure:
-            raise ValueError(f"case {case_id!r} needs non-empty correct/lure for logprob_margin")
+            raise ValueError(
+                f"case {case_id!r} needs non-empty correct/lure for {scoring}"
+            )
         if correct.casefold() == lure.casefold():
             raise ValueError(f"case {case_id!r} has identical correct and lure answers")
 
@@ -148,6 +146,9 @@ def _case_from_row(row: dict[str, Any], *, scoring: str, index: int) -> LureCase
         lure_answer=(" " + lure) if lure else "",
         control_prompt=_answer_prompt(control) if control else "",
         note=note,
+        pair_id=str(row.get("pair_id", "")).strip(),
+        template_id=str(row.get("template_id", "")).strip(),
+        condition=str(row.get("condition", "hostile")).strip() or "hostile",
     )
 
 

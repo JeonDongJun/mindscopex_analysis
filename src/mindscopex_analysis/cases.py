@@ -20,6 +20,9 @@ class LureCase:
     lure_answer: str
     control_prompt: str = ""
     note: str = ""
+    pair_id: str = ""
+    template_id: str = ""
+    condition: str = "hostile"
 
 
 def _answer_prompt(text: str) -> str:

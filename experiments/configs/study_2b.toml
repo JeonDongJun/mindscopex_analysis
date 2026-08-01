@@ -29,7 +29,7 @@ instruction = true          # prepend the final-answer instruction
 candidate_top_n = 10         # active features considered per item
 min_active_cases = 3         # a candidate must be active in >= this many train items
 max_candidates = 24          # cap scored candidates (speed)
-max_cases = 24               # cap train items used for discovery (speed)
+max_cases = 24               # family-balanced cap on train items used for discovery
 coefficient = 1.0
 intervention_mode = "remove_activation"
 null_samples = 32            # random-direction null draws for significance
@@ -39,8 +39,9 @@ null_seed = 0
 [behavioral]
 coefficients = [0.0, -2.0, -4.0, -8.0]   # negative suppresses the lure feature
 max_new_tokens = 16
-max_cases = 40               # held-out items to generate for
+max_cases = 40               # deterministic family-balanced held-out subset
 token_position = "all"
+output_mode = "binary_choice" # hard-constrain output to correct or lure; no <think>/other
 
 [colab]
 gpu = "A100"

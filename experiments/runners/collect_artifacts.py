@@ -22,6 +22,7 @@ EXCLUDED_SOURCE_DIRS = {
     "build",
 }
 EXCLUDED_SUFFIXES = {".pyc", ".pyo", ".npy"}
+EXCLUDED_SOURCE_FILES = {".env"}
 
 
 def make_source_archive(repo_root: Path, destination: Path) -> Path:
@@ -35,6 +36,8 @@ def make_source_archive(repo_root: Path, destination: Path) -> Path:
             current_path = Path(current)
             dirs[:] = [name for name in dirs if name not in EXCLUDED_SOURCE_DIRS]
             for filename in files:
+                if filename in EXCLUDED_SOURCE_FILES:
+                    continue
                 path = current_path / filename
                 rel = path.relative_to(root)
                 if any(part in EXCLUDED_SOURCE_DIRS for part in rel.parts):

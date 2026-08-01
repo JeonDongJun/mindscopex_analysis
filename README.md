@@ -1,118 +1,89 @@
 # MindScopeX Analysis
 
-Focused Qwen interpretability experiments with NNsight and Qwen-Scope.
+Qwen3.5와 Qwen-Scope SAE를 이용해 reasoning lure를 행동·activation·인과 개입
+관점에서 분석하는 연구 코드입니다. 탐색용 노트북과 재현 가능한 TOML 기반 배치 실험을
+같은 `mindscopex_analysis` 코어 위에서 실행합니다.
 
-## Quick Start
+## 빠른 시작
+
+Python 3.11–3.13과 [`uv`](https://docs.astral.sh/uv/)가 필요합니다.
 
 ```powershell
 uv sync --extra dev
 uv run nbstripout --install --attributes .gitattributes
+make smoke
+```
+
+노트북을 열려면:
+
+```powershell
 uv run jupyter lab notebooks/
 ```
 
-The `nbstripout` Git filter keeps notebook outputs and execution counts in the local working
-copy while removing them from staged and committed notebook blobs. Run the filter-install
-command once after each fresh clone; `make install` performs both setup steps as well.
+`nbstripout` 필터는 로컬 출력은 유지하면서 커밋되는 노트북의 출력과 execution count를
+제거합니다. 새 clone마다 한 번 설치하면 됩니다.
 
-Start with `notebooks/00_qwen_crt_text_responses.ipynb` to inspect model behavior,
-then use `notebooks/01_qwen_scope_activation_mvp.ipynb` and
-`notebooks/02_bat_ball_lure_feature_ablation.ipynb` for the bat-and-ball
-feature ablation workflow.
+## 실행 경로
 
-The full experiment order, cache dependencies, and evidence gates are documented in
-[docs/notebook_pipeline.md](docs/notebook_pipeline.md).
+목적에 따라 진입점을 고릅니다.
 
-All experiments use the same concise final-answer instruction. Notebook 00 passes it as a
-chat system message; notebooks 01-13 prepend it to the analysis prompt. Feature handles are
-cached per Qwen3.5 profile so feature IDs from different SAE dictionaries cannot be mixed.
+| 목적 | 진입점 | 설명 |
+|---|---|---|
+| 가장 빠른 로컬 검증 | `make smoke` | 전체 Python 문법 검사와 단위 테스트 |
+| 데이터셋 검증 | `uv run python scripts/audit_datasets.py` | 스키마·중복·메타데이터 감사 |
+| 탐색과 시각적 확인 | `notebooks/00`–`13` | 행동 기준선부터 feature 기하까지 |
+| 재현 가능한 원격 실험 | `experiments/run_colab.sh` | TOML config/suite를 Colab에서 실행 |
+| 결과 통합 | `make analyze-crt` | `results/runs`의 CRT summary를 병합 |
+| 논문 렌더 | `make paper` / `make paper-ko` | Quarto HTML 출력 |
 
-## CRT Datasets
+첫 Colab smoke run:
 
-Notebook 00 supports three run presets:
+```bash
+./experiments/run_colab.sh experiments/suites/smoke.toml --session mindscopex-smoke
+```
 
-- `RUN_PRESET = "pilot"`: the repository's 9-item smoke-test suite, loaded from
-  `src/mindscopex_analysis/data/crt_pilot.json`.
-- `RUN_PRESET = "nature_smoke"`: three items from each Nature CRT family.
-- `RUN_PRESET = "nature_full"`: all 150 public CRT variants from Hagendorff, Fabi,
-  and Kosinski (2023), downloaded from OSF with a pinned SHA-256 checksum.
+통제 연구 전체 실행과 accelerator 전환 규칙은
+[`experiments/README.md`](experiments/README.md)를 참고하세요.
 
-The full Nature run contains 150 cases and produces 1,200 responses with the default four
-models and two reasoning modes per seed. Run `nature_smoke` and optionally reduce
-`MODEL_IDS_TO_RUN` before launching the full benchmark. Dataset provenance, licensing notes,
-and the review of newer CRT-related resources are documented in
-[docs/datasets.md](docs/datasets.md).
-The official Qwen-Scope SAE coverage and checkpoint-matching notes are tracked in
-[docs/qwen_scope_sae_catalog.md](docs/qwen_scope_sae_catalog.md).
+## 저장소 구조
 
-Notebook 00 retries thinking-protocol failures and ambiguous `both` answers with new seeds while
-retaining every attempt in the JSON output. It also writes a Markdown report with correct, lure,
-and operational hallucination/other counts, plus family-level lure rates with Wilson 95%
-intervals. `GENERATION_PROTOCOL` separates Qwen-native sampling from a no-system-prompt,
-deterministic replication baseline. Multiple-seed inference should cluster by item rather than
-treating repeated responses as independent. The default behavior suite is Qwen3.5 2B, 9B,
-27B, and 35B-A3B, loaded sequentially. The first cell installs a pinned Transformers revision
-with Qwen3.5 support when the runtime does not already provide it.
+```text
+src/mindscopex_analysis/   재사용 가능한 모델·SAE·채점·연구 로직
+src/mindscopex_analysis/data/
+                           checksum/provenance가 포함된 정규화 JSON 데이터
+experiments/               TOML config/suite, Colab launcher, 배치 job
+notebooks/                 00–13 탐색 파이프라인
+scripts/                   데이터 구축·감사·결과 분석·API 평가
+tests/                     네트워크와 대형 모델 없이 실행되는 단위 테스트
+docs/                      설계, 데이터, 지표, 실행 가이드
+paper/                     Quarto 논문과 figure/table 입력
+results/                   로컬/원격 실행 산출물(버전 관리 제외)
+```
 
-## Experiment Notebooks
+모듈 경계와 데이터 흐름은 [`docs/architecture.md`](docs/architecture.md), 문서 전체
+목록과 정본 관계는 [`docs/README.md`](docs/README.md)에 정리되어 있습니다.
 
-- `00_qwen_crt_text_responses.ipynb`: full CRT responses from Qwen models in thinking and non-thinking modes.
-- `01_qwen_scope_activation_mvp.ipynb`: activation capture and first Qwen-Scope layer scan.
-- `02_bat_ball_lure_feature_ablation.ipynb`: first bat-and-ball lure feature ablation.
-- `03_layer_sweep_feature_search.ipynb`: layer-wise feature search.
-- `04_coefficient_dose_response.ipynb`: removal/steering dose response.
-- `05_intervention_mode_comparison.ipynb`: removal, suppression, amplification, projection removal.
-- `06_control_prompt_specificity.ipynb`: matched control prompt specificity.
-- `07_paraphrase_robustness.ipynb`: bat-and-ball paraphrase robustness.
-- `08_answer_format_sensitivity.ipynb`: answer surface-form sensitivity.
-- `09_token_position_sweep.ipynb`: token-position intervention sweep.
-- `10_crt_transfer.ipynb`: transfer to other CRT lures.
-- `11_control_delta_bypass.ipynb`: bypass with matched-control residual delta.
-- `12_decoder_geometry.ipynb`: decoder-direction geometry among candidate features.
-- `13_semantic_logic_specificity.ipynb`: specificity against semantic and logic lures.
+## 데이터와 연구 설계
 
-## What Is Included
+정규화 카탈로그에는 현재 10개 데이터셋, 657개 case가 있습니다. 주 통제 연구는
+150개 Hagendorff CRT와 matched control을 사용하며, discovery/held-out split,
+random-direction null, control specificity, behavioral readout을 분리합니다.
 
-- `src/mindscopex_analysis/models.py`: Qwen + NNsight model loading helpers.
-- `src/mindscopex_analysis/prompts.py`: shared final-answer instruction and Base-prompt helpers.
-- `src/mindscopex_analysis/generation.py`: Qwen CRT generation, retries, classification, and JSON/Markdown persistence.
-- `src/mindscopex_analysis/datasets.py`: checksum-pinned public CRT dataset download and parsing.
-- `src/mindscopex_analysis/activations.py`: residual stream capture with `lm.trace(...).save()`.
-- `src/mindscopex_analysis/qwen_scope.py`: Qwen-Scope SAE loading, TopK feature extraction, and a first-pass layer ranking helper.
-- `src/mindscopex_analysis/effects.py`: answer logprob margins and SAE decoder-direction ablation.
-- `src/mindscopex_analysis/cases.py`: validated pilot JSON loading plus experimental lure/control cases.
-- `src/mindscopex_analysis/workflows.py`: reusable notebook-level experiment loops.
+- 데이터셋 스키마·출처·감사 결과: [`docs/datasets.md`](docs/datasets.md)
+- 통제 연구의 단계와 해석: [`docs/study_design.md`](docs/study_design.md)
+- 지표 정의: [`docs/metrics_guide.md`](docs/metrics_guide.md)
+- Qwen-Scope checkpoint 호환성: [`docs/qwen_scope_sae_catalog.md`](docs/qwen_scope_sae_catalog.md)
 
-The default mechanistic pair is:
+기본 mechanistic profile은 정확히 대응하는 다음 pair입니다.
 
-- Model: `Qwen/Qwen3.5-27B`
-- SAE repo: `Qwen/SAE-Res-Qwen3.5-27B-W80K-L0_50`
+- model: `Qwen/Qwen3.5-27B`
+- SAE: `Qwen/SAE-Res-Qwen3.5-27B-W80K-L0_50`
 
-This is the only selected post-trained behavior checkpoint with a directly matching official
-Qwen-Scope SAE. Set `ANALYSIS_PROFILE_KEY` in notebooks 01-13 to `2b`, `9b`, `27b`, or
-`35b-a3b`; the matching analysis checkpoint, SAE, layer count, and scan layers change together.
+비용 절감용 2B/9B와 MoE 35B-A3B profile도 제공하지만, 이들의 공식 SAE는 Base
+checkpoint용입니다. post-trained behavior model의 feature로 해석하려면 별도의
+reconstruction/transfer 검증이 필요합니다.
 
-## Recommended Research Target
-
-- Exact-checkpoint research target: `Qwen/Qwen3.5-27B` with
-  `Qwen/SAE-Res-Qwen3.5-27B-W80K-L0_50`. This official SAE covers all 64 residual layers
-  of the same post-trained checkpoint, so it is the cleanest thinking/non-thinking comparison.
-- Lower-cost exact Base controls: `Qwen3.5-2B-Base` and `Qwen3.5-9B-Base` with their official
-  W32K/W64K K50 SAEs.
-- MoE Base control: `Qwen3.5-35B-A3B-Base` with the official W32K/K50 SAE.
-- Behavior comparison: the corresponding post-trained 2B, 9B, 27B, and 35B-A3B checkpoints
-  are all enabled in notebook 00.
-- Do not describe a 2B, 9B, or 35B-A3B Base feature as a post-trained-model feature without a
-  separate reconstruction and transfer validation; only the selected 27B pair is exact.
-
-## Colab CLI Results
-
-The official Colab CLI can execute local notebooks on a hosted GPU and recover both executed
-`*_output.ipynb` notebooks and remote artifacts through `colab download` and `colab log`.
-The CLI currently supports Linux and macOS, so Windows development should use WSL2. See
-[docs/colab_cli_workflow.md](docs/colab_cli_workflow.md) for the repository-specific commands,
-remote paths, and result archival workflow.
-
-## Checks
+## 개발 검사
 
 ```powershell
 make lint
@@ -120,5 +91,5 @@ make test
 make smoke
 ```
 
-`make test` runs the unit tests directly; `make smoke` byte-compiles `src`/`tests` and
-then runs the same suite, so it doubles as a fast pre-commit check.
+`make lint`는 `src`, `tests`, `experiments`, `scripts`의 Python 코드를 검사합니다.
+단위 테스트는 네트워크 요청이나 모델 다운로드 없이 실행됩니다.

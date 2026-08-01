@@ -144,25 +144,33 @@ def continuation_logprob_from_logits(
 
     if logits.dim() == 3:
         logits = logits[0]
+    if logits.dim() != 2:
+        raise ValueError(f"Expected logits shape (seq, vocab); got {tuple(logits.shape)}")
     if target_start <= 0:
         raise ValueError("target_start must be greater than 0")
 
     ids = full_input_ids.detach().cpu().long()
     if logits.shape[0] < ids.numel():
         raise ValueError(f"logits seq_len={logits.shape[0]} < input ids={ids.numel()}")
+    if target_start >= ids.numel():
+        raise ValueError("target_start must point to at least one continuation token")
 
-    log_probs = torch.log_softmax(logits.detach().cpu().float(), dim=-1)
-    token_logprobs: list[float] = []
-    target_ids: list[int] = []
-    tokens: list[str] = []
-
-    for pos in range(target_start, int(ids.numel())):
-        token_id = int(ids[pos])
-        token_logprob = float(log_probs[pos - 1, token_id])
-        token_logprobs.append(token_logprob)
-        target_ids.append(token_id)
-        if tokenizer is not None:
-            tokens.append(tokenizer.decode([token_id]))
+    # Only the positions that predict continuation tokens are needed. Slicing
+    # before the dtype/device transfer avoids copying a full sequence x vocab
+    # tensor to CPU for a short answer.
+    prediction_logits = logits[target_start - 1 : ids.numel() - 1].detach().float()
+    target_tensor = ids[target_start:].to(prediction_logits.device)
+    selected = torch.log_softmax(prediction_logits, dim=-1).gather(
+        1,
+        target_tensor.unsqueeze(1),
+    )
+    token_logprobs = selected.squeeze(1).cpu().tolist()
+    target_ids = target_tensor.cpu().tolist()
+    tokens = (
+        [tokenizer.decode([token_id]) for token_id in target_ids]
+        if tokenizer is not None
+        else []
+    )
 
     total = float(sum(token_logprobs))
     mean = total / max(len(token_logprobs), 1)
@@ -185,11 +193,14 @@ def _direction_edit(
     intervention_mode: InterventionMode,
 ) -> Any:
     direction = direction.to(device=hidden_vector.device, dtype=hidden_vector.dtype)
-    unit = direction / torch.linalg.norm(direction.float()).clamp_min(1e-12).to(direction.dtype)
     if intervention_mode == "remove_activation":
         return hidden_vector - float(coefficient) * float(feature_value) * direction
     if intervention_mode == "add_activation":
         return hidden_vector + float(coefficient) * float(feature_value) * direction
+    if intervention_mode == "add_vector":
+        return hidden_vector + float(coefficient) * direction
+
+    unit = direction / torch.linalg.norm(direction.float()).clamp_min(1e-12).to(direction.dtype)
     if intervention_mode == "subtract_unit":
         return hidden_vector - float(coefficient) * unit
     if intervention_mode == "add_unit":
@@ -197,8 +208,6 @@ def _direction_edit(
     if intervention_mode == "projection_remove":
         projection = (hidden_vector @ unit).unsqueeze(-1) * unit
         return hidden_vector - float(coefficient) * projection
-    if intervention_mode == "add_vector":
-        return hidden_vector + float(coefficient) * direction
     raise ValueError(f"Unknown intervention_mode={intervention_mode!r}")
 
 
@@ -228,7 +237,7 @@ def _trace_logits_with_optional_intervention(
             )
         logits = lm.output.logits.save()
 
-    return getattr(logits, "value", logits).detach().cpu()
+    return getattr(logits, "value", logits).detach()
 
 
 def score_answer_logprob(
@@ -335,6 +344,8 @@ def active_prompt_features(
         residual = residual.unsqueeze(0)
     if residual.shape[0] != 1:
         raise ValueError("active_prompt_features expects one residual vector")
+    if top_n < 0:
+        raise ValueError("top_n must be non-negative")
     vals, idx = encode_qwen_scope_topk(residual, sae)
     return [
         (int(feature_id), float(value))
@@ -362,6 +373,7 @@ def rank_lure_feature_effects(
     token_index: int | None = None,
     block_path_template: str = DEFAULT_BLOCK_PATH_TEMPLATE,
     output_index: int | None = None,
+    baseline: AnswerMargin | None = None,
 ) -> tuple[AnswerMargin, list[FeatureAblationResult]]:
     """Rank active SAE features by how much ablation reduces lure preference.
 
@@ -370,15 +382,18 @@ def rank_lure_feature_effects(
     the correct answer.
     """
 
-    baseline = answer_logprob_margin(
-        lm,
-        prompt,
-        correct_answer=correct_answer,
-        lure_answer=lure_answer,
-        token_index=token_index,
-        block_path_template=block_path_template,
-        output_index=output_index,
-    )
+    if top_n_candidates < 1:
+        raise ValueError("top_n_candidates must be positive")
+    if baseline is None:
+        baseline = answer_logprob_margin(
+            lm,
+            prompt,
+            correct_answer=correct_answer,
+            lure_answer=lure_answer,
+            token_index=token_index,
+            block_path_template=block_path_template,
+            output_index=output_index,
+        )
 
     if candidate_features is None:
         candidate_features = active_prompt_features(

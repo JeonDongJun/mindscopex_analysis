@@ -17,16 +17,16 @@ lab:  ## JupyterLab 열기
 	uv run jupyter lab notebooks/
 
 lint:  ## ruff 린트
-	uv run ruff check src/ tests/
+	uv run ruff check src/ tests/ experiments/ scripts/
 
 format:  ## ruff 포맷
-	uv run ruff format src/ tests/
+	uv run ruff format src/ tests/ experiments/ scripts/
 
 test:  ## 단위 테스트 실행
 	uv run python -m unittest discover -s tests -v
 
 smoke:  ## import/문법 확인 + 단위 테스트
-	uv run python -m compileall src tests
+	uv run python -m compileall src tests experiments scripts
 	uv run python -m unittest discover -s tests
 
 analyze-crt:  ## 00 CRT 실행 결과 교차 분석 (results/runs -> results/analysis)

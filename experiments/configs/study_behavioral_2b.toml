@@ -1,6 +1,7 @@
-# E3 (behavioral): does suppressing the feature during FREE GENERATION shift the
-# answer from lure to correct? Greedy base-model completion, baseline vs steered,
-# across steering coefficients on the held-out split. Writes behavioral.csv.
+# E3 (behavioral): does suppressing the feature during constrained binary
+# generation shift the selected answer from lure to correct? The model may emit
+# only the case's correct or lure string, so <think>/both/other cannot confound
+# the behavioral endpoint. Writes behavioral.csv.
 # Rediscovers the feature on train first (margin phase) unless pinned below, then
 # loads the HF text-generation model for the steered rollouts.
 [run]
@@ -28,7 +29,7 @@ instruction = true
 candidate_top_n = 10
 min_active_cases = 3
 max_candidates = 24
-max_cases = 24
+max_cases = 24               # family-balanced cap on train items used for discovery
 coefficient = 1.0
 intervention_mode = "remove_activation"
 null_samples = 32
@@ -40,8 +41,9 @@ null_samples = 32
 [behavioral]
 coefficients = [0.0, -2.0, -4.0, -8.0]
 max_new_tokens = 16
-max_cases = 40
+max_cases = 40               # deterministic family-balanced held-out subset
 token_position = "all"
+output_mode = "binary_choice"
 
 [colab]
 gpu = "A100"

@@ -22,16 +22,6 @@ def table(config: dict[str, Any], name: str) -> dict[str, Any]:
     return value
 
 
-def string_list(value: Any, *, default: tuple[str, ...] = ()) -> list[str]:
-    if value is None:
-        return list(default)
-    if isinstance(value, str):
-        return [value]
-    if isinstance(value, list) and all(isinstance(item, str) for item in value):
-        return value
-    raise TypeError(f"Expected string or list[str], got {value!r}")
-
-
 def bool_or_none_list(value: Any, *, default: tuple[bool | None, ...]) -> tuple[bool | None, ...]:
     if value is None:
         return default

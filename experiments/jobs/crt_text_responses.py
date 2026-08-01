@@ -62,6 +62,8 @@ RUN_PRESETS = {
     # Fresh synthetic CRT (same schema/families as hagendorff_crt; no pretraining exposure).
     "crt_fresh_v1": {"dataset": "crt_fresh_v1", "limit_per_family": None},
     "crt_fresh_v2": {"dataset": "crt_fresh_v2", "limit_per_family": None},
+    # Goal-affordance traps (240 = 60 scenarios x 4 conditions; binary_choice scoring).
+    "goal_affordance_traps_v1": {"dataset": "goal_affordance_traps_v1", "limit_per_family": None},
     # Back-compat aliases for the pre-rename preset names.
     "nature_smoke": {"dataset": "hagendorff_crt", "limit_per_family": 3},
     "nature_full": {"dataset": "hagendorff_crt", "limit_per_family": None},

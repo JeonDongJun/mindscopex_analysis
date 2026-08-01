@@ -13,7 +13,7 @@
 
 | 약점 | 문제 | 보강 |
 |------|------|------|
-| **순환성(selection-on-outcome)** | top-N에서 최댓값을 고르면 항상 뭔가 나온다 | **random-direction null** 대비 z-score |
+| **순환성(selection-on-outcome)** | top-N에서 최댓값을 고르면 항상 뭔가 나온다 | 현재 null z는 진단값; 확인 실험은 **selection-adjusted max null** |
 | **logprob ≠ 행동** | 2개 고정 문자열 margin은 "정답 회복" 주장을 직접 못 함 | **free-generation 정답률** readout |
 | **n=1 발견** | 한 문항 발견을 4문항에 적용 | **train/test 분할**, train에서만 발견·계수 선택 |
 | **control 미활용** | 특이성의 최강 증거가 각주 | **matched-control** hostile vs control 대조를 headline으로 |
@@ -46,12 +46,21 @@
 
 - **의의.** 한 문항이 아니라 **train split 여러 문항에 걸쳐** 함정 margin을 올리는 feature를
   찾는다. 각 layer의 최고 feature 효과를 **동일 크기 무작위 방향 제거(null)** 와 비교해
-  "이 방향이 특별한가"를 z-score로 계량한다.
+  "이 방향이 특별한가"를 z-score로 계량한다. `max_cases`로 일부만 쓸 때도 family별
+  round-robin으로 균형 있게 뽑는다.
 - **산출.** `discover_localization.csv`(layer별 `mean_margin_delta`, `null_mean`, `null_z`,
   `null_percentile`, `frac_positive`), `discover_features.csv`(best layer의 상위 feature),
   `study_feature.json`(이후 단계가 쓰는 feature), `discover_localization.png`(layer vs null band).
 - **해석.** 특정 layer에서 feature 곡선이 null 위로 크게 뜨고(`null_z` 큼, `null_percentile`
   ≈1) `frac_positive`가 높으면 → 국소적이고 일반화되는 lure 방향. null과 겹치면 근거 약함.
+
+> **현재 null의 한계.** feature 선택은 discovery 문항 전체에서 여러 후보와 layer를 검색해
+> 최대 평균 효과를 고르지만, 현재 null은 각 layer 대표 feature를 `subset[0]` 한 문항에서만
+> 동일 norm의 random direction과 비교한다. 따라서 `null_z`는 “이 대표 문항에서 임의 방향보다
+> 큰가”를 보는 진단값이지, 후보·layer 검색의 winner's curse를 보정한 p-value가 아니다.
+> 확인 실험에서는 각 null 반복마다 discovery 전체와 후보 검색을 재현하고 최댓값을 취하는
+> selection-adjusted max null로 교체한다. 계산과 해석은
+> [random_direction_null.md](random_direction_null.md)에 자세히 정리했다.
 
 ### E3-margin `causal_heldout` — held-out 인과(margin)
 
@@ -60,14 +69,18 @@
 - **산출.** `causal_heldout.csv`(test case별 baseline/edited margin, `margin_delta`), 요약.
 - **해석.** train 대비 효과가 유지되면 일반화. 크게 줄면 train 과적합(feature가 train 특이적).
 
-### E3-behavioral `behavioral` — 자유 생성 정답률 (논문 제목 직결)
+### E3-behavioral `behavioral` — correct-vs-lure 제한 생성 (논문 제목 직결)
 
-- **의의.** teacher-forced margin이 아니라 **실제 생성**에서 lure feature를 억제(음의 steering
-  계수)했을 때 답이 함정→정답으로 바뀌는지 본다. "CoT 없이 정답 회복"을 직접 측정.
+- **의의.** 각 문항의 정답 또는 lure 문자열만 생성할 수 있게 token-level constraint를 건 뒤,
+  lure feature를 억제(음의 steering 계수)했을 때 선택이 함정→정답으로 바뀌는지 본다.
+  Qwen의 `enable_thinking=False`는 chat-template 옵션이라 SAE와 같은 Base 체크포인트의 plain
+  completion에는 적용되지 않는다. 제한 생성은 같은 체크포인트를 유지하면서 `<think>`와
+  `both`/`other`를 원천 차단하며, held-out 일부만 쓸 때도 family-balanced subset을 사용한다.
 - **산출.** `behavioral.csv`(계수별 baseline/steered `accuracy`·`lure_rate`와 delta),
   case별 생성 텍스트(`behavioral/generations.json`), `behavioral.png`.
 - **해석.** 음의 계수를 키울수록 `steered_accuracy` 상승·`steered_lure_rate` 하락이면 행동
-  수준 인과. 계수를 너무 키우면 텍스트가 무너져 `other`가 늘 수 있으니 정확도·lure율을 함께 본다.
+  수준 인과. 다만 이는 자유 응답이 아니라 두 후보 사이의 강제 선택이므로 teacher-forced margin과
+  독립적인 자유 생성 검증으로 과장하지 않는다.
 
 ### E4 `control_specificity` — 특이성 (matched control)
 

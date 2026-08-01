@@ -1,0 +1,29 @@
+# Goal-affordance traps thinking-effect on Qwen — 27B (fits the 96GB G4 on-GPU).
+# 240 cases (60 scenarios x 4 conditions). Reasoning OFF/ON, forced correct-vs-lure
+# (output_mode="binary_choice", no "other"). Condition encoded in case_id.
+[run]
+name = "00_goal_affordance_27b"
+job = "crt_text_responses"
+
+[dataset]
+preset = "goal_affordance_traps_v1"
+
+[model]
+ids = ["Qwen/Qwen3.5-27B"]
+dtype = "auto"
+device_map = "auto"
+
+[generation]
+protocol = "qwen_native"
+seeds = [42]
+thinking_modes = [false, true]
+output_mode = "binary_choice"
+max_new_tokens = 2048
+
+[colab]
+gpu = "G4"
+
+[remote]
+source = "archive"
+repo_dir = "/content/mindscopex_analysis"
+output_root = "/content/mindscopex_artifacts"

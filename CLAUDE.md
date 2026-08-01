@@ -1,12 +1,15 @@
 # MindScopeX Analysis
 
-이 저장소는 이제 Qwen 모델 내부 분석을 작게 반복하기 위한 레포입니다.
+이 저장소는 Qwen3.5와 Qwen-Scope SAE로 reasoning lure를 분석하는 연구 레포입니다.
+노트북은 탐색용이고, TOML 기반 `experiments/`가 재현 가능한 통제 실험의 실행
+경로입니다.
 
 ## 현재 초점
 
-- `nnsight.LanguageModel` 로 Qwen residual stream activation 캡처
-- Hugging Face의 Qwen-Scope SAE checkpoint 로 feature activation 추출
-- 노트북은 목적별 최소 흐름만 유지: `01`부터 `13`까지 activation, feature search, steering, control, transfer 실험으로 분리
+- `nnsight.LanguageModel`로 Qwen residual stream activation 캡처
+- Qwen-Scope SAE checkpoint로 feature activation과 decoder direction 추출
+- discovery/held-out split, random-direction null, matched control, behavioral readout 분리
+- 노트북 00–13과 batch job이 같은 `src/mindscopex_analysis` 코어 사용
 
 ## 핵심 경로
 
@@ -16,9 +19,12 @@
 | `src/mindscopex_analysis/activations.py` | NNsight trace 기반 residual stream 캡처 |
 | `src/mindscopex_analysis/qwen_scope.py` | Qwen-Scope SAE 로드, TopK feature 요약, layer scan |
 | `src/mindscopex_analysis/effects.py` | 답변 logprob margin과 feature decoder-direction ablation |
+| `src/mindscopex_analysis/research.py` | split, null, 일반화 feature, specificity, behavioral readout |
 | `src/mindscopex_analysis/lure_datasets.py` | `data/*.json` 통일 로더 (`load_lure_dataset`, `lure_dataset_cases`) |
 | `src/mindscopex_analysis/data/*.json` | 실험용 lure 데이터셋 (CRT/의미착각), 공통 스키마 |
 | `scripts/build_datasets.py` | 원본 fetch + 정규화(1회성). `docs/datasets.md`가 카탈로그 정본 |
+| `experiments/jobs/research_experiments.py` | 재현 가능한 통제 연구 batch job |
+| `experiments/runners/launch_colab.py` | config/suite 실행과 Colab artifact 회수 |
 | `notebooks/01_qwen_scope_activation_mvp.ipynb` | activation 캡처부터 layer 후보 선정까지의 MVP |
 | `notebooks/02_bat_ball_lure_feature_ablation.ipynb` | bat-and-ball 함정 답 feature ablation 실험 |
 
@@ -37,5 +43,8 @@
 - 설치: `uv sync --extra dev`
 - 노트북: `uv run jupyter lab notebooks/`
 - 확인: `make lint` / `make smoke`
+- Colab smoke: `./experiments/run_colab.sh experiments/suites/smoke.toml -s mindscopex-smoke`
 
-기본 모델은 Qwen-Scope SAE와 정확히 맞는 `Qwen/Qwen3-1.7B-Base` 입니다. 더 작은 `Qwen3-0.6B`는 현재 Qwen-Scope 공개 SAE가 없어 이 레포의 기본 경로로 쓰지 않습니다.
+기본 mechanistic pair는 정확히 대응하는 `Qwen/Qwen3.5-27B`와
+`Qwen/SAE-Res-Qwen3.5-27B-W80K-L0_50`입니다. 2B/9B/35B-A3B profile의 공식 SAE는
+Base checkpoint용이므로 post-trained behavior model의 feature로 직접 해석하지 않습니다.

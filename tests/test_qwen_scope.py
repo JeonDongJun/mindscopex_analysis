@@ -9,6 +9,7 @@ from mindscopex_analysis.qwen_scope import (
     encode_qwen_scope_topk,
     infer_top_k_from_repo,
     make_layer_feature_report,
+    qwen_scope_feature_values,
     sae_decoder_direction,
     split_qwen_thinking,
     summarize_qwen_scope_features,
@@ -64,6 +65,21 @@ class EncodeTopKTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             encode_qwen_scope_topk(torch.zeros(1, D_MODEL + 1), sae)
 
+    def test_selected_feature_values_match_dense_encoding(self) -> None:
+        sae = _make_sae()
+        sae.b_enc = torch.arange(D_SAE, dtype=torch.float32)
+        residual = torch.tensor([[2.0, 0.0, 0.0], [-1.0, 0.0, 0.0]])
+
+        selected = qwen_scope_feature_values(residual, sae, [4, 1])
+        dense = residual @ sae.W_enc.T + sae.b_enc
+
+        self.assertTrue(torch.allclose(selected, dense[:, [4, 1]]))
+
+    def test_selected_feature_values_validate_ids(self) -> None:
+        sae = _make_sae()
+        with self.assertRaises(IndexError):
+            qwen_scope_feature_values(torch.zeros(1, D_MODEL), sae, [D_SAE])
+
 
 class SummarizeFeaturesTests(unittest.TestCase):
     def test_aggregates_topk_activations_over_tokens(self) -> None:
@@ -89,6 +105,14 @@ class SummarizeFeaturesTests(unittest.TestCase):
         whole = summarize_qwen_scope_features(residuals, sae, batch_size=64)
         self.assertTrue(torch.allclose(small["mean"], whole["mean"]))
         self.assertTrue(torch.allclose(small["activation_rate"], whole["activation_rate"]))
+
+    def test_rejects_nonpositive_batch_size(self) -> None:
+        with self.assertRaises(ValueError):
+            summarize_qwen_scope_features(
+                torch.zeros(1, D_MODEL),
+                _make_sae(),
+                batch_size=0,
+            )
 
 
 class TopFeaturesTests(unittest.TestCase):
