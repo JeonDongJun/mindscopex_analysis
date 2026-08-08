@@ -71,9 +71,20 @@ from mindscopex_analysis import (
 DEFAULT_STEER_COEFFICIENTS = (0.0, -2.0, -4.0, -8.0)
 
 # Which model each kind needs: nnsight LM for margins, HF model for generation.
-MARGIN_KINDS = ("phenomenon", "discover", "causal_heldout", "control_specificity")
+MARGIN_KINDS = (
+    "phenomenon",
+    "discover",
+    "causal_heldout",
+    "control_specificity",
+    "condition_specificity",
+)
 GEN_KINDS = ("behavioral",)
-FEATURE_KINDS = ("causal_heldout", "control_specificity", "behavioral")
+FEATURE_KINDS = (
+    "causal_heldout",
+    "control_specificity",
+    "condition_specificity",
+    "behavioral",
+)
 
 META_KINDS: dict[str, tuple[str, ...]] = {
     "study": (
@@ -90,6 +101,14 @@ META_KINDS: dict[str, tuple[str, ...]] = {
         "discover",
         "control_specificity",
         "causal_heldout",
+    ),
+    # Multi-condition sets (goal_affordance_traps) carry no matched control_prompt,
+    # so specificity is tested by the counterfactual sign flip instead.
+    "study_affordance": (
+        "phenomenon",
+        "discover",
+        "causal_heldout",
+        "condition_specificity",
     ),
 }
 
@@ -213,6 +232,15 @@ def _load_splits(config: dict[str, Any]) -> dict[str, Any]:
         families=tuple(families) if families else None,
         limit_per_family=limit,
     )
+    # Multi-condition sets (goal_affordance_traps) encode the condition as a case_id
+    # suffix. Keep only the requested conditions so discovery is not diluted by the
+    # controls -- the counterfactual condition even swaps correct/lure.
+    conditions = data_cfg.get("conditions") or None
+    if conditions:
+        suffixes = tuple(f"_{name}" for name in conditions)
+        cases = [case for case in cases if case.case_id.endswith(suffixes)]
+        if not cases:
+            raise ValueError(f"No {dataset!r} cases match conditions {list(conditions)}")
     if bool(data_cfg.get("instruction", True)):
         cases = instruct_lure_cases(cases)
     train_frac = float(data_cfg.get("train_frac", 0.6))
@@ -612,6 +640,107 @@ def run_control_specificity(
     }
 
 
+def run_condition_specificity(
+    lm: Any,
+    splits: dict[str, Any],
+    config: dict[str, Any],
+    env: dict[str, Any],
+    run_dir: Path,
+    state: dict[str, Any],
+) -> dict[str, Any]:
+    """Sign-flip specificity for multi-condition sets (goal_affordance_traps).
+
+    The counterfactual twin keeps the same surface cue but swaps which action is
+    correct, so a genuine "prefer the intuitive/efficient action" feature must move
+    the two margins in *opposite* directions: ablating it should lower the lure
+    margin on hostile (delta > 0) and lower the correct margin on the twin
+    (delta < 0). A direction that merely damages the model moves both the same way,
+    so ``mean_sign_flip_gap`` separates a real lure feature from generic damage.
+    """
+
+    info = _ensure_feature(lm, splits, config, env, run_dir, state)
+    feature = info["feature"]
+    cfg = table(config, "condition_specificity")
+    base_condition = str(cfg.get("base_condition", "hostile"))
+    twin_condition = str(cfg.get("twin_condition", "counterfactual"))
+
+    all_cases = lure_dataset_cases(splits["dataset"])
+    if bool(table(config, "data").get("instruction", True)):
+        all_cases = instruct_lure_cases(all_cases)
+    by_id = {case.case_id: case for case in all_cases}
+
+    suffix = f"_{base_condition}"
+    base_cases: list[Any] = []
+    twin_cases: list[Any] = []
+    for case in splits["test"]:
+        if not case.case_id.endswith(suffix):
+            continue
+        twin = by_id.get(f"{case.case_id[: -len(suffix)]}_{twin_condition}")
+        if twin is not None:
+            base_cases.append(case)
+            twin_cases.append(twin)
+    if not base_cases:
+        raise ValueError(f"No {base_condition}/{twin_condition} pairs in the held-out split")
+
+    _log(f"condition_specificity: {len(base_cases)} {base_condition}/{twin_condition} pairs")
+    shared: dict[str, Any] = {
+        "layer": int(feature["layer"]),
+        "sae": info["sae"],
+        "feature_id": int(feature["feature_id"]),
+        "coefficient": float(info.get("coefficient", 1.0)),
+        "intervention_mode": str(info.get("intervention_mode", "remove_activation")),
+    }
+    base_effect = aggregate_feature_effect(lm, base_cases, **shared)
+    twin_effect = aggregate_feature_effect(lm, twin_cases, **shared)
+
+    rows: list[dict[str, Any]] = []
+    flipped = 0
+    pairs = zip(base_effect["per_case"], twin_effect["per_case"], strict=True)
+    for base_row, twin_row in pairs:
+        base_delta = float(base_row["margin_delta"])
+        twin_delta = float(twin_row["margin_delta"])
+        is_flipped = base_delta > 0.0 > twin_delta
+        flipped += int(is_flipped)
+        rows.append(
+            {
+                "pair_id": base_row["case_id"][: -len(suffix)],
+                "family": base_row["family"],
+                "base_margin_delta": base_delta,
+                "twin_margin_delta": twin_delta,
+                "sign_flip_gap": base_delta - twin_delta,
+                "flipped": is_flipped,
+            }
+        )
+    _write_csv(
+        run_dir / "condition_specificity.csv",
+        rows,
+        [
+            "pair_id",
+            "family",
+            "base_margin_delta",
+            "twin_margin_delta",
+            "sign_flip_gap",
+            "flipped",
+        ],
+    )
+    n = len(rows)
+    summary = {
+        "base_condition": base_condition,
+        "twin_condition": twin_condition,
+        "n_pairs": n,
+        "mean_base_delta": base_effect["mean_margin_delta"],
+        "mean_twin_delta": twin_effect["mean_margin_delta"],
+        "mean_sign_flip_gap": sum(row["sign_flip_gap"] for row in rows) / n,
+        "frac_flipped": flipped / n,
+    }
+    _write_json(run_dir / "condition_specificity" / "summary.json", summary)
+    return {
+        "kind": "condition_specificity",
+        "paper_csv": str(run_dir / "condition_specificity.csv"),
+        **summary,
+    }
+
+
 def run_behavioral(
     model: Any,
     tokenizer: Any,
@@ -705,6 +834,7 @@ MARGIN_RUNNERS: dict[str, Callable[..., dict[str, Any]]] = {
     "discover": run_discover,
     "causal_heldout": run_causal_heldout,
     "control_specificity": run_control_specificity,
+    "condition_specificity": run_condition_specificity,
 }
 GEN_RUNNERS: dict[str, Callable[..., dict[str, Any]]] = {
     "behavioral": run_behavioral,

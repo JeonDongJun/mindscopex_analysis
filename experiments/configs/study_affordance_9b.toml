@@ -1,0 +1,45 @@
+# SAE causal study on goal_affordance_traps_v1 — 9B. See study_affordance_2b.toml
+# for the design (discover on hostile, counterfactual sign-flip for specificity).
+[run]
+name = "study_affordance_9b"
+job = "research_experiments"
+
+[experiment]
+kind = "study_affordance"
+
+[model]
+profile = "9b"
+dtype = "auto"
+device_map = "auto"
+sae_device = "cpu"
+sae_dtype = "auto"
+
+[data]
+dataset = "goal_affordance_traps_v1"
+conditions = ["hostile"]
+limit_per_family = 0
+train_frac = 0.6
+split_seed = 0
+instruction = true
+
+[discover]
+candidate_top_n = 12
+min_active_cases = 3
+max_candidates = 24
+max_cases = 24
+coefficient = 1.0
+intervention_mode = "remove_activation"
+null_samples = 32
+null_seed = 0
+
+[condition_specificity]
+base_condition = "hostile"
+twin_condition = "counterfactual"
+
+[colab]
+gpu = "G4"
+
+[remote]
+source = "archive"
+repo_dir = "/content/mindscopex_analysis"
+output_root = "/content/mindscopex_artifacts"

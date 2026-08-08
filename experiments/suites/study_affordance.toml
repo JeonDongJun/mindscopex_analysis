@@ -1,0 +1,12 @@
+# SAE causal study on the goal-affordance traps across scales (2B -> 9B -> 27B),
+# sequentially on one G4. Discovers the intuitive-answer feature on hostile items,
+# ablates it on held-out items, and checks the counterfactual sign flip.
+#   ./experiments/run_colab.sh experiments/suites/study_affordance.toml \
+#       -s mindscopex-aff -g G4 --exec-timeout 21600 --continue-on-error
+[suite]
+name = "study_affordance"
+configs = [
+  "../configs/study_affordance_2b.toml",
+  "../configs/study_affordance_9b.toml",
+  "../configs/study_affordance_27b.toml",
+]

@@ -1,0 +1,52 @@
+# SAE causal study on goal_affordance_traps_v1 — 2B.
+#
+# Finds the feature that drives the *intuitive* (efficient-action) answer on the
+# hostile condition, ablates it, and measures the correct-vs-lure margin change.
+#
+# Specificity uses the counterfactual twin instead of a matched control prompt:
+# the twin keeps the same surface cue but swaps which action is correct, so a real
+# "prefer the efficient action" feature must move the two margins in OPPOSITE
+# directions (hostile delta > 0, twin delta < 0). Generic damage moves both alike.
+[run]
+name = "study_affordance_2b"
+job = "research_experiments"
+
+[experiment]
+kind = "study_affordance"
+
+[model]
+profile = "2b"
+dtype = "auto"
+device_map = "auto"
+sae_device = "auto"
+sae_dtype = "auto"
+
+[data]
+dataset = "goal_affordance_traps_v1"
+conditions = ["hostile"]   # discover on the trap only; controls would dilute it
+limit_per_family = 0
+train_frac = 0.6
+split_seed = 0
+instruction = true
+
+[discover]
+candidate_top_n = 12
+min_active_cases = 3
+max_candidates = 24
+max_cases = 24             # family-balanced cap on train items used for discovery
+coefficient = 1.0
+intervention_mode = "remove_activation"
+null_samples = 32
+null_seed = 0
+
+[condition_specificity]
+base_condition = "hostile"
+twin_condition = "counterfactual"
+
+[colab]
+gpu = "G4"
+
+[remote]
+source = "archive"
+repo_dir = "/content/mindscopex_analysis"
+output_root = "/content/mindscopex_artifacts"
