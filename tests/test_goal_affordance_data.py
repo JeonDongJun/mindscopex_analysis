@@ -11,6 +11,7 @@ SCRIPTS_DIR = ROOT / "scripts"
 sys.path.insert(0, str(SCRIPTS_DIR))
 
 from build_goal_affordance_dataset import build_payload, canonical_scenarios  # noqa: E402
+from build_goal_affordance_v2_dataset import build_payload as build_v2_payload  # noqa: E402
 
 
 class GoalAffordanceDatasetTests(unittest.TestCase):
@@ -66,6 +67,20 @@ class GoalAffordanceDatasetTests(unittest.TestCase):
                 (hostile["lure_answer"], hostile["correct_answer"]),
                 pair_id,
             )
+
+    def test_v2_micro_challenge_rebuilds_and_records_repetition_units(self) -> None:
+        payload = build_v2_payload()
+        path = (
+            ROOT
+            / "src"
+            / "mindscopex_analysis"
+            / "data"
+            / "goal_affordance_traps_v2.json"
+        )
+        self.assertEqual(payload, json.loads(path.read_text(encoding="utf-8")))
+        self.assertEqual(payload["n_independent_semantic_clusters"], 1)
+        self.assertEqual(payload["selection"]["intuitive_hostile_lure"]["pooled"], "8/15")
+        self.assertEqual(payload["selection"]["reflective_hostile_lure"]["pooled"], "0/15")
 
     def test_option_positions_are_nearly_balanced(self) -> None:
         from evaluate_goal_affordance import correct_is_a, load_cases

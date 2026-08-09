@@ -21,7 +21,7 @@
 
 ## 1. 한눈에 보는 결론
 
-현재 정규화된 데이터는 **10개 데이터셋, 657 cases**다.
+현재 정규화된 데이터는 **11개 데이터셋, 661 cases**다.
 
 | 목적 | 우선 사용할 데이터셋 | 이유 |
 |---|---|---|
@@ -32,6 +32,7 @@
 | 비수학 반성 사고 | `crt2`, `verbal_crt` | 산술에 의존하지 않는 verbal lure |
 | 거짓 전제 수용 여부 | `hagendorff_semantic_illusion` | premise rejection 50문항 |
 | 목표-수단 필수조건 추론 | `goal_affordance_traps_v1` | 60 scenario × 4 condition의 paired binary choice |
+| 직관→심사숙고 micro challenge | `goal_affordance_traps_v2` | 한국어 semantic cluster 1개에서 반복 검증된 4-condition set |
 
 중요한 제한:
 
@@ -95,6 +96,7 @@ hostile과 control을 비교해 feature가 단순 숫자·문장 형식이 아�
 | `crt_fresh_v1` | 30 | 1 | CRT / margin | 30 | 합성 generator pilot | v2로 대체됨 |
 | `crt_fresh_v2` | 150 | 2 | CRT / margin | 150 | 신규 synthetic core | 자동 검증 완료, 인간/API 검수 대기 |
 | `goal_affordance_traps_v1` | 240 | 3 | goal affordance / binary choice | 180 paired conditions | 목표-필수조건·조건 효과 | v1.1 build·frontier 검증 완료 |
+| `goal_affordance_traps_v2` | 4 | 3 | goal affordance / binary choice | 3 paired conditions | intuitive↔reflective micro challenge | 반복·A/B 반전 검증 완료, broad benchmark 아님 |
 | `crt7_classic` | 7 | 1 | CRT / margin | 0 | 고전 기준·노출 비교 | fair-use 주의 |
 | `yax_crt_isomorph` | 7 | 1 | CRT / margin | 0 | CRT-7 신규 표면형 비교 | 사용 가능 |
 | `crt2` | 4 | 1 | verbal CRT / margin | 0 | 짧은 비수학 전이 | 사용 가능 |
@@ -110,6 +112,7 @@ Family 합계는 다음과 같다.
 | `crt_fresh_v1` | difference 10, growth 10, rate 10 |
 | `crt_fresh_v2` | difference 50, growth 50, rate 50 |
 | `goal_affordance_traps_v1` | agent capability 40, means-end conflict 40, prerequisite state 40, required resource 40, target transport 40, tool transport 40 |
+| `goal_affordance_traps_v2` | goal-bound vehicle 4; 독립 semantic cluster 1개 |
 | `crt7_classic` | arithmetic 1, counting 1, difference 1, growth 1, percentage 1, rate 2 |
 | `yax_crt_isomorph` | arithmetic 1, counting 1, difference 1, growth 1, percentage 1, rate 2 |
 | `crt2` | verbal 4 |
@@ -454,6 +457,60 @@ effort를 direct로 썼다. 응답은 strict JSON A/B, 동일 case의 direct/hig
 - option-order 반전: `results/goal_affordance_traps_v1_1_challenge_reverse_20260731/`
 - challenge manifest: 최종 full run 디렉터리의 `challenge_manifest.json`
 
+### 7.11 `goal_affordance_traps_v2` — 직관/심사숙고 micro challenge
+
+- **크기:** 독립 semantic cluster 1개 × 4 condition = 4 case
+- **언어:** 한국어
+- **condition:** `hostile`, `explicit`, `neutral`, `counterfactual`
+- **채점:** counterbalanced binary choice
+- **생성:** `scripts/build_goal_affordance_v2_dataset.py`
+- **상태:** confirmed micro-challenge, broad benchmark가 아님
+
+hostile 문항은 다음 구조다.
+
+```text
+차 타이어에 공기를 넣어야 한다. 정비소는 주차장 건너편이라
+차로 돌아가는 것보다 걸어가는 편이 쉽다. 어떻게 가야 할까?
+
+correct: 차를 운전해 정비소로 간다
+lure:    정비소까지 걸어간다
+```
+
+v2 개발에서 확인한 calibration:
+
+- 이미지와 같은 짧은 “50m 앞, 걸을까/운전할까” 8문항은 최신 frontier가 72/72 정답
+- bilingual 20표면형 direct hostile은 8/60 lure였지만 모호성·비재현 항목 제외
+- high-load frontier 제안 16문항은 intuitive에서 1/48 lure에 그침
+- 부착 차량 부품 6문항 중 타이어 공기만 반복 재현
+- 같은 의미 paraphrase는 독립 문항으로 채택하지 않음
+
+최종 조작은 API effort만 비교하지 않는다.
+
+| 조건 | system instruction | effort |
+|---|---|---|
+| intuitive | 첫인상으로 즉답하고 재검토하지 않음 | endpoint별 최저 (`none`/`low`/`minimal`) |
+| reflective | 목표 대상·자원·자격·선행상태를 재점검 | `high` |
+
+독립 호출 5회씩의 hostile 결과:
+
+| model | intuitive lure | reflective lure |
+|---|---:|---:|
+| `openai/gpt-5.6-sol` | 0/5 | 0/5 |
+| `anthropic/claude-opus-5` | 5/5 | 0/5 |
+| `google/gemini-3-flash-preview` | 3/5 | 0/5 |
+| **pooled** | **8/15 (53.3%)** | **0/15 (0%)** |
+
+정방향·A/B 반전에서 explicit/neutral/counterfactual은 모두 정답이었고 reflective
+hostile도 모두 정답이었다. 다만 5회 반복은 한 문항의 응답 확률을 추정하는 반복 측정이지
+독립 표본 5개가 아니다. GPT에서는 lure가 전혀 없었으므로 “모든 frontier 모델이
+함정에 빠진다”는 결론도 금지한다.
+
+주요 아티팩트:
+
+- 최종 데이터: `src/mindscopex_analysis/data/goal_affordance_traps_v2.json`
+- 통합 보고서: `results/goal_affordance_traps_v2_final_20260802/report.md`
+- 평가 manifest: 같은 디렉터리의 `evaluation_manifest.json`
+
 ---
 
 ## 8. 2026-07-31 데이터 감사 결과
@@ -467,8 +524,8 @@ uv run python scripts/audit_datasets.py --check
 결과:
 
 ```text
-10 datasets
-657 cases
+11 datasets
+661 cases
 0 integrity errors
 3 documented warnings
 ```
@@ -482,6 +539,7 @@ uv run python scripts/audit_datasets.py --check
 - control이 hostile 질문과 동일한 case 없음
 - schema v2의 pair/template/condition 존재
 - schema v3 goal-affordance의 60 pair × 4 condition 및 family 균형
+- schema v3 v2 micro-challenge의 1 pair × 4 condition과 answer swap 관계
 
 문서화된 warning:
 
@@ -498,7 +556,7 @@ uv run python scripts/audit_datasets.py --check
 - Moses / widow 계열: verbal CRT와 semantic lure 사례 간 개념 중복
 - `crt_fresh_v1`과 v2: 같은 생성 계보이며 일부 문항은 매우 높은 문자열 유사도
 
-따라서 전체 657을 하나의 독립 pooled benchmark처럼 평균 내지 않는다.
+따라서 전체 661을 하나의 독립 pooled benchmark처럼 평균 내지 않는다.
 
 ### 품질 상태 표
 
@@ -509,6 +567,7 @@ uv run python scripts/audit_datasets.py --check
 | `crt_fresh_v1` | 프로그램 수식 | 프로그램 수식 | v2와 강한 중복 | 표본 검수 | 미실시 |
 | `crt_fresh_v2` | 프로그램 수식 | 프로그램 수식 | public near-copy 검사 통과 | **대기** | **대기** |
 | `goal_affordance_traps_v1` | pair rationale·build invariant | 4-condition paired 설계 | 독립 scenario 60개 | 내부 curation 완료, 독립 blind 검수 대기 | **3계열 1,440회 + 순서 반전 완료** |
+| `goal_affordance_traps_v2` | 목표 대상이 차에 부착됨 | 4-condition + A/B 반전 | v1/후보군과 같은 계보, 독립 cluster 1개 | 내부 검수 완료 | **intuitive/reflective 각 15회 반복** |
 | `crt7_classic` | 원 논문 | 없음 | pilot과 정확 중복 | 공개 문항 | 공개 노출 가능 |
 | `yax_crt_isomorph` | 공개 논문 | 로컬 미포함 | classic 구조 대응 | 원 연구 | 기존 연구 |
 | `crt2` | 공개 논문 | 없음 | verbal/pilot 의미 중복 | 원 연구 | 별도 필요 |
@@ -603,6 +662,21 @@ uv run python scripts/audit_datasets.py --check
 이 데이터는 생활 상식의 모호성이 있으므로 프로그램 수식만으로 검증할 수 없다.
 독립 검토자 2명과 불일치 adjudication이 필요하다.
 
+#### Phase 3b — `goal_affordance_traps_v2`
+
+v1의 낮은 frontier lure 비율을 보완하기 위해 이미지형 short prompt, bilingual surface,
+entity-binding high-load 문제, 부착 차량 부품 family, paraphrase를 단계적으로 시험했다.
+최종적으로 새 semantic cluster를 여러 개 확보하지 못했고, 타이어 공기 1개 pair만
+intuitive→reflective 회복과 control/A-B 반전을 반복 통과했다.
+
+v2의 올바른 용도는 다음과 같다.
+
+- reasoning instruction·SAE steering의 민감한 micro challenge
+- 모델별 응답 확률과 intervention 효과 확인
+- 새로운 semantic cluster를 발굴할 때의 positive control
+
+v2 하나로 일반적인 goal-affordance 오류율, 언어 일반화, family 일반화를 추정하지 않는다.
+
 ### 완료: Phase 4 — Frontier API 검증
 
 - 서로 다른 제공자 계열 3개 이상
@@ -678,6 +752,8 @@ uv run python scripts/build_datasets.py crt_fresh_v2
 uv run python scripts/build_datasets.py
 uv run python scripts/build_goal_affordance_dataset.py
 uv run python scripts/build_goal_affordance_dataset.py --refresh-selection
+uv run python scripts/build_goal_affordance_v2_dataset.py
+uv run python scripts/summarize_goal_affordance_v2.py
 
 # Goal-Affordance 세 모델 × direct/high
 uv run python scripts/evaluate_goal_affordance.py \
@@ -712,7 +788,7 @@ uv run ruff check src tests experiments scripts
 |---|---|
 | `crt_pilot` | 저장소 자체 fixture; 고전 문항 포함, 정식 benchmark 아님 |
 | `crt_fresh_v1/v2` | repository-generated, Apache-2.0 |
-| `goal_affordance_traps_v1` | repository-generated and curated, Apache-2.0 |
+| `goal_affordance_traps_v1/v2` | repository-generated and curated, Apache-2.0 |
 | `hagendorff_*` | 논문·부속자료 CC BY 4.0; 논문과 OSF 모두 인용 |
 | `crt2` | CC BY 3.0 |
 | `verbal_crt` | CC BY 4.0 |
@@ -727,6 +803,7 @@ uv run ruff check src tests experiments scripts
 
 | 날짜 | 변경 |
 |---|---|
+| 2026-08-02 | `goal_affordance_traps_v2` micro-challenge 1 pair/4 cases 추가. intuitive 8/15 vs reflective 0/15, controls·A/B 반전 검증. 카탈로그 11개/661 cases |
 | 2026-07-31 | Goal-Affordance v1.1 frontier 1,440회 평가와 A/B 반전 완료. counterfactual 결함 수정, confirmed challenge 1쌍 분리 |
 | 2026-07-31 | `goal_affordance_traps_v1` 60 scenario/240 case와 schema v3 추가. 카탈로그를 10개/657 cases로 갱신 |
 | 2026-07-30 | 데이터 문서와 확장 계획을 이 파일로 통합. 9개/417 cases 전수 감사, control 의미·중복·품질 상태 명시, 감사 스크립트 추가 |

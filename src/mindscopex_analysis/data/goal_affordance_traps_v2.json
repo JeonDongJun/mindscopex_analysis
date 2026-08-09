@@ -1,0 +1,116 @@
+{
+  "dataset_id": "goal_affordance_traps_v2",
+  "schema_version": 3,
+  "title": "Goal-Affordance Traps v2 micro-challenge",
+  "description": "A Korean four-condition micro-challenge in which local travel ease conflicts with moving the vehicle-bound target of the goal.",
+  "task_kind": "goal_affordance",
+  "scoring": "binary_choice",
+  "source": {
+    "authors": "MindScopeX project",
+    "year": 2026,
+    "title": "Goal-Affordance Traps v2 micro-challenge",
+    "license": "Apache-2.0 (repository-generated and curated content)",
+    "generation_note": "Selected after bilingual short-form, high-load, attached-component, paraphrase, control, repetition, and option-reversal screening."
+  },
+  "generated_by": "scripts/build_goal_affordance_v2_dataset.py",
+  "revision": "v2.0",
+  "status": "confirmed_micro_challenge_not_a_broad_benchmark",
+  "language": "ko",
+  "n_independent_semantic_clusters": 1,
+  "n_base_surfaces": 1,
+  "n_cases": 4,
+  "family_counts": {
+    "goal_bound_vehicle": 4
+  },
+  "condition_counts": {
+    "counterfactual": 1,
+    "explicit": 1,
+    "hostile": 1,
+    "neutral": 1
+  },
+  "selection": {
+    "pair_id": "vehicle_tire_air_ko",
+    "intuitive_prompted_repetitions": 5,
+    "reflective_prompted_repetitions": 5,
+    "intuitive_hostile_lure": {
+      "openai/gpt-5.6-sol": "0/5",
+      "anthropic/claude-opus-5": "5/5",
+      "google/gemini-3-flash-preview": "3/5",
+      "pooled": "8/15"
+    },
+    "reflective_hostile_lure": {
+      "openai/gpt-5.6-sol": "0/5",
+      "anthropic/claude-opus-5": "0/5",
+      "google/gemini-3-flash-preview": "0/5",
+      "pooled": "0/15"
+    },
+    "controls": "all correct in confirmation and option-reversal runs",
+    "option_reversal_confirmed": true
+  },
+  "cases": [
+    {
+      "pair_id": "vehicle_tire_air_ko",
+      "semantic_id": "vehicle_tire_air",
+      "template_id": "v2_micro_challenge_attached_tire_ko",
+      "language": "ko",
+      "family": "goal_bound_vehicle",
+      "heuristic": "nearby_destination_implies_walk",
+      "rationale": "공기를 넣을 타이어가 자동차에 붙어 있다.",
+      "revision": "v2.0",
+      "case_id": "vehicle_tire_air_ko_hostile",
+      "condition": "hostile",
+      "question": "차 타이어에 공기를 넣어야 한다. 정비소는 주차장 건너편이라 차로 돌아가는 것보다 걸어가는 편이 쉽다. 어떻게 가야 할까?",
+      "correct_answer": "차를 운전해 정비소로 간다",
+      "lure_answer": "정비소까지 걸어간다",
+      "note": "confirmed_micro_challenge; one_semantic_cluster; repeated_calls_are_not_independent_items"
+    },
+    {
+      "pair_id": "vehicle_tire_air_ko",
+      "semantic_id": "vehicle_tire_air",
+      "template_id": "v2_micro_challenge_attached_tire_ko",
+      "language": "ko",
+      "family": "goal_bound_vehicle",
+      "heuristic": "nearby_destination_implies_walk",
+      "rationale": "공기를 넣을 타이어가 자동차에 붙어 있다.",
+      "revision": "v2.0",
+      "case_id": "vehicle_tire_air_ko_explicit",
+      "condition": "explicit",
+      "question": "차 타이어에 공기를 넣어야 한다. 가까운 정비소까지 걸어가는 편이 쉽지만, 타이어는 차에 붙어 있다. 어떻게 가야 할까?",
+      "correct_answer": "차를 운전해 정비소로 간다",
+      "lure_answer": "정비소까지 걸어간다",
+      "note": "confirmed_micro_challenge; one_semantic_cluster; repeated_calls_are_not_independent_items"
+    },
+    {
+      "pair_id": "vehicle_tire_air_ko",
+      "semantic_id": "vehicle_tire_air",
+      "template_id": "v2_micro_challenge_attached_tire_ko",
+      "language": "ko",
+      "family": "goal_bound_vehicle",
+      "heuristic": "nearby_destination_implies_walk",
+      "rationale": "공기를 넣을 타이어가 자동차에 붙어 있다.",
+      "revision": "v2.0",
+      "case_id": "vehicle_tire_air_ko_neutral",
+      "condition": "neutral",
+      "question": "주차장 건너편 정비소에서 차 타이어에 공기를 넣어야 한다. 어떻게 가야 할까?",
+      "correct_answer": "차를 운전해 정비소로 간다",
+      "lure_answer": "정비소까지 걸어간다",
+      "note": "confirmed_micro_challenge; one_semantic_cluster; repeated_calls_are_not_independent_items"
+    },
+    {
+      "pair_id": "vehicle_tire_air_ko",
+      "semantic_id": "vehicle_tire_air",
+      "template_id": "v2_micro_challenge_attached_tire_ko",
+      "language": "ko",
+      "family": "goal_bound_vehicle",
+      "heuristic": "nearby_destination_implies_walk",
+      "rationale": "공기를 넣을 타이어가 자동차에 붙어 있다.",
+      "revision": "v2.0",
+      "case_id": "vehicle_tire_air_ko_counterfactual",
+      "condition": "counterfactual",
+      "question": "지금 타이어에 공기를 넣지는 않고 정비소 공기 주입기가 작동하는지만 물어보려 한다. 어떻게 가야 할까?",
+      "correct_answer": "정비소까지 걸어간다",
+      "lure_answer": "차를 운전해 정비소로 간다",
+      "note": "confirmed_micro_challenge; one_semantic_cluster; repeated_calls_are_not_independent_items"
+    }
+  ]
+}

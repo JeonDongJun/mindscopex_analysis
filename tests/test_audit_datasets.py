@@ -15,8 +15,8 @@ class DatasetAuditTests(unittest.TestCase):
         report = audit()
 
         self.assertEqual(report["errors"], [])
-        self.assertEqual(len(report["datasets"]), 10)
-        self.assertEqual(report["total_cases"], 657)
+        self.assertEqual(len(report["datasets"]), 11)
+        self.assertEqual(report["total_cases"], 661)
 
     def test_known_exact_overlaps_remain_explicit(self) -> None:
         report = audit()

@@ -22,6 +22,7 @@ _EXPECTED = {
     "crt7_classic": 7,
     "crt_pilot": 9,
     "goal_affordance_traps_v1": 240,
+    "goal_affordance_traps_v2": 4,
     "hagendorff_crt": 150,
     "hagendorff_semantic_illusion": 50,
     "verbal_crt": 10,
@@ -101,6 +102,17 @@ class LureDatasetLoaderTests(unittest.TestCase):
         )
         self.assertTrue(all(case.correct_answer.startswith(" ") for case in cases))
         self.assertTrue(all(case.lure_answer.startswith(" ") for case in cases))
+
+    def test_goal_affordance_v2_is_a_single_confirmed_micro_challenge(self) -> None:
+        info = lure_dataset_info("goal_affordance_traps_v2")
+        self.assertEqual(info.scoring, "binary_choice")
+        self.assertEqual(info.n_cases, 4)
+        cases = load_lure_dataset("goal_affordance_traps_v2")
+        self.assertEqual({case.pair_id for case in cases}, {"vehicle_tire_air_ko"})
+        self.assertEqual(
+            {case.condition for case in cases},
+            {"counterfactual", "explicit", "hostile", "neutral"},
+        )
 
     def test_all_case_ids_globally_unique(self) -> None:
         ids = [case.case_id for cases in load_all_lure_cases().values() for case in cases]

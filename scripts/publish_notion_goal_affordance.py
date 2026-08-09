@@ -14,6 +14,7 @@ PAGE_ID = "3ad0df78-43fe-8154-9a5a-c6ea23c761c8"
 NOTION_API = "https://api.notion.com/v1"
 NOTION_VERSION = "2026-03-11"
 MARKER = "[GA-V1.1-2026-07-31]"
+V2_MARKER = "[GA-V2.0-2026-08-02]"
 
 
 def env_value(name: str) -> str:
@@ -71,7 +72,7 @@ def block(kind: str, text: str) -> dict[str, Any]:
     }
 
 
-def page_contains_marker() -> bool:
+def page_contains_marker(marker: str = MARKER) -> bool:
     cursor = None
     while True:
         url = f"{NOTION_API}/blocks/{PAGE_ID}/children?page_size=100"
@@ -81,7 +82,7 @@ def page_contains_marker() -> bool:
         for item in payload.get("results", []):
             value = item.get(item.get("type", ""), {})
             text = "".join(part.get("plain_text", "") for part in value.get("rich_text", []))
-            if MARKER in text:
+            if marker in text:
                 return True
         if not payload.get("has_more"):
             return False
@@ -153,9 +154,68 @@ def publish() -> bool:
     return True
 
 
+def publish_v2() -> bool:
+    if page_contains_marker(V2_MARKER):
+        return False
+    children = [
+        block("heading_2", "Goal-Affordance Traps v2 micro-challenge — 2026-08-02"),
+        block(
+            "paragraph",
+            (
+                f"{V2_MARKER} 이미지형 거리 함정을 최신 frontier에 맞게 다시 "
+                "설계하고 반복 검증했다."
+            ),
+        ),
+        block(
+            "bulleted_list_item",
+            (
+                "최종 구성: 한국어 타이어 공기 scenario 1개 × hostile/explicit/"
+                "neutral/counterfactual = 4 cases. broad benchmark가 아닌 micro-challenge."
+            ),
+        ),
+        block(
+            "bulleted_list_item",
+            (
+                "5회 반복 hostile: intuitive 8/15 lure(Claude 5/5, Gemini 3/5, "
+                "GPT 0/5), reflective 0/15 lure."
+            ),
+        ),
+        block(
+            "bulleted_list_item",
+            (
+                "explicit/neutral/counterfactual과 A/B 순서 반전은 모두 통과. "
+                "반복 호출은 독립 문항이 아니라 한 문항의 응답 확률 추정."
+            ),
+        ),
+        block(
+            "bulleted_list_item",
+            (
+                "짧은 50m 원형 8개는 frontier가 72/72 정답. 새 semantic cluster를 "
+                "확보하기 전까지 v2로 일반 오류율을 추정하지 않는다."
+            ),
+        ),
+        block(
+            "paragraph",
+            (
+                "정본: docs/datasets.md · 데이터: src/mindscopex_analysis/data/"
+                "goal_affordance_traps_v2.json · 보고서: results/"
+                "goal_affordance_traps_v2_final_20260802/"
+            ),
+        ),
+    ]
+    request(
+        "PATCH",
+        f"{NOTION_API}/blocks/{PAGE_ID}/children",
+        {"children": children},
+    )
+    return True
+
+
 if __name__ == "__main__":
-    changed = publish()
+    v1_changed = publish()
+    v2_changed = publish_v2()
     print(
         f"https://www.notion.so/{PAGE_ID.replace('-', '')} | "
-        f"{'updated' if changed else 'already present'}"
+        f"v1={'updated' if v1_changed else 'present'} | "
+        f"v2={'updated' if v2_changed else 'present'}"
     )

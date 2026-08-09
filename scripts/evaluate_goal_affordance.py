@@ -48,11 +48,22 @@ DEFAULT_MODELS = (
     "google/gemini-3-flash-preview",
 )
 MODES = ("direct", "deliberate")
+MODE_CHOICES = (*MODES, "intuitive_prompted", "deliberate_prompted")
 CONDITIONS = ("hostile", "explicit", "neutral", "counterfactual")
 RETRYABLE_HTTP_CODES = {408, 409, 429, 500, 502, 503, 504}
 SYSTEM_PROMPT = (
     "Answer the user's question by choosing exactly one of the provided options. "
     "Return only the JSON object required by the response schema."
+)
+INTUITIVE_SYSTEM_PROMPT = (
+    "Choose immediately from your first impression. Do not analyze hidden requirements "
+    "or reconsider the options. Return only the JSON object required by the response schema."
+)
+DELIBERATE_SYSTEM_PROMPT = (
+    "Before choosing, carefully reread the stated goal and check which option can "
+    "actually accomplish it. Explicitly account for any object that must move, "
+    "required resource, eligible agent, or prerequisite state. Reason internally, "
+    "then return only the JSON object required by the response schema."
 )
 SCHEMA = {
     "type": "json_schema",
@@ -166,7 +177,11 @@ def effort_for_mode(model_row: dict[str, Any], mode: str) -> str:
         for candidate in ("none", "minimal", "low"):
             if candidate in efforts:
                 return candidate
-    elif mode == "deliberate" and "high" in efforts:
+    elif mode == "intuitive_prompted":
+        for candidate in ("none", "minimal", "low"):
+            if candidate in efforts:
+                return candidate
+    elif mode in {"deliberate", "deliberate_prompted"} and "high" in efforts:
         return "high"
     raise ValueError(f"No valid {mode} effort for {model_row['id']}: {efforts}")
 
@@ -226,7 +241,13 @@ def request_task(
     payload = {
         "model": task.model,
         "messages": [
-            {"role": "system", "content": SYSTEM_PROMPT},
+            {
+                "role": "system",
+                "content": {
+                    "intuitive_prompted": INTUITIVE_SYSTEM_PROMPT,
+                    "deliberate_prompted": DELIBERATE_SYSTEM_PROMPT,
+                }.get(task.mode, SYSTEM_PROMPT),
+            },
             {"role": "user", "content": user_prompt},
         ],
         "reasoning": {"effort": task.effort, "exclude": True},
@@ -514,7 +535,11 @@ def run(args: argparse.Namespace) -> Path:
             if args.reverse_options
             else "sha256(goal-affordance-order-v1|case_id); fixed across models/modes"
         ),
-        "system_prompt": SYSTEM_PROMPT,
+        "system_prompts": {
+            "direct_and_deliberate": SYSTEM_PROMPT,
+            "intuitive_prompted": INTUITIVE_SYSTEM_PROMPT,
+            "deliberate_prompted": DELIBERATE_SYSTEM_PROMPT,
+        },
         "response_schema": SCHEMA,
     }
     if manifest_path.is_file():
@@ -619,7 +644,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--input", type=Path, default=DEFAULT_INPUT)
     parser.add_argument("--model", action="append", default=None)
-    parser.add_argument("--mode", action="append", choices=MODES, default=None)
+    parser.add_argument("--mode", action="append", choices=MODE_CHOICES, default=None)
     parser.add_argument("--condition", action="append", choices=CONDITIONS, default=None)
     parser.add_argument("--pair", action="append", default=None)
     parser.add_argument(

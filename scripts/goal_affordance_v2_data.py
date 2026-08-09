@@ -538,7 +538,382 @@ SURFACES = (
 )
 
 
-def expand_surfaces(surfaces: tuple[Surface, ...]) -> list[dict[str, Any]]:
+SHORT_KO_SURFACES = (
+    Surface(
+        semantic_id="short_car_wash",
+        language="ko",
+        family="short_goal_bound_vehicle",
+        hostile_question="세차를 하고 싶다. 세차장은 50m 앞에 있다. 걸어갈까, 차로 갈까?",
+        explicit_question=(
+            "세차를 하고 싶다. 세차장은 50m 앞에 있다. 세차할 차를 세차장까지 "
+            "가져가야 한다. 걸어갈까, 차로 갈까?"
+        ),
+        neutral_question="세차장에서 내 차를 세차하고 싶다. 걸어갈까, 차로 갈까?",
+        counterfactual_question=(
+            "세차는 하지 않고 50m 앞 세차장에 가격만 물어보려 한다. 걸어갈까, 차로 갈까?"
+        ),
+        correct_action="차를 운전해 간다",
+        lure_action="걸어간다",
+        heuristic="short_distance_implies_walk",
+        rationale="세차의 대상인 자동차가 세차장에 도착해야 한다.",
+    ),
+    Surface(
+        semantic_id="short_refuel",
+        language="ko",
+        family="short_goal_bound_vehicle",
+        hostile_question="차에 기름을 넣고 싶다. 주유소는 100m 앞에 있다. 걸어갈까, 차로 갈까?",
+        explicit_question=(
+            "차에 기름을 넣고 싶다. 주유소는 100m 앞에 있다. 주유할 차가 주유기까지 "
+            "가야 한다. 걸어갈까, 차로 갈까?"
+        ),
+        neutral_question="주유소에서 내 차에 기름을 넣고 싶다. 걸어갈까, 차로 갈까?",
+        counterfactual_question=(
+            "주유는 하지 않고 100m 앞 주유소의 가격표만 보려 한다. 걸어갈까, 차로 갈까?"
+        ),
+        correct_action="차를 운전해 간다",
+        lure_action="걸어간다",
+        heuristic="short_distance_implies_walk",
+        rationale="주유 대상인 자동차가 주유기 앞에 도착해야 한다.",
+    ),
+    Surface(
+        semantic_id="short_tire_air",
+        language="ko",
+        family="short_goal_bound_vehicle",
+        hostile_question=(
+            "차 타이어에 공기를 넣고 싶다. 공기 주입기는 주차장 70m 앞에 있다. "
+            "걸어갈까, 차로 갈까?"
+        ),
+        explicit_question=(
+            "차 타이어에 공기를 넣고 싶다. 공기 주입기는 70m 앞에 있고 타이어는 "
+            "차에 붙어 있다. 걸어갈까, 차로 갈까?"
+        ),
+        neutral_question="내 차 타이어에 공기를 넣고 싶다. 걸어갈까, 차로 갈까?",
+        counterfactual_question=(
+            "공기는 넣지 않고 70m 앞 주입기가 작동하는지만 보려 한다. 걸어갈까, 차로 갈까?"
+        ),
+        correct_action="차를 운전해 간다",
+        lure_action="걸어간다",
+        heuristic="short_distance_implies_walk",
+        rationale="공기를 넣을 타이어가 자동차에 붙어 있다.",
+    ),
+    Surface(
+        semantic_id="short_noise_inspection",
+        language="ko",
+        family="short_goal_bound_vehicle",
+        hostile_question=(
+            "차에서 나는 소리를 정비사에게 점검받고 싶다. 정비소는 다음 블록에 있다. "
+            "걸어갈까, 차로 갈까?"
+        ),
+        explicit_question=(
+            "차에서 나는 소리를 점검받고 싶다. 정비소는 다음 블록에 있고 정비사가 "
+            "소리 나는 차를 직접 봐야 한다. 걸어갈까, 차로 갈까?"
+        ),
+        neutral_question="정비사에게 내 차에서 나는 소리를 점검받고 싶다. 걸어갈까, 차로 갈까?",
+        counterfactual_question=(
+            "점검은 받지 않고 다음 블록 정비소의 영업시간만 물어보려 한다. "
+            "걸어갈까, 차로 갈까?"
+        ),
+        correct_action="차를 운전해 간다",
+        lure_action="걸어간다",
+        heuristic="short_distance_implies_walk",
+        rationale="정비사가 소음의 원인인 자동차를 직접 점검해야 한다.",
+    ),
+    Surface(
+        semantic_id="short_safety_inspection",
+        language="ko",
+        family="short_goal_bound_vehicle",
+        hostile_question=(
+            "자동차 정기검사를 받고 싶다. 검사소는 200m 앞에 있다. 걸어갈까, 차로 갈까?"
+        ),
+        explicit_question=(
+            "자동차 정기검사를 받고 싶다. 검사소는 200m 앞에 있고 검사할 자동차가 "
+            "검사소에 있어야 한다. 걸어갈까, 차로 갈까?"
+        ),
+        neutral_question="내 자동차의 정기검사를 받고 싶다. 걸어갈까, 차로 갈까?",
+        counterfactual_question=(
+            "검사는 받지 않고 200m 앞 검사소에 예약 방법만 물어보려 한다. "
+            "걸어갈까, 차로 갈까?"
+        ),
+        correct_action="차를 운전해 간다",
+        lure_action="걸어간다",
+        heuristic="short_distance_implies_walk",
+        rationale="정기검사의 대상인 자동차가 검사소에 도착해야 한다.",
+    ),
+    Surface(
+        semantic_id="short_emissions_test",
+        language="ko",
+        family="short_goal_bound_vehicle",
+        hostile_question=(
+            "내 차의 배출가스 검사를 받고 싶다. 검사장은 길 건너 80m 앞에 있다. "
+            "걸어갈까, 차로 갈까?"
+        ),
+        explicit_question=(
+            "내 차의 배출가스 검사를 받고 싶다. 검사장은 80m 앞에 있고 검사 장비에 "
+            "차를 연결해야 한다. 걸어갈까, 차로 갈까?"
+        ),
+        neutral_question="내 차의 배출가스 검사를 받고 싶다. 걸어갈까, 차로 갈까?",
+        counterfactual_question=(
+            "검사는 받지 않고 길 건너 검사장의 대기 시간만 물어보려 한다. "
+            "걸어갈까, 차로 갈까?"
+        ),
+        correct_action="차를 운전해 간다",
+        lure_action="걸어간다",
+        heuristic="short_distance_implies_walk",
+        rationale="배출가스 검사 장비에 자동차를 연결해야 한다.",
+    ),
+    Surface(
+        semantic_id="short_ev_charge",
+        language="ko",
+        family="short_goal_bound_vehicle",
+        hostile_question=(
+            "전기차를 충전하고 싶다. 충전기는 60m 앞에 있다. 걸어갈까, 차로 갈까?"
+        ),
+        explicit_question=(
+            "전기차를 충전하고 싶다. 충전기는 60m 앞에 있고 충전 케이블을 차에 "
+            "연결해야 한다. 걸어갈까, 차로 갈까?"
+        ),
+        neutral_question="내 전기차를 충전하고 싶다. 걸어갈까, 차로 갈까?",
+        counterfactual_question=(
+            "충전은 하지 않고 60m 앞 충전기가 비었는지만 보려 한다. 걸어갈까, 차로 갈까?"
+        ),
+        correct_action="차를 운전해 간다",
+        lure_action="걸어간다",
+        heuristic="short_distance_implies_walk",
+        rationale="충전할 전기차가 충전기 앞에 도착해야 한다.",
+    ),
+    Surface(
+        semantic_id="short_rental_return",
+        language="ko",
+        family="short_goal_bound_vehicle",
+        hostile_question=(
+            "렌터카를 반납하고 싶다. 반납 지점은 100m 앞에 있다. 걸어갈까, 차로 갈까?"
+        ),
+        explicit_question=(
+            "렌터카를 반납하고 싶다. 반납 지점은 100m 앞에 있고 빌린 차를 그곳에 "
+            "돌려줘야 한다. 걸어갈까, 차로 갈까?"
+        ),
+        neutral_question="빌린 렌터카를 반납하고 싶다. 걸어갈까, 차로 갈까?",
+        counterfactual_question=(
+            "차는 나중에 반납하고 100m 앞 반납 지점에 서류만 물어보려 한다. "
+            "걸어갈까, 차로 갈까?"
+        ),
+        correct_action="렌터카를 운전해 간다",
+        lure_action="걸어간다",
+        heuristic="short_distance_implies_walk",
+        rationale="반납 대상인 렌터카가 반납 지점에 도착해야 한다.",
+    ),
+)
+
+
+ATTACHED_COMPONENT_KO_SURFACES = (
+    next(surface for surface in SURFACES if surface.pair_id == "vehicle_tire_air_ko"),
+    Surface(
+        semantic_id="attached_headlight_alignment",
+        language="ko",
+        family="attached_vehicle_component",
+        hostile_question=(
+            "차 전조등의 비추는 각도를 정비소에서 맞추고 싶다. 정비소는 주차장 "
+            "건너편이라 차로 돌아가는 것보다 걸어가는 편이 쉽다. 어떻게 가야 할까?"
+        ),
+        explicit_question=(
+            "차 전조등의 각도를 맞추고 싶다. 걸어가는 편이 쉽지만 전조등은 차에 "
+            "붙어 있어 차를 정비 장비 앞에 세워야 한다. 어떻게 가야 할까?"
+        ),
+        neutral_question="정비소에서 내 차 전조등의 비추는 각도를 맞추고 싶다. 어떻게 가야 할까?",
+        counterfactual_question=(
+            "전조등을 조정하지 않고 정비소의 작업 가능 시간만 물어보려 한다. 어떻게 가야 할까?"
+        ),
+        correct_action="차를 운전해 정비소로 간다",
+        lure_action="정비소까지 걸어간다",
+        heuristic="easiest_person_route_ignores_attached_component",
+        rationale="조정할 전조등이 자동차에 붙어 있다.",
+    ),
+    Surface(
+        semantic_id="attached_windshield_chip",
+        language="ko",
+        family="attached_vehicle_component",
+        hostile_question=(
+            "차 앞유리의 작은 돌빵을 수리점에서 메우고 싶다. 수리점은 80m 앞이라 "
+            "차를 빼는 것보다 걸어가는 편이 빠르다. 어떻게 가야 할까?"
+        ),
+        explicit_question=(
+            "차 앞유리의 돌빵을 메우고 싶다. 걸어가는 편이 빠르지만 앞유리는 차에 "
+            "고정되어 있어 차가 수리점에 있어야 한다. 어떻게 가야 할까?"
+        ),
+        neutral_question="수리점에서 내 차 앞유리의 작은 돌빵을 메우고 싶다. 어떻게 가야 할까?",
+        counterfactual_question=(
+            "지금 수리하지 않고 80m 앞 수리점에 비용만 물어보려 한다. 어떻게 가야 할까?"
+        ),
+        correct_action="차를 운전해 수리점으로 간다",
+        lure_action="수리점까지 걸어간다",
+        heuristic="short_distance_ignores_attached_component",
+        rationale="수리할 앞유리가 자동차에 고정되어 있다.",
+    ),
+    Surface(
+        semantic_id="attached_battery_diagnostic",
+        language="ko",
+        family="attached_vehicle_component",
+        hostile_question=(
+            "시동은 걸리지만 약해진 차 배터리를 가까운 정비소에서 진단받고 싶다. "
+            "정비소는 바로 옆 블록이라 걸어가는 편이 훨씬 빠르다. 어떻게 가야 할까?"
+        ),
+        explicit_question=(
+            "차 배터리를 진단받고 싶다. 걸어가는 편이 빠르지만 배터리는 차에 장착된 "
+            "상태로 정비소 장비에 연결해야 한다. 어떻게 가야 할까?"
+        ),
+        neutral_question="가까운 정비소에서 내 차 배터리 상태를 진단받고 싶다. 어떻게 가야 할까?",
+        counterfactual_question=(
+            "배터리를 진단하지 않고 정비소에 예약 가능한지만 물어보려 한다. 어떻게 가야 할까?"
+        ),
+        correct_action="차를 운전해 정비소로 간다",
+        lure_action="정비소까지 걸어간다",
+        heuristic="fastest_person_route_ignores_attached_component",
+        rationale="진단할 배터리가 자동차에 장착되어 있다.",
+    ),
+    Surface(
+        semantic_id="attached_wheel_alignment",
+        language="ko",
+        family="attached_vehicle_component",
+        hostile_question=(
+            "차의 휠 얼라인먼트를 맞추고 싶다. 작업장은 길 건너편이라 진입로로 "
+            "차를 돌려가는 것보다 걸어가는 편이 간단하다. 어떻게 가야 할까?"
+        ),
+        explicit_question=(
+            "차의 휠 얼라인먼트를 맞추고 싶다. 걸어가는 편이 간단하지만 자동차를 "
+            "얼라인먼트 장비 위에 올려야 한다. 어떻게 가야 할까?"
+        ),
+        neutral_question="작업장에서 내 차의 휠 얼라인먼트를 맞추고 싶다. 어떻게 가야 할까?",
+        counterfactual_question=(
+            "작업은 하지 않고 길 건너 작업장의 대기 시간만 알아보려 한다. 어떻게 가야 할까?"
+        ),
+        correct_action="차를 운전해 작업장으로 간다",
+        lure_action="작업장까지 걸어간다",
+        heuristic="simplest_person_route_ignores_attached_component",
+        rationale="얼라인먼트 작업은 자동차 자체를 장비에 올려 수행한다.",
+    ),
+    Surface(
+        semantic_id="attached_emissions_probe",
+        language="ko",
+        family="attached_vehicle_component",
+        hostile_question=(
+            "내 차의 배출가스를 측정받고 싶다. 측정소는 100m 앞이고 길이 막혀 "
+            "걸어가는 편이 더 빠르다. 어떻게 가야 할까?"
+        ),
+        explicit_question=(
+            "내 차의 배출가스를 측정받고 싶다. 걸어가는 편이 빠르지만 자동차의 "
+            "배기관에 측정 장비를 연결해야 한다. 어떻게 가야 할까?"
+        ),
+        neutral_question="측정소에서 내 차의 배출가스를 측정받고 싶다. 어떻게 가야 할까?",
+        counterfactual_question=(
+            "측정은 받지 않고 100m 앞 측정소의 요금만 확인하려 한다. 어떻게 가야 할까?"
+        ),
+        correct_action="차를 운전해 측정소로 간다",
+        lure_action="측정소까지 걸어간다",
+        heuristic="fastest_person_route_ignores_attached_component",
+        rationale="배출가스를 내는 자동차의 배기관이 측정소에 있어야 한다.",
+    ),
+)
+
+
+TIRE_PARAPHRASE_KO_SURFACES = (
+    next(surface for surface in SURFACES if surface.pair_id == "vehicle_tire_air_ko"),
+    Surface(
+        semantic_id="tire_air_walk_one_minute",
+        language="ko",
+        family="tire_air_paraphrase",
+        hostile_question=(
+            "차 타이어의 공기압을 보충하려 한다. 공기 주입기는 주차장 반대편에 있어 "
+            "걸어서 1분이지만 차로는 진입로를 돌아 5분이 걸린다. 어떻게 가야 할까?"
+        ),
+        explicit_question=(
+            "차 타이어의 공기압을 보충하려 한다. 걸어서 1분이지만 공기를 넣을 "
+            "타이어가 차에 붙어 있으므로 차를 주입기까지 가져가야 한다. 어떻게 가야 할까?"
+        ),
+        neutral_question=(
+            "주차장 반대편 주입기에서 차 타이어의 공기압을 보충하려 한다. "
+            "어떻게 가야 할까?"
+        ),
+        counterfactual_question=(
+            "공기압은 보충하지 않고 주차장 반대편 주입기의 사용법만 읽어보려 한다. "
+            "어떻게 가야 할까?"
+        ),
+        correct_action="차를 운전해 공기 주입기로 간다",
+        lure_action="공기 주입기까지 걸어간다",
+        heuristic="one_minute_walk_beats_five_minute_drive",
+        rationale="공기압을 보충할 타이어가 자동차에 붙어 있다.",
+    ),
+    Surface(
+        semantic_id="tire_air_warning_light",
+        language="ko",
+        family="tire_air_paraphrase",
+        hostile_question=(
+            "차의 공기압 경고등이 켜져 타이어에 공기를 넣으려 한다. 주입기는 70m "
+            "앞이고 차로는 주차 줄을 돌아야 하지만 걸으면 금방이다. 어떻게 가야 할까?"
+        ),
+        explicit_question=(
+            "차의 공기압 경고등이 켜져 타이어에 공기를 넣으려 한다. 걸으면 금방이지만 "
+            "타이어가 달린 차를 주입기 앞에 세워야 한다. 어떻게 가야 할까?"
+        ),
+        neutral_question="70m 앞 주입기에서 내 차 타이어에 공기를 넣으려 한다. 어떻게 가야 할까?",
+        counterfactual_question=(
+            "지금 공기를 넣지는 않고 70m 앞 주입기가 비어 있는지만 확인하려 한다. "
+            "어떻게 가야 할까?"
+        ),
+        correct_action="차를 운전해 주입기로 간다",
+        lure_action="주입기까지 걸어간다",
+        heuristic="walking_looks_faster_than_driving_around",
+        rationale="공기를 넣을 타이어가 경고등이 켜진 자동차에 붙어 있다.",
+    ),
+    Surface(
+        semantic_id="tire_air_practical_walk",
+        language="ko",
+        family="tire_air_paraphrase",
+        hostile_question=(
+            "차 타이어에 바람을 넣을 곳이 바로 건너편에 있다. 이렇게 가까우면 차를 "
+            "움직이는 것보다 걷는 편이 더 실용적이다. 무엇을 해야 할까?"
+        ),
+        explicit_question=(
+            "차 타이어에 바람을 넣을 곳이 바로 건너편에 있다. 걷는 편이 실용적으로 "
+            "보이지만 타이어는 차에 붙어 있다. 무엇을 해야 할까?"
+        ),
+        neutral_question="바로 건너편에서 내 차 타이어에 바람을 넣고 싶다. 무엇을 해야 할까?",
+        counterfactual_question=(
+            "지금 바람은 넣지 않고 건너편 주입 장소의 운영 여부만 확인하려 한다. "
+            "무엇을 해야 할까?"
+        ),
+        correct_action="차를 운전해 건너편으로 간다",
+        lure_action="건너편까지 걸어간다",
+        heuristic="surface_practicality_over_goal_object",
+        rationale="바람을 넣을 타이어가 자동차에 붙어 있다.",
+    ),
+    Surface(
+        semantic_id="tire_air_shortcut",
+        language="ko",
+        family="tire_air_paraphrase",
+        hostile_question=(
+            "내 차 타이어에 공기를 넣어야 한다. 주입기까지 보행자 지름길은 50m이고 "
+            "차량 통로는 300m를 돌아간다. 지름길로 걸을까, 차로 돌아갈까?"
+        ),
+        explicit_question=(
+            "내 차 타이어에 공기를 넣어야 한다. 보행자 지름길이 짧지만 공기를 넣을 "
+            "타이어와 차가 주입기에 도착해야 한다. 지름길로 걸을까, 차로 돌아갈까?"
+        ),
+        neutral_question="내 차 타이어에 공기를 넣기 위해 주입기로 가야 한다. 걸을까, 차로 갈까?",
+        counterfactual_question=(
+            "지금 공기는 넣지 않고 보행자 지름길 끝에 있는 주입기의 가격표만 보려 한다. "
+            "지름길로 걸을까, 차로 돌아갈까?"
+        ),
+        correct_action="차량 통로로 차를 운전해 간다",
+        lure_action="보행자 지름길로 걸어간다",
+        heuristic="shorter_path_ignores_goal_bound_vehicle",
+        rationale="공기를 넣을 타이어가 자동차에 붙어 있어 차량도 주입기에 가야 한다.",
+    ),
+)
+
+
+def expand_surfaces(
+    surfaces: tuple[Surface, ...], *, revision: str = "candidate_v0"
+) -> list[dict[str, Any]]:
     rows = []
     for surface in surfaces:
         common = {
@@ -549,7 +924,7 @@ def expand_surfaces(surfaces: tuple[Surface, ...]) -> list[dict[str, Any]]:
             "family": surface.family,
             "heuristic": surface.heuristic,
             "rationale": surface.rationale,
-            "revision": "candidate_v0",
+            "revision": revision,
         }
         for condition, question, correct, lure in (
             (
@@ -593,7 +968,7 @@ def expand_surfaces(surfaces: tuple[Surface, ...]) -> list[dict[str, Any]]:
 
 
 def validate_rows(rows: list[dict[str, Any]]) -> None:
-    if len(rows) != len(SURFACES) * 4:
+    if len(rows) != len({row["pair_id"] for row in rows}) * 4:
         raise ValueError("Every v2 surface must have four conditions")
     if len({row["case_id"] for row in rows}) != len(rows):
         raise ValueError("Duplicate v2 case IDs")
@@ -625,10 +1000,15 @@ def validate_rows(rows: list[dict[str, Any]]) -> None:
             raise ValueError(f"{pair_id}: counterfactual does not swap options")
 
 
-def payload() -> dict[str, Any]:
-    rows = expand_surfaces(SURFACES)
+def payload(
+    surfaces: tuple[Surface, ...] = SURFACES,
+    *,
+    dataset_id: str = "goal_affordance_traps_v2_candidate_v0",
+    revision: str = "candidate_v0",
+) -> dict[str, Any]:
+    rows = expand_surfaces(surfaces, revision=revision)
     return {
-        "dataset_id": "goal_affordance_traps_v2_candidate_v0",
+        "dataset_id": dataset_id,
         "schema_version": 3,
         "title": "Goal-Affordance Traps v2 conversational candidate pool",
         "description": (
@@ -637,15 +1017,15 @@ def payload() -> dict[str, Any]:
         ),
         "task_kind": "goal_affordance",
         "scoring": "binary_choice",
-        "revision": "candidate_v0",
+        "revision": revision,
         "selection_unit": "language-specific pair_id",
-        "n_semantic_scenarios": len({surface.semantic_id for surface in SURFACES}),
-        "n_base_surfaces": len(SURFACES),
+        "n_semantic_scenarios": len({surface.semantic_id for surface in surfaces}),
+        "n_base_surfaces": len(surfaces),
         "n_cases": len(rows),
         "language_counts": dict(sorted(Counter(row["language"] for row in rows).items())),
         "condition_counts": dict(sorted(Counter(row["condition"] for row in rows).items())),
         "family_counts": dict(sorted(Counter(row["family"] for row in rows).items())),
-        "surface_source": [asdict(surface) for surface in SURFACES],
+        "surface_source": [asdict(surface) for surface in surfaces],
         "cases": rows,
     }
 
@@ -661,4 +1041,46 @@ if __name__ == "__main__":
     print(
         f"{destination} | semantic={data['n_semantic_scenarios']} | "
         f"surfaces={data['n_base_surfaces']} | cases={data['n_cases']}"
+    )
+    short_destination = DEVELOPMENT_DIR / "candidate_pool_v1_short_ko.json"
+    short_data = payload(
+        SHORT_KO_SURFACES,
+        dataset_id="goal_affordance_traps_v2_candidate_v1_short_ko",
+        revision="candidate_v1_short_ko",
+    )
+    short_destination.write_text(
+        json.dumps(short_data, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+    print(
+        f"{short_destination} | semantic={short_data['n_semantic_scenarios']} | "
+        f"surfaces={short_data['n_base_surfaces']} | cases={short_data['n_cases']}"
+    )
+    attached_destination = DEVELOPMENT_DIR / "candidate_pool_v3_attached_ko.json"
+    attached_data = payload(
+        ATTACHED_COMPONENT_KO_SURFACES,
+        dataset_id="goal_affordance_traps_v2_candidate_v3_attached_ko",
+        revision="candidate_v3_attached_ko",
+    )
+    attached_destination.write_text(
+        json.dumps(attached_data, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+    print(
+        f"{attached_destination} | semantic={attached_data['n_semantic_scenarios']} | "
+        f"surfaces={attached_data['n_base_surfaces']} | cases={attached_data['n_cases']}"
+    )
+    tire_destination = DEVELOPMENT_DIR / "candidate_pool_v4_tire_paraphrases_ko.json"
+    tire_data = payload(
+        TIRE_PARAPHRASE_KO_SURFACES,
+        dataset_id="goal_affordance_traps_v2_candidate_v4_tire_paraphrases_ko",
+        revision="candidate_v4_tire_paraphrases_ko",
+    )
+    tire_destination.write_text(
+        json.dumps(tire_data, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+    print(
+        f"{tire_destination} | semantic={tire_data['n_semantic_scenarios']} | "
+        f"surfaces={tire_data['n_base_surfaces']} | cases={tire_data['n_cases']}"
     )
