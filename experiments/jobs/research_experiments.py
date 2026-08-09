@@ -276,10 +276,15 @@ def _discover_study_feature(
     intervention_mode = str(dcfg.get("intervention_mode", "remove_activation"))
     null_samples = int(dcfg.get("null_samples", 32))
     null_seed = int(dcfg.get("null_seed", 0))
+    null_cases = int(dcfg.get("null_cases", 6))
+    select_by = str(dcfg.get("select_by", "null_z"))
+    if select_by not in {"null_z", "mean_delta"}:
+        raise ValueError(f"Unknown [discover].select_by={select_by!r}")
 
     subset = family_balanced_subset(train_cases, max_cases=max_cases)
     localization: list[dict[str, Any]] = []
     best: dict[str, Any] | None = None
+    best_score = float("-inf")
     best_sae = None
     best_feature_rows: list[dict[str, Any]] = []
 
@@ -303,46 +308,78 @@ def _discover_study_feature(
             clear_device_cache()
             continue
         top = rows[0]
-        # Null for the top feature on a representative discovery case.
-        rep = subset[0]
-        rep_effect = aggregate_feature_effect(
-            lm,
-            [rep],
-            layer=int(layer),
-            sae=sae,
-            feature_id=int(top["feature_id"]),
-            coefficient=coefficient,
-            intervention_mode=intervention_mode,
+        # Null over several cases rather than one. random_direction_margin_deltas
+        # seeds its own generator, so sample i is the *same* random direction for
+        # every case (scaled to each case's matched norm); averaging column-wise
+        # therefore gives the null distribution of the mean delta -- the statistic
+        # we actually rank features by. A single-case null is far too noisy for that.
+        null_subset = subset[: max(1, null_cases)]
+        observed_deltas: list[float] = []
+        null_by_case: list[list[float]] = []
+        for case in null_subset:
+            case_effect = aggregate_feature_effect(
+                lm,
+                [case],
+                layer=int(layer),
+                sae=sae,
+                feature_id=int(top["feature_id"]),
+                coefficient=coefficient,
+                intervention_mode=intervention_mode,
+            )
+            case_row = case_effect["per_case"][0]
+            observed_deltas.append(float(case_row["margin_delta"]))
+            null_by_case.append(
+                random_direction_null_for_feature(
+                    lm,
+                    case,
+                    layer=int(layer),
+                    sae=sae,
+                    feature_id=int(top["feature_id"]),
+                    feature_value=float(case_row["feature_value"]),
+                    coefficient=coefficient,
+                    n_samples=null_samples,
+                    seed=null_seed,
+                    baseline_margin=float(case_row["baseline_margin"]),
+                )
+            )
+        observed_mean = sum(observed_deltas) / len(observed_deltas)
+        draws = min(len(values) for values in null_by_case)
+        null_means = [
+            sum(values[index] for values in null_by_case) / len(null_by_case)
+            for index in range(draws)
+        ]
+        summary = null_summary(observed_mean, null_means)
+        entry = {
+            "layer": int(layer),
+            "feature_id": int(top["feature_id"]),
+            "mean_margin_delta": top["mean_margin_delta"],
+            "frac_positive": top["frac_positive"],
+            "active_in_cases": top["active_in_cases"],
+            "null_n_cases": len(null_subset),
+            "observed_mean_delta": observed_mean,
+            "null_mean": summary["null_mean"],
+            "null_z": summary["z"],
+            "null_percentile": summary["percentile"],
+        }
+        localization.append(entry)
+        _log(
+            f"discover: layer {int(layer)} feature {int(top['feature_id'])} "
+            f"delta={top['mean_margin_delta']:+.4f} "
+            f"null_z={'n/a' if entry['null_z'] is None else format(entry['null_z'], '+.2f')}"
         )
-        rep_row = rep_effect["per_case"][0]
-        null = random_direction_null_for_feature(
-            lm,
-            rep,
-            layer=int(layer),
-            sae=sae,
-            feature_id=int(top["feature_id"]),
-            feature_value=float(rep_row["feature_value"]),
-            coefficient=coefficient,
-            n_samples=null_samples,
-            seed=null_seed,
-            baseline_margin=float(rep_row["baseline_margin"]),
-        )
-        summary = null_summary(float(rep_row["margin_delta"]), null)
-        localization.append(
-            {
-                "layer": int(layer),
-                "feature_id": int(top["feature_id"]),
-                "mean_margin_delta": top["mean_margin_delta"],
-                "frac_positive": top["frac_positive"],
-                "active_in_cases": top["active_in_cases"],
-                "rep_margin_delta": rep_row["margin_delta"],
-                "null_mean": summary["null_mean"],
-                "null_z": summary["z"],
-                "null_percentile": summary["percentile"],
-            }
-        )
-        if best is None or top["mean_margin_delta"] > best["mean_margin_delta"]:
-            best = {**top, "layer": int(layer)}
+        # Selecting on raw mean delta picks whichever feature has the largest
+        # outliers; ranking by null_z asks the question the study actually cares
+        # about -- does this direction beat matched random directions?
+        if select_by == "null_z":
+            score = float("-inf") if entry["null_z"] is None else float(entry["null_z"])
+        else:
+            score = float(top["mean_margin_delta"])
+        if best is None or score > best_score:
+            if best_sae is not None:
+                del best_sae
+                clear_device_cache()
+            best = {**top, "layer": int(layer), "null_z": entry["null_z"], "select_score": score}
+            best_score = score
             best_sae = sae
             best_feature_rows = rows
         else:
@@ -358,6 +395,7 @@ def _discover_study_feature(
         "feature_rows": best_feature_rows,
         "coefficient": coefficient,
         "intervention_mode": intervention_mode,
+        "select_by": select_by,
     }
 
 
@@ -669,20 +707,25 @@ def run_condition_specificity(
         all_cases = instruct_lure_cases(all_cases)
     by_id = {case.case_id: case for case in all_cases}
 
+    neutral_condition = str(cfg.get("neutral_condition", "neutral"))
     suffix = f"_{base_condition}"
     base_cases: list[Any] = []
     twin_cases: list[Any] = []
+    neutral_cases: list[Any] = []
     for case in splits["test"]:
         if not case.case_id.endswith(suffix):
             continue
-        twin = by_id.get(f"{case.case_id[: -len(suffix)]}_{twin_condition}")
-        if twin is not None:
+        pair_id = case.case_id[: -len(suffix)]
+        twin = by_id.get(f"{pair_id}_{twin_condition}")
+        neutral = by_id.get(f"{pair_id}_{neutral_condition}")
+        if twin is not None and neutral is not None:
             base_cases.append(case)
             twin_cases.append(twin)
+            neutral_cases.append(neutral)
     if not base_cases:
         raise ValueError(f"No {base_condition}/{twin_condition} pairs in the held-out split")
 
-    _log(f"condition_specificity: {len(base_cases)} {base_condition}/{twin_condition} pairs")
+    _log(f"condition_specificity: {len(base_cases)} pairs x 3 conditions")
     shared: dict[str, Any] = {
         "layer": int(feature["layer"]),
         "sae": info["sae"],
@@ -692,13 +735,20 @@ def run_condition_specificity(
     }
     base_effect = aggregate_feature_effect(lm, base_cases, **shared)
     twin_effect = aggregate_feature_effect(lm, twin_cases, **shared)
+    neutral_effect = aggregate_feature_effect(lm, neutral_cases, **shared)
 
     rows: list[dict[str, Any]] = []
     flipped = 0
-    pairs = zip(base_effect["per_case"], twin_effect["per_case"], strict=True)
-    for base_row, twin_row in pairs:
+    triples = zip(
+        base_effect["per_case"],
+        twin_effect["per_case"],
+        neutral_effect["per_case"],
+        strict=True,
+    )
+    for base_row, twin_row, neutral_row in triples:
         base_delta = float(base_row["margin_delta"])
         twin_delta = float(twin_row["margin_delta"])
+        neutral_delta = float(neutral_row["margin_delta"])
         is_flipped = base_delta > 0.0 > twin_delta
         flipped += int(is_flipped)
         rows.append(
@@ -707,7 +757,13 @@ def run_condition_specificity(
                 "family": base_row["family"],
                 "base_margin_delta": base_delta,
                 "twin_margin_delta": twin_delta,
+                "neutral_margin_delta": neutral_delta,
                 "sign_flip_gap": base_delta - twin_delta,
+                # hostile and neutral share the same answers and the same correct
+                # answer and differ only by the salient cue, so this isolates the
+                # cue-driven part from any generic preference between the two
+                # answer strings.
+                "cue_effect": base_delta - neutral_delta,
                 "flipped": is_flipped,
             }
         )
@@ -719,7 +775,9 @@ def run_condition_specificity(
             "family",
             "base_margin_delta",
             "twin_margin_delta",
+            "neutral_margin_delta",
             "sign_flip_gap",
+            "cue_effect",
             "flipped",
         ],
     )
@@ -727,10 +785,13 @@ def run_condition_specificity(
     summary = {
         "base_condition": base_condition,
         "twin_condition": twin_condition,
+        "neutral_condition": neutral_condition,
         "n_pairs": n,
         "mean_base_delta": base_effect["mean_margin_delta"],
         "mean_twin_delta": twin_effect["mean_margin_delta"],
+        "mean_neutral_delta": neutral_effect["mean_margin_delta"],
         "mean_sign_flip_gap": sum(row["sign_flip_gap"] for row in rows) / n,
+        "mean_cue_effect": sum(row["cue_effect"] for row in rows) / n,
         "frac_flipped": flipped / n,
     }
     _write_json(run_dir / "condition_specificity" / "summary.json", summary)
