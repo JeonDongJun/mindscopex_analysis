@@ -25,6 +25,7 @@ from experiments.runners.remote_bootstrap import render_bootstrap  # noqa: E402
 JOB_PATHS = {
     "crt_text_responses": "experiments/jobs/crt_text_responses.py",
     "feature_diagnostics": "experiments/jobs/feature_diagnostics.py",
+    "multisite_ablation": "experiments/jobs/multisite_ablation.py",
     "research_experiments": "experiments/jobs/research_experiments.py",
 }
 HARDWARE_RE = re.compile(r"\bHardware:\s*([^|]+)", re.IGNORECASE)

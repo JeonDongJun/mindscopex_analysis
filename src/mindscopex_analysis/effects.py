@@ -167,9 +167,7 @@ def continuation_logprob_from_logits(
     token_logprobs = selected.squeeze(1).cpu().tolist()
     target_ids = target_tensor.cpu().tolist()
     tokens = (
-        [tokenizer.decode([token_id]) for token_id in target_ids]
-        if tokenizer is not None
-        else []
+        [tokenizer.decode([token_id]) for token_id in target_ids] if tokenizer is not None else []
     )
 
     total = float(sum(token_logprobs))
@@ -238,6 +236,121 @@ def _trace_logits_with_optional_intervention(
         logits = lm.output.logits.save()
 
     return getattr(logits, "value", logits).detach()
+
+
+@dataclass(frozen=True)
+class EditSite:
+    """One direction edit, applied at one layer at one token position.
+
+    ``projection_remove`` is the right mode for a multi-layer window: it zeroes
+    whatever component of the residual lies along ``direction`` at *that* layer,
+    whereas ``remove_activation`` subtracts a fixed ``feature_value * direction``
+    that was measured somewhere else and so under- or over-removes as the
+    residual grows with depth.
+    """
+
+    layer: int
+    direction: torch.Tensor
+    feature_value: float = 0.0
+    coefficient: float = 1.0
+    intervention_mode: InterventionMode = "projection_remove"
+
+
+def trace_logits_multi_site(
+    lm: Any,
+    text: str,
+    *,
+    sites: Sequence[EditSite] = (),
+    token_index: int = -1,
+    capture_layers: Sequence[int] = (),
+    block_path_template: str = DEFAULT_BLOCK_PATH_TEMPLATE,
+    output_index: int | None = None,
+) -> tuple[torch.Tensor, dict[tuple[int, str], torch.Tensor]]:
+    """Apply direction edits at several layers within ONE forward pass.
+
+    nnsight >= 0.5 runs the trace body on a thread interleaved with the real
+    forward, so every module must be touched in execution order -- requesting a
+    block that already ran raises ``OutOfOrderError``. Both edits and captures
+    therefore share one ascending walk, and caller order is never trusted.
+
+    Returns ``(logits, captures)`` where ``captures`` maps ``(layer, "pre"|"post")``
+    to a CPU ``(batch, d_model)`` tensor. Captures downstream of an edit carry that
+    edit's effect, which is what makes a self-repair readout possible.
+    """
+
+    by_layer: dict[int, EditSite] = {}
+    for site in sites:
+        layer = int(site.layer)
+        if layer in by_layer:
+            raise ValueError(f"duplicate edit site for layer {layer}; merge them into one")
+        by_layer[layer] = site
+
+    wanted = {int(layer) for layer in capture_layers}
+    walk = sorted(by_layer.keys() | wanted)
+    # Built outside the trace: nnsight drops plain locals assigned inside the body.
+    saved: dict[tuple[int, str], Any] = {}
+
+    # no_grad (not inference_mode): nnsight leaves grad on inside a trace, and
+    # inference tensors cannot be mutated in place.
+    with torch.no_grad(), lm.trace(text):
+        for layer in walk:
+            block = get_module(lm, block_path_template.format(layer=layer, i=layer))
+            hidden = block.output if output_index is None else block.output[output_index]
+            if layer in wanted:
+                # clone(): the slice is a view of the live residual, so without it a
+                # "pre" capture at an edited layer silently reports the edited value.
+                saved[(layer, "pre")] = hidden[:, token_index, :].detach().clone().cpu().save()
+            site = by_layer.get(layer)
+            if site is not None:
+                hidden[:, token_index, :] = _direction_edit(
+                    hidden[:, token_index, :],
+                    site.direction,
+                    feature_value=site.feature_value,
+                    coefficient=site.coefficient,
+                    intervention_mode=site.intervention_mode,
+                )
+                if layer in wanted:
+                    saved[(layer, "post")] = hidden[:, token_index, :].detach().clone().cpu().save()
+        logits = lm.output.logits.save()
+
+    captures = {key: getattr(value, "value", value) for key, value in saved.items()}
+    return getattr(logits, "value", logits).detach(), captures
+
+
+def multi_site_answer_margin(
+    lm: Any,
+    prompt: str,
+    *,
+    correct_answer: str,
+    lure_answer: str,
+    sites: Sequence[EditSite] = (),
+    token_index: int | None = None,
+    block_path_template: str = DEFAULT_BLOCK_PATH_TEMPLATE,
+    output_index: int | None = None,
+) -> AnswerMargin:
+    """``answer_logprob_margin`` with an arbitrary set of edit sites.
+
+    ``token_index=None`` resolves to the last *prompt* token, the same rule the
+    single-site path uses, and that one absolute index is reused at every site so
+    the correct and lure passes edit the identical position.
+    """
+
+    def _score(answer: str) -> AnswerLogprob:
+        full_ids, start = continuation_token_span(lm.tokenizer, prompt, answer)
+        edit_index = start - 1 if token_index is None else int(token_index)
+        logits, _ = trace_logits_multi_site(
+            lm,
+            prompt + answer,
+            sites=sites,
+            token_index=edit_index,
+            block_path_template=block_path_template,
+            output_index=output_index,
+        )
+        return continuation_logprob_from_logits(
+            logits, full_ids, start, tokenizer=lm.tokenizer, answer=answer
+        )
+
+    return AnswerMargin(correct=_score(correct_answer), lure=_score(lure_answer))
 
 
 def score_answer_logprob(

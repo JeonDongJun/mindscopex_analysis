@@ -1,0 +1,41 @@
+# Phase 3: is the single-layer number an understatement, or is the direction
+# layer-local? Ablates 27B L15 #81663 alone, at each neighbouring layer alone, and
+# at the whole window jointly in one forward pass, against norm-matched random
+# directions at the same sites -- then reads the downstream projection to see
+# whether the direction comes back (self-repair).
+[run]
+name = "multisite_affordance_27b"
+job = "multisite_ablation"
+
+[feature]
+feature_id = 81663
+layer = 15
+
+[model]
+profile = "27b"
+dtype = "auto"
+device_map = "auto"
+sae_device = "cpu"
+sae_dtype = "auto"
+
+[data]
+dataset = "goal_affordance_traps_v1"
+conditions = ["hostile"]
+train_frac = 0.6
+split_seed = 0
+instruction = true
+max_items = 12          # held-out subset, family-balanced; each item costs ~40 margins
+
+[window]
+radius = 1              # {L-1, L, L+1}; the 27B SAEs sit 16 layers apart so the
+                        # window uses the same direction transplanted, not new SAEs
+random_draws = 8        # matched-norm null for the interaction term
+seed = 0
+
+[colab]
+gpu = "G4"
+
+[remote]
+source = "archive"
+repo_dir = "/content/mindscopex_analysis"
+output_root = "/content/mindscopex_artifacts"

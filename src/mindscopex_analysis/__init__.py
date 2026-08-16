@@ -51,11 +51,14 @@ _MODULE_EXPORTS = {
     "effects": (
         "AnswerLogprob",
         "AnswerMargin",
+        "EditSite",
         "FeatureAblationResult",
         "active_prompt_features",
         "answer_logprob_margin",
+        "multi_site_answer_margin",
         "rank_lure_feature_effects",
         "score_answer_logprob",
+        "trace_logits_multi_site",
     ),
     "generation": (
         "PremiseVerdict",
