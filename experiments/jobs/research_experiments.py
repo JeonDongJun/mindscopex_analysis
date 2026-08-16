@@ -54,6 +54,7 @@ from mindscopex_analysis import (
     default_sae_device,
     discover_generalizing_feature,
     dtype_from_name,
+    evaluate_feature_null,
     family_balanced_subset,
     get_qwen35_analysis_profile,
     instruct_lure_cases,
@@ -259,6 +260,25 @@ def _load_splits(config: dict[str, Any]) -> dict[str, Any]:
 # ------------------------------------------------------------------- feature
 
 
+def _null_rank_key(report: dict[str, Any]) -> tuple[float, float, float]:
+    """Rank candidates by how well they survive the strict nulls, not by raw size.
+
+    Selection-adjusted percentile first (it already folds in the search size), then
+    the peer-feature percentile, then the effect. Missing percentiles sort last so a
+    candidate with no peer pool can never win on a technicality.
+    """
+
+    def _value(key: str) -> float:
+        value = report.get(key)
+        return float(value) if value is not None else float("-inf")
+
+    return (
+        _value("selection_adjusted_percentile"),
+        _value("peer_feature_percentile"),
+        float(report.get("observed_mean_delta") or 0.0),
+    )
+
+
 def _discover_study_feature(
     lm: Any,
     train_cases: Sequence[Any],
@@ -278,11 +298,23 @@ def _discover_study_feature(
     null_seed = int(dcfg.get("null_seed", 0))
     null_cases = int(dcfg.get("null_cases", 6))
     select_by = str(dcfg.get("select_by", "null_z"))
-    if select_by not in {"null_z", "mean_delta"}:
+    if select_by not in {"null_z", "mean_delta", "selection_adjusted"}:
         raise ValueError(f"Unknown [discover].select_by={select_by!r}")
+
+    # Strong-null stage: the per-layer null above is a cheap screen. This one scores
+    # the surviving candidates against matched-norm peer features and corrects for
+    # the size of the search, which is what the winner is actually reported on.
+    ncfg = table(config, "null")
+    strong_null = bool(ncfg.get("selection_adjusted", select_by == "selection_adjusted"))
+    null_top_m = int(ncfg.get("top_m", 3))
+    null_panel_cases = int(ncfg.get("panel_cases", null_cases))
+    gaussian_draws = int(ncfg.get("gaussian_draws", 100))
+    peer_draws = int(ncfg.get("peer_draws", 100))
+    null_bootstrap = int(ncfg.get("bootstrap", 20000))
 
     subset = family_balanced_subset(train_cases, max_cases=max_cases)
     localization: list[dict[str, Any]] = []
+    all_candidates: list[dict[str, Any]] = []
     best: dict[str, Any] | None = None
     best_score = float("-inf")
     best_sae = None
@@ -307,6 +339,7 @@ def _discover_study_feature(
             del sae
             clear_device_cache()
             continue
+        all_candidates.extend(rows)
         top = rows[0]
         # Null over several cases rather than one. random_direction_margin_deltas
         # seeds its own generator, so sample i is the *same* random direction for
@@ -388,14 +421,75 @@ def _discover_study_feature(
 
     if best is None:
         raise RuntimeError("discovery found no candidate features on the train split")
+
+    null_reports: list[dict[str, Any]] = []
+    if strong_null and all_candidates:
+        # The cheap per-layer screen ranks by mean delta, which favours whichever
+        # candidate has the largest outliers. Re-score the survivors against peer
+        # features that fire at the same site, and against the size of the search.
+        ranked = sorted(all_candidates, key=lambda r: -float(r["mean_margin_delta"]))[:null_top_m]
+        panel = family_balanced_subset(train_cases, max_cases=null_panel_cases)
+        selection_k = max(1, len(all_candidates))
+        _log(
+            f"strong null: {len(ranked)} candidates x {len(panel)} items "
+            f"({gaussian_draws} gaussian + {peer_draws} peer draws, selection_k={selection_k})"
+        )
+        best_report: dict[str, Any] | None = None
+        for rank, candidate in enumerate(ranked, start=1):
+            layer = int(candidate["layer"])
+            candidate_sae = _load_sae(env, layer)
+            report = evaluate_feature_null(
+                lm,
+                panel,
+                layer=layer,
+                sae=candidate_sae,
+                feature_id=int(candidate["feature_id"]),
+                gaussian_draws=gaussian_draws,
+                peer_draws=peer_draws,
+                selection_k=selection_k,
+                bootstrap=null_bootstrap,
+                seed=null_seed,
+                coefficient=coefficient,
+                intervention_mode=intervention_mode,
+            )
+            report["mean_margin_delta"] = float(candidate["mean_margin_delta"])
+            report["frac_positive"] = float(candidate["frac_positive"])
+            report["active_in_cases"] = int(candidate["active_in_cases"])
+            null_reports.append(report)
+            _log(
+                f"strong null [{rank}/{len(ranked)}] L{layer} #{candidate['feature_id']}: "
+                f"peer pct {report['peer_feature_percentile']} | "
+                f"selection-adjusted p {report['selection_adjusted_p']}"
+            )
+            if best_report is None or _null_rank_key(report) > _null_rank_key(best_report):
+                if best_sae is not None:
+                    del best_sae
+                    clear_device_cache()
+                best_report = report
+                best_sae = candidate_sae
+                best = {
+                    **candidate,
+                    "layer": layer,
+                    "peer_feature_percentile": report["peer_feature_percentile"],
+                    "gaussian_percentile": report["gaussian_percentile"],
+                    "selection_adjusted_percentile": report["selection_adjusted_percentile"],
+                    "selection_adjusted_p": report["selection_adjusted_p"],
+                    "select_score": _null_rank_key(report),
+                }
+            else:
+                del candidate_sae
+                clear_device_cache()
+
     return {
         "feature": best,
         "sae": best_sae,
         "localization": localization,
         "feature_rows": best_feature_rows,
+        "candidates": all_candidates,
+        "null_reports": null_reports,
         "coefficient": coefficient,
         "intervention_mode": intervention_mode,
-        "select_by": select_by,
+        "select_by": "selection_adjusted" if null_reports else select_by,
     }
 
 
@@ -572,9 +666,19 @@ def run_discover(
             "null_percentile",
         ],
     )
+    # Candidates that went through the strong null carry its percentiles; the rest
+    # are the cheap screen's ranking, with the null columns blank.
+    null_by_key = {
+        (int(report["layer"]), int(report["feature_id"])): report
+        for report in info.get("null_reports", [])
+    }
+    candidate_rows: list[dict[str, Any]] = []
+    for candidate in info.get("candidates") or info["feature_rows"]:
+        report = null_by_key.get((int(candidate["layer"]), int(candidate["feature_id"])), {})
+        candidate_rows.append({**candidate, **report})
     _write_csv(
         run_dir / "discover_features.csv",
-        info["feature_rows"],
+        candidate_rows,
         [
             "feature_id",
             "layer",
@@ -583,8 +687,17 @@ def run_discover(
             "frac_positive",
             "active_in_cases",
             "n_cases",
+            "observed_mean_delta",
+            "gaussian_percentile",
+            "peer_feature_percentile",
+            "selection_adjusted_percentile",
+            "selection_adjusted_p",
+            "n_peers_matching_or_beating",
+            "peer_pool_size",
         ],
     )
+    if null_by_key:
+        _write_json(run_dir / "discover" / "null_reports.json", info["null_reports"])
     _write_json(
         run_dir / "study_feature.json",
         {"feature": info["feature"], "source": "discovered", "localization": localization},

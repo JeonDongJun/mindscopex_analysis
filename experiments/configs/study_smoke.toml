@@ -29,6 +29,17 @@ max_candidates = 8
 max_cases = 8
 null_samples = 8
 
+# Strong-null stage: re-score the surviving candidates against matched-norm peer
+# features and against the size of the search. Tiny here so the smoke stays cheap;
+# a real study wants ~100+ draws each.
+[null]
+selection_adjusted = true
+top_m = 2
+panel_cases = 4
+gaussian_draws = 8
+peer_draws = 8
+bootstrap = 5000
+
 [colab]
 gpu = "T4"
 
