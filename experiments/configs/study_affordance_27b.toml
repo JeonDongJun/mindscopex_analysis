@@ -37,6 +37,17 @@ null_seed = 0
 base_condition = "hostile"
 twin_condition = "counterfactual"
 
+# Strong-null stage (P0-2): re-score the surviving candidates against matched-norm
+# peer features that fire at the same site, and against the size of the search.
+# Sized for 27B -- top_m x (gaussian+peer) x panel x 2 forwards is the dominant cost.
+[null]
+selection_adjusted = true
+top_m = 3
+panel_cases = 6
+gaussian_draws = 60
+peer_draws = 60
+bootstrap = 20000
+
 [colab]
 gpu = "G4"
 
