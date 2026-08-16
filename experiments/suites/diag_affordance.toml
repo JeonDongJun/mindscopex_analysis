@@ -1,0 +1,10 @@
+# Phase 1 degeneracy screen: 2B first (cheap, validates the job), then the 27B
+# feature the causal claim actually rests on. One G4 session, sequential.
+#   ./experiments/run_colab.sh experiments/suites/diag_affordance.toml \
+#       -s mindscopex-diag -g G4 --exec-timeout 21600 --continue-on-error
+[suite]
+name = "diag_affordance"
+configs = [
+  "../configs/diag_affordance_2b.toml",
+  "../configs/diag_affordance_27b.toml",
+]

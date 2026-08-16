@@ -1,0 +1,62 @@
+# Degeneracy screen for the 27B winner (L15 #81663). This is the feature the whole
+# question hangs on: null_z=+6.96 (from only 16 single-case draws) and held-out
+# delta +0.195 at p=.058. Its activation is near-constant across held-out items
+# (2.47-2.98, CV 4.3%), which is what a positional/template feature looks like, so
+# the position profile against a different task is the first thing to read.
+[run]
+name = "diag_affordance_27b"
+job = "feature_diagnostics"
+
+[feature]
+feature_id = 81663
+layer = 15
+
+[model]
+profile = "27b"
+dtype = "auto"
+device_map = "auto"
+sae_device = "cpu"       # 27B SAEs are large; keep them off the GPU
+sae_dtype = "auto"
+
+[data]
+dataset = "goal_affordance_traps_v1"
+conditions = ["hostile"]
+train_frac = 0.6
+split_seed = 0
+instruction = true
+
+[reference]
+dataset = "hagendorff_crt"
+limit_per_family = 10
+
+[checks]
+logit_lens = true
+positions = true
+null = true
+# 27B SAEs are ~GB each and the other scanned layers are 31/47/63; enable once the
+# cheaper checks are in and the extra downloads are worth the session time.
+siblings = false
+
+[logit_lens]
+top_n = 30
+reference_directions = 500
+seed = 0
+
+[null]
+panel_cases = 8
+gaussian_draws = 200
+peer_draws = 200
+seed = 0
+selection_k = 64         # 27B discovery used max_candidates=16 across 4 layers
+bootstrap = 20000
+
+[siblings]
+top_n = 20
+
+[colab]
+gpu = "G4"
+
+[remote]
+source = "archive"
+repo_dir = "/content/mindscopex_analysis"
+output_root = "/content/mindscopex_artifacts"

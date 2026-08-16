@@ -1,0 +1,62 @@
+# Degeneracy screen for the 2B winner (L17 #2144, null_z=+3.71 under the fixed
+# multi-case null). Cheap, and it validates the whole diagnostics job before the
+# 27B run, which is the one we actually care about.
+[run]
+name = "diag_affordance_2b"
+job = "feature_diagnostics"
+
+[feature]
+feature_id = 2144
+layer = 17
+
+[model]
+profile = "2b"
+dtype = "auto"
+device_map = "auto"
+sae_device = "auto"
+sae_dtype = "auto"
+
+[data]
+dataset = "goal_affordance_traps_v1"
+conditions = ["hostile"]     # same 60 items discovery ran on
+train_frac = 0.6
+split_seed = 0
+instruction = true
+
+# A different task that shares the answer template: if the feature fires just as
+# hard here, it tracks the template position, not the affordance trap.
+[reference]
+dataset = "hagendorff_crt"
+limit_per_family = 10
+
+[checks]
+logit_lens = true
+positions = true
+null = true
+siblings = true
+
+[logit_lens]
+top_n = 30
+reference_directions = 500
+seed = 0
+
+[null]
+panel_cases = 8
+gaussian_draws = 200
+peer_draws = 200
+seed = 0
+# discovery took the best of ~(max_candidates x scanned layers); the winner must be
+# compared against the best of that many null draws, not against a single draw.
+selection_k = 96
+bootstrap = 20000
+
+[siblings]
+top_n = 20
+
+[colab]
+gpu = "G4"
+
+[remote]
+source = "archive"
+repo_dir = "/content/mindscopex_analysis"
+output_root = "/content/mindscopex_artifacts"
