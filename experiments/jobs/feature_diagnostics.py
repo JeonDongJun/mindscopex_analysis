@@ -61,7 +61,8 @@ from mindscopex_analysis import (
     load_qwen_language_model,
     load_qwen_scope_sae,
     lure_dataset_cases,
-    qwen_scope_feature_values,
+    qwen_scope_feature_preactivations,
+    qwen_scope_sparse_feature_values,
     recommended_dtype_name,
     sae_decoder_direction,
     split_lure_cases,
@@ -331,8 +332,13 @@ def check_positions(
         for index, case in enumerate(cases, start=1):
             resid = capture_layer_residuals(lm, [case.prompt], layer, token_position="all")
             resid = resid.detach().to(torch.float32).cpu()
-            values = qwen_scope_feature_values(resid, sae, [int(feature_id)])
+            # Sparse: "where does this feature actually fire", not "where is its
+            # pre-activation large". The pre-activation is kept alongside so a
+            # feature that is always near-threshold is still visible.
+            values = qwen_scope_sparse_feature_values(resid, sae, [int(feature_id)])
             values = values.detach().to(torch.float32).cpu().reshape(-1)
+            preacts = qwen_scope_feature_preactivations(resid, sae, [int(feature_id)])
+            preacts = preacts.detach().to(torch.float32).cpu().reshape(-1)
             seq = int(values.numel())
             last = float(values[-1])
             argmax = int(values.argmax())
@@ -346,6 +352,8 @@ def check_positions(
                     "argmax_position_frac": argmax / max(seq - 1, 1),
                     "mean_value": float(values.mean()),
                     "frac_positions_positive": float((values > 0).float().mean()),
+                    "last_preactivation": float(preacts[-1]),
+                    "mean_preactivation": float(preacts.mean()),
                 }
             )
 
@@ -383,6 +391,8 @@ def check_positions(
             "argmax_position_frac",
             "mean_value",
             "frac_positions_positive",
+            "last_preactivation",
+            "mean_preactivation",
         ],
     )
     _write_csv(
@@ -510,7 +520,7 @@ def check_null(
     for case in panel:
         resid = capture_layer_residuals(lm, [case.prompt], layer, token_position="last")
         value = float(
-            qwen_scope_feature_values(resid, sae, [int(feature_id)])
+            qwen_scope_sparse_feature_values(resid, sae, [int(feature_id)])
             .detach()
             .to(torch.float32)
             .reshape(-1)[0]

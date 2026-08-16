@@ -9,7 +9,9 @@ from mindscopex_analysis.qwen_scope import (
     encode_qwen_scope_topk,
     infer_top_k_from_repo,
     make_layer_feature_report,
+    qwen_scope_feature_preactivations,
     qwen_scope_feature_values,
+    qwen_scope_sparse_feature_values,
     sae_decoder_direction,
     split_qwen_thinking,
     summarize_qwen_scope_features,
@@ -79,6 +81,86 @@ class EncodeTopKTests(unittest.TestCase):
         sae = _make_sae()
         with self.assertRaises(IndexError):
             qwen_scope_feature_values(torch.zeros(1, D_MODEL), sae, [D_SAE])
+
+
+def _reference_sparse(
+    residual: torch.Tensor,
+    sae: QwenScopeSAE,
+    feature_ids: list[int],
+) -> torch.Tensor:
+    """Naive TopK encode: densify, scatter the kept values, then index.
+
+    This mirrors the Qwen-Scope model card's description directly, so it is the
+    reference the optimised gather in ``qwen_scope_sparse_feature_values`` must
+    reproduce.
+    """
+
+    pre_acts = residual @ sae.W_enc.T + sae.b_enc
+    values, indices = pre_acts.topk(sae.top_k, dim=-1)
+    dense = torch.zeros_like(pre_acts)
+    dense.scatter_(-1, indices, values)
+    return dense[..., feature_ids]
+
+
+class SparseFeatureValueTests(unittest.TestCase):
+    def test_sparse_feature_value_is_zero_outside_topk(self) -> None:
+        # Pre-activations are [0, 1, 2, 3, 4] and top_k=2, so only features 3 and 4
+        # are in the support; everything else must read exactly zero even though its
+        # pre-activation is non-zero.
+        sae = _make_sae(top_k=2)
+        residual = torch.tensor([[1.0, 0.0, 0.0]])
+
+        sparse = qwen_scope_sparse_feature_values(residual, sae, [1, 2, 3, 4])
+        self.assertEqual([round(v, 5) for v in sparse[0].tolist()], [0.0, 0.0, 3.0, 4.0])
+
+        preacts = qwen_scope_feature_preactivations(residual, sae, [1, 2, 3, 4])
+        self.assertEqual([round(v, 5) for v in preacts[0].tolist()], [1.0, 2.0, 3.0, 4.0])
+
+    def test_qwen_scope_topk_matches_reference(self) -> None:
+        torch.manual_seed(0)
+        sae = _make_sae(top_k=3)
+        sae = QwenScopeSAE(
+            repo_id=sae.repo_id,
+            layer=sae.layer,
+            W_enc=torch.randn(D_SAE, D_MODEL),
+            W_dec=sae.W_dec,
+            b_enc=torch.randn(D_SAE),
+            b_dec=sae.b_dec,
+            top_k=3,
+        )
+        residual = torch.randn(10, D_MODEL)
+        ids = [0, 2, 4]
+
+        values, indices = encode_qwen_scope_topk(residual, sae)
+        reference_values, reference_indices = (residual @ sae.W_enc.T + sae.b_enc).topk(3, dim=-1)
+        self.assertTrue(torch.equal(indices, reference_indices))
+        self.assertTrue(torch.allclose(values, reference_values, atol=1e-6))
+
+        self.assertTrue(
+            torch.allclose(
+                qwen_scope_sparse_feature_values(residual, sae, ids),
+                _reference_sparse(residual, sae, ids),
+                atol=1e-6,
+            )
+        )
+
+    def test_sparse_and_preactivation_agree_inside_topk(self) -> None:
+        # top_k == d_sae means nothing is masked, so the two APIs must coincide.
+        sae = _make_sae(top_k=D_SAE)
+        residual = torch.tensor([[1.0, 0.0, 0.0], [2.0, 0.0, 0.0]])
+        ids = [0, 1, 2, 3, 4]
+        self.assertTrue(
+            torch.allclose(
+                qwen_scope_sparse_feature_values(residual, sae, ids),
+                qwen_scope_feature_preactivations(residual, sae, ids),
+                atol=1e-6,
+            )
+        )
+
+    def test_sparse_feature_values_handle_empty_ids(self) -> None:
+        sae = _make_sae()
+        out = qwen_scope_sparse_feature_values(torch.zeros(2, D_MODEL), sae, [])
+        self.assertEqual(tuple(out.shape), (2, 0))
 
 
 class SummarizeFeaturesTests(unittest.TestCase):

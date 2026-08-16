@@ -49,7 +49,7 @@ from mindscopex_analysis.models import DEFAULT_BLOCK_PATH_TEMPLATE
 from mindscopex_analysis.qwen_scope import (
     QwenScopeSAE,
     make_feature_steering_hook,
-    qwen_scope_feature_values,
+    qwen_scope_sparse_feature_values,
     sae_decoder_direction,
 )
 
@@ -253,7 +253,10 @@ def null_summary(observed_delta: float, null_deltas: Sequence[float]) -> dict[st
 
 def _feature_activation(residual: torch.Tensor, sae: QwenScopeSAE, feature_id: int) -> float:
     vector = residual if residual.dim() > 1 else residual.unsqueeze(0)
-    values = qwen_scope_feature_values(vector, sae, [int(feature_id)])
+    # The SAE's real activation, not the pre-activation: a feature outside the TopK
+    # support contributes nothing to the reconstruction, so ablating it by its
+    # pre-activation would subtract a contribution the model never made.
+    values = qwen_scope_sparse_feature_values(vector, sae, [int(feature_id)])
     return float(values[0, 0])
 
 
@@ -385,7 +388,7 @@ def discover_generalizing_feature(
         progress(f"layer {int(layer)}: {len(candidates)} candidates x {len(contexts)} cases")
 
     activation_rows = [
-        qwen_scope_feature_values(residual, sae, candidates)[0].detach().float().cpu()
+        qwen_scope_sparse_feature_values(residual, sae, candidates)[0].detach().float().cpu()
         for _case, residual, _baseline in contexts
     ]
     rows: list[dict[str, Any]] = []

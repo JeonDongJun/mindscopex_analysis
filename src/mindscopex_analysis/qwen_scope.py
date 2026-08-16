@@ -192,12 +192,20 @@ def encode_qwen_scope_topk(
     return pre_acts.topk(sae.top_k, dim=-1)
 
 
-def qwen_scope_feature_values(
+def qwen_scope_feature_preactivations(
     residual: torch.Tensor,
     sae: QwenScopeSAE,
     feature_ids: Sequence[int],
 ) -> torch.Tensor:
-    """Encode only selected SAE features instead of the full feature dictionary."""
+    """Raw encoder pre-activations ``x @ W_enc.T + b_enc`` for selected features.
+
+    These are NOT the SAE's activations. Qwen-Scope is a TopK SAE, so a feature
+    outside the TopK support contributes exactly zero to the reconstruction even
+    when its pre-activation is large. Use this only for diagnostics that really
+    want the pre-activation (e.g. "how close was this feature to firing?"); any
+    causal intervention must scale its edit by
+    :func:`qwen_scope_sparse_feature_values` instead.
+    """
 
     if residual.shape[-1] != sae.d_model:
         raise ValueError(f"residual d_model={residual.shape[-1]} != SAE d_model={sae.d_model}")
@@ -214,6 +222,48 @@ def qwen_scope_feature_values(
     weights = sae.W_enc.index_select(0, ids)
     biases = sae.b_enc.index_select(0, ids)
     return x @ weights.T + biases
+
+
+# Historical name: kept because notebooks and tests call it, and because several
+# diagnostics legitimately want the pre-activation.
+qwen_scope_feature_values = qwen_scope_feature_preactivations
+
+
+def qwen_scope_sparse_feature_values(
+    residual: torch.Tensor,
+    sae: QwenScopeSAE,
+    feature_ids: Sequence[int],
+) -> torch.Tensor:
+    """The SAE's actual activations for selected features: zero outside the TopK.
+
+    This is the value a causal intervention must use. ``remove_activation`` scales
+    the decoder direction by the feature's activation, so feeding it a raw
+    pre-activation subtracts a contribution the model never made whenever the
+    feature is outside the TopK support.
+
+    TopK is taken over the full dictionary (as the Qwen-Scope model cards do, with
+    no ReLU clamp), so a kept value may be negative; callers that mean "firing"
+    should test ``> 0`` rather than ``!= 0``.
+    """
+
+    if residual.shape[-1] != sae.d_model:
+        raise ValueError(f"residual d_model={residual.shape[-1]} != SAE d_model={sae.d_model}")
+
+    ids = torch.as_tensor(feature_ids, device=sae.W_enc.device, dtype=torch.long)
+    if ids.dim() != 1:
+        raise ValueError("feature_ids must be one-dimensional")
+    if ids.numel() == 0:
+        x = residual.to(device=sae.W_enc.device, dtype=sae.W_enc.dtype)
+        return x.new_empty((*residual.shape[:-1], 0))
+    if int(ids.min()) < 0 or int(ids.max()) >= sae.d_sae:
+        raise IndexError(f"feature_ids must be in [0, {sae.d_sae})")
+
+    values, indices = encode_qwen_scope_topk(residual, sae)
+    # One match at most per requested id, so masking and summing over the TopK axis
+    # gathers the kept value and yields 0 for anything outside the support -- without
+    # materialising a dense (tokens x d_sae) tensor.
+    matches = indices.unsqueeze(-1) == ids.view(*([1] * (indices.dim() - 1)), -1)
+    return (values.unsqueeze(-1) * matches).sum(dim=-2)
 
 
 def summarize_qwen_scope_features(
