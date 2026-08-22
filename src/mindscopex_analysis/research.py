@@ -432,6 +432,7 @@ def discover_generalizing_feature(
     for candidate_index, feature_id in enumerate(candidates):
         direction = sae_decoder_direction(sae, [int(feature_id)])
         deltas: list[float] = []
+        hostile_deltas: list[float] = []
         control_deltas: list[float] = []
         for case_index, (case, _residual, baseline_margin) in enumerate(contexts):
             value = float(activation_rows[case_index][candidate_index])
@@ -448,6 +449,7 @@ def discover_generalizing_feature(
                 block_path_template=block_path_template,
             ).margin
             delta = baseline_margin - ablated
+            hostile_deltas.append(delta)
             if control_contexts:
                 control, _control_residual, control_baseline = control_contexts[case_index]
                 control_value = float(control_activation_rows[case_index][candidate_index])
@@ -475,6 +477,10 @@ def discover_generalizing_feature(
                 "layer": int(layer),
                 "n_cases": n,
                 "objective": "cue_effect" if control_contexts else "margin_delta",
+                # The cue effect is a difference, so it can be maximised by damaging
+                # the control instead of moving the trap. Report the arms separately
+                # so that failure mode is visible without recomputing anything.
+                "mean_hostile_delta": statistics.fmean(hostile_deltas) if hostile_deltas else 0.0,
                 "mean_control_delta": (
                     statistics.fmean(control_deltas) if control_deltas else None
                 ),

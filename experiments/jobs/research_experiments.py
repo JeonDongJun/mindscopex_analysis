@@ -280,21 +280,39 @@ def _pair_with_controls(
     by_id = {case.case_id: case for case in everything}
 
     conditions = data_cfg.get("conditions") or ()
+    if not conditions:
+        raise ValueError("[data].conditions is required to pair cases with control twins")
+
     paired: list[Any] = []
     controls: list[Any] = []
+    dropped: list[str] = []
     for case in cases:
         suffix = next(
             (f"_{name}" for name in conditions if case.case_id.endswith(f"_{name}")),
             None,
         )
         if suffix is None:
+            dropped.append(case.case_id)
             continue
         twin = by_id.get(f"{case.case_id[: -len(suffix)]}_{control_condition}")
-        if twin is not None:
-            paired.append(case)
-            controls.append(twin)
+        if twin is None:
+            dropped.append(case.case_id)
+            continue
+        # The control must keep the case's answer mapping. The counterfactual twin
+        # swaps correct and lure, so differencing against it ADDS the two magnitudes
+        # instead of cancelling the shared baseline -- that is the specificity gate,
+        # not a discovery control, and using it here would make the check circular.
+        if twin.correct_answer != case.correct_answer or twin.lure_answer != case.lure_answer:
+            raise ValueError(
+                f"{control_condition!r} twin of {case.case_id!r} does not share its answer "
+                "mapping; a discovery control must differ from the case only by the cue"
+            )
+        paired.append(case)
+        controls.append(twin)
     if not paired:
         raise ValueError(f"no case had a {control_condition!r} twin; cannot score the cue effect")
+    if dropped:
+        _log(f"pairing: dropped {len(dropped)} case(s) with no {control_condition} twin")
     return paired, controls
 
 
@@ -323,8 +341,27 @@ def _discover_study_feature(
     config: dict[str, Any],
     env: dict[str, Any],
 ) -> dict[str, Any]:
-    profile = env["profile"]
+    # Validate the config before touching the model, so a misconfigured run fails in
+    # a second rather than after loading a 27B checkpoint.
     dcfg = table(config, "discover")
+    select_by = str(dcfg.get("select_by", "null_z"))
+    if select_by not in {"null_z", "mean_delta", "selection_adjusted"}:
+        raise ValueError(f"Unknown [discover].select_by={select_by!r}")
+    objective = str(dcfg.get("objective", "hostile_margin"))
+    if objective not in {"hostile_margin", "cue_effect"}:
+        raise ValueError(f"Unknown [discover].objective={objective!r}")
+    ncfg = table(config, "null")
+    strong_null = bool(ncfg.get("selection_adjusted", select_by == "selection_adjusted"))
+    if objective == "cue_effect" and not strong_null:
+        # The cheap per-layer screen still scores the raw hostile margin, so without
+        # the strong-null stage the cross-layer winner would be chosen on exactly the
+        # statistic this objective exists to replace.
+        raise ValueError(
+            "[discover].objective='cue_effect' requires [null].selection_adjusted=true; "
+            "the per-layer screen still ranks the raw hostile margin"
+        )
+
+    profile = env["profile"]
     layers = _int_list_or_none(dcfg.get("layers")) or list(profile.scan_layers)
     candidate_top_n = int(dcfg.get("candidate_top_n", 12))
     min_active_cases = int(dcfg.get("min_active_cases", 2))
@@ -335,28 +372,23 @@ def _discover_study_feature(
     null_samples = int(dcfg.get("null_samples", 32))
     null_seed = int(dcfg.get("null_seed", 0))
     null_cases = int(dcfg.get("null_cases", 6))
-    select_by = str(dcfg.get("select_by", "null_z"))
-    if select_by not in {"null_z", "mean_delta", "selection_adjusted"}:
-        raise ValueError(f"Unknown [discover].select_by={select_by!r}")
-
     # Strong-null stage: the per-layer null above is a cheap screen. This one scores
     # the surviving candidates against matched-norm peer features and corrects for
     # the size of the search, which is what the winner is actually reported on.
-    objective = str(dcfg.get("objective", "hostile_margin"))
-    if objective not in {"hostile_margin", "cue_effect"}:
-        raise ValueError(f"Unknown [discover].objective={objective!r}")
     control_condition = str(dcfg.get("control_condition", "neutral"))
-
-    ncfg = table(config, "null")
-    strong_null = bool(ncfg.get("selection_adjusted", select_by == "selection_adjusted"))
     null_top_m = int(ncfg.get("top_m", 3))
     null_panel_cases = int(ncfg.get("panel_cases", null_cases))
     gaussian_draws = int(ncfg.get("gaussian_draws", 100))
     peer_draws = int(ncfg.get("peer_draws", 100))
     null_bootstrap = int(ncfg.get("bootstrap", 20000))
 
-    subset = family_balanced_subset(train_cases, max_cases=max_cases)
+    discovery_pool = list(train_cases)
     subset_controls: list[Any] | None = None
+    if objective == "cue_effect":
+        # Pair first, then balance: pairing can drop items, and balancing a list that
+        # later loses members returns neither the requested size nor the balance.
+        discovery_pool, _ = _pair_with_controls(discovery_pool, config, control_condition)
+    subset = family_balanced_subset(discovery_pool, max_cases=max_cases)
     if objective == "cue_effect":
         # Rank on what the cue added, not on the raw hostile margin: the hostile
         # margin also contains the model's baseline preference, and a feature that
@@ -364,6 +396,7 @@ def _discover_study_feature(
         # trap. Pairing each item with its own no-cue twin cancels the shared part.
         subset, subset_controls = _pair_with_controls(subset, config, control_condition)
         _log(f"objective=cue_effect: {len(subset)} hostile/{control_condition} pairs")
+    discovery_ids = {case.case_id for case in subset}
     localization: list[dict[str, Any]] = []
     all_candidates: list[dict[str, Any]] = []
     best: dict[str, Any] | None = None
@@ -434,36 +467,51 @@ def _discover_study_feature(
             for index in range(draws)
         ]
         summary = null_summary(observed_mean, null_means)
+        # The screen always scores the RAW hostile margin on its own small subset, so
+        # its columns are named apart from the objective's. Putting a cue effect and a
+        # hostile-margin null z in one row under generic names reads as a failed null
+        # when the two numbers simply measure different things.
         entry = {
             "layer": int(layer),
             "feature_id": int(top["feature_id"]),
+            "objective": objective,
             "mean_margin_delta": top["mean_margin_delta"],
+            "mean_hostile_delta": top.get("mean_hostile_delta"),
+            "mean_control_delta": top.get("mean_control_delta"),
             "frac_positive": top["frac_positive"],
             "active_in_cases": top["active_in_cases"],
-            "null_n_cases": len(null_subset),
-            "observed_mean_delta": observed_mean,
-            "null_mean": summary["null_mean"],
-            "null_z": summary["z"],
-            "null_percentile": summary["percentile"],
+            "screen_n_cases": len(null_subset),
+            "screen_hostile_delta": observed_mean,
+            "screen_null_mean": summary["null_mean"],
+            "screen_null_z": summary["z"],
+            "screen_null_percentile": summary["percentile"],
         }
         localization.append(entry)
         _log(
             f"discover: layer {int(layer)} feature {int(top['feature_id'])} "
             f"delta={top['mean_margin_delta']:+.4f} "
-            f"null_z={'n/a' if entry['null_z'] is None else format(entry['null_z'], '+.2f')}"
+            f"screen_null_z="
+            f"{'n/a' if entry['screen_null_z'] is None else format(entry['screen_null_z'], '+.2f')}"
         )
         # Selecting on raw mean delta picks whichever feature has the largest
         # outliers; ranking by null_z asks the question the study actually cares
         # about -- does this direction beat matched random directions?
         if select_by == "null_z":
-            score = float("-inf") if entry["null_z"] is None else float(entry["null_z"])
+            score = (
+                float("-inf") if entry["screen_null_z"] is None else float(entry["screen_null_z"])
+            )
         else:
             score = float(top["mean_margin_delta"])
         if best is None or score > best_score:
             if best_sae is not None:
                 del best_sae
                 clear_device_cache()
-            best = {**top, "layer": int(layer), "null_z": entry["null_z"], "select_score": score}
+            best = {
+                **top,
+                "layer": int(layer),
+                "screen_null_z": entry["screen_null_z"],
+                "select_score": score,
+            }
             best_score = score
             best_sae = sae
             best_feature_rows = rows
@@ -479,12 +527,40 @@ def _discover_study_feature(
         # The cheap per-layer screen ranks by mean delta, which favours whichever
         # candidate has the largest outliers. Re-score the survivors against peer
         # features that fire at the same site, and against the size of the search.
-        ranked = sorted(all_candidates, key=lambda r: -float(r["mean_margin_delta"]))[:null_top_m]
-        panel = family_balanced_subset(train_cases, max_cases=null_panel_cases)
+        eligible = all_candidates
+        if objective == "cue_effect":
+            # delta(hostile) - delta(control) is maximised just as well by damaging the
+            # control, so require the hostile arm to move in the claimed direction
+            # before a candidate may compete.
+            eligible = [
+                row for row in all_candidates if float(row.get("mean_hostile_delta") or 0.0) > 0.0
+            ]
+            _log(
+                f"sign gate: {len(eligible)}/{len(all_candidates)} candidates raise the hostile arm"
+            )
+            if not eligible:
+                raise RuntimeError(
+                    "no candidate raised the hostile arm; a cue effect carried entirely by "
+                    "the control arm is not evidence of a lure feature"
+                )
+        ranked = sorted(eligible, key=lambda r: -float(r["mean_margin_delta"]))[:null_top_m]
+        # The panel must not be the discovery items. family_balanced_subset is a
+        # deterministic round-robin from index 0, so a smaller call returns a PREFIX
+        # of the larger one -- the "null" would otherwise be scored in-sample.
+        panel_pool = [case for case in train_cases if case.case_id not in discovery_ids]
+        if len(panel_pool) < null_panel_cases:
+            _log(
+                f"strong null: only {len(panel_pool)} train items sit outside the discovery "
+                "subset; falling back to the full train split (panel overlaps discovery)"
+            )
+            panel_pool = list(train_cases)
         panel_controls: list[Any] | None = None
         if objective == "cue_effect":
+            panel_pool, _ = _pair_with_controls(panel_pool, config, control_condition)
+        panel = family_balanced_subset(panel_pool, max_cases=null_panel_cases)
+        if objective == "cue_effect":
             panel, panel_controls = _pair_with_controls(panel, config, control_condition)
-        selection_k = max(1, len(all_candidates))
+        selection_k = max(1, len(eligible))
         _log(
             f"strong null: {len(ranked)} candidates x {len(panel)} items "
             f"({gaussian_draws} gaussian + {peer_draws} peer draws, selection_k={selection_k})"
@@ -577,6 +653,9 @@ def _ensure_feature(
             "feature_rows": [],
             "source": "pinned",
         }
+        info.setdefault(
+            "objective", str(table(config, "discover").get("objective", "hostile_margin"))
+        )
         state["study_feature"] = info
         _write_json(
             run_dir / "study_feature.json", {"feature": info["feature"], "source": "pinned"}
@@ -714,13 +793,17 @@ def run_discover(
         [
             "layer",
             "feature_id",
+            "objective",
             "mean_margin_delta",
+            "mean_hostile_delta",
+            "mean_control_delta",
             "frac_positive",
             "active_in_cases",
-            "rep_margin_delta",
-            "null_mean",
-            "null_z",
-            "null_percentile",
+            "screen_n_cases",
+            "screen_hostile_delta",
+            "screen_null_mean",
+            "screen_null_z",
+            "screen_null_percentile",
         ],
     )
     # Candidates that went through the strong null carry its percentiles; the rest
@@ -793,17 +876,65 @@ def run_causal_heldout(
         intervention_mode=str(info.get("intervention_mode", "remove_activation")),
     )
     per_case = effect.pop("per_case")
-    _write_csv(
-        run_dir / "causal_heldout.csv",
-        per_case,
-        ["case_id", "family", "feature_value", "baseline_margin", "edited_margin", "margin_delta"],
-    )
+    columns = [
+        "case_id",
+        "family",
+        "feature_value",
+        "baseline_margin",
+        "edited_margin",
+        "margin_delta",
+    ]
+
+    # When discovery optimised the cue effect, reporting the raw hostile margin here
+    # under the same key study_feature uses invites reading a cue effect against a
+    # hostile margin. Score the control twins too and report the like-for-like number.
+    objective = str(info.get("objective", "hostile_margin"))
+    effect["objective"] = objective
+    if objective == "cue_effect":
+        control_condition = str(table(config, "discover").get("control_condition", "neutral"))
+        paired, controls = _pair_with_controls(splits["test"], config, control_condition)
+        control_effect = aggregate_feature_effect(
+            lm,
+            controls,
+            layer=int(feature["layer"]),
+            sae=info["sae"],
+            feature_id=int(feature["feature_id"]),
+            coefficient=float(info.get("coefficient", 1.0)),
+            intervention_mode=str(info.get("intervention_mode", "remove_activation")),
+        )
+        control_rows = {
+            case.case_id: row
+            for case, row in zip(paired, control_effect.pop("per_case"), strict=True)
+        }
+        cue_effects: list[float] = []
+        for row in per_case:
+            control_row = control_rows.get(row["case_id"])
+            if control_row is None:
+                continue
+            row["control_margin_delta"] = float(control_row["margin_delta"])
+            row["cue_effect"] = float(row["margin_delta"]) - row["control_margin_delta"]
+            cue_effects.append(row["cue_effect"])
+        columns.extend(["control_margin_delta", "cue_effect"])
+        effect["mean_control_delta"] = control_effect["mean_margin_delta"]
+        effect["mean_cue_effect"] = sum(cue_effects) / len(cue_effects) if cue_effects else None
+        effect["frac_cue_effect_positive"] = (
+            sum(1 for value in cue_effects if value > 0) / len(cue_effects) if cue_effects else None
+        )
+        _log(
+            f"causal_heldout: cue effect {effect['mean_cue_effect']:+.4f} "
+            f"(hostile {effect['mean_margin_delta']:+.4f}, "
+            f"control {effect['mean_control_delta']:+.4f})"
+        )
+
+    _write_csv(run_dir / "causal_heldout.csv", per_case, columns)
     _write_json(run_dir / "causal_heldout" / "summary.json", effect)
     return {
         "kind": "causal_heldout",
         "paper_csv": str(run_dir / "causal_heldout.csv"),
         "n_test": len(splits["test"]),
+        "objective": objective,
         "mean_margin_delta": effect["mean_margin_delta"],
+        "mean_cue_effect": effect.get("mean_cue_effect"),
         "frac_positive": effect["frac_positive"],
     }
 

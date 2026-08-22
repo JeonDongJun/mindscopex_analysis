@@ -132,6 +132,10 @@ class NullPanel:
     control_baselines: tuple[float, ...] = field(default=())
     control_values: tuple[float, ...] = field(default=())
     control_norms: tuple[float, ...] = field(default=())
+    # Kept separately from observed_deltas (which becomes the paired difference) so
+    # a "cue effect" carried entirely by the control arm is visible in the artifact.
+    hostile_deltas: tuple[float, ...] = field(default=())
+    control_deltas: tuple[float, ...] = field(default=())
 
     @property
     def objective(self) -> str:
@@ -151,14 +155,22 @@ class NullPanel:
                 "target_norm": norm,
                 "baseline_margin": baseline,
                 "observed_delta": delta,
+                "hostile_delta": (self.hostile_deltas[index] if self.hostile_deltas else delta),
+                "control_delta": (self.control_deltas[index] if self.control_deltas else None),
+                "control_feature_value": (
+                    self.control_values[index] if self.control_values else None
+                ),
+                "control_target_norm": (self.control_norms[index] if self.control_norms else None),
             }
-            for case, value, norm, baseline, delta in zip(
-                self.cases,
-                self.feature_values,
-                self.target_norms,
-                self.baseline_margins,
-                self.observed_deltas,
-                strict=True,
+            for index, (case, value, norm, baseline, delta) in enumerate(
+                zip(
+                    self.cases,
+                    self.feature_values,
+                    self.target_norms,
+                    self.baseline_margins,
+                    self.observed_deltas,
+                    strict=True,
+                )
             )
         ]
 
@@ -243,6 +255,8 @@ def build_null_panel(
     control_baselines: list[float] = []
     control_values: list[float] = []
     control_norms: list[float] = []
+    control_deltas: list[float] = []
+    hostile_deltas = list(deltas)
     for index, control in enumerate(control_cases or ()):
         control_residual = capture_layer_residuals(
             lm,
@@ -283,8 +297,9 @@ def build_null_panel(
         control_baselines.append(control_baseline)
         control_values.append(control_value)
         control_norms.append(abs(control_value) * abs(coefficient) * direction_norm)
+        control_deltas.append(control_baseline - control_ablated)
         # Observed statistic becomes the paired difference.
-        deltas[index] = deltas[index] - (control_baseline - control_ablated)
+        deltas[index] = deltas[index] - control_deltas[-1]
 
     peers.discard(int(feature_id))
     return NullPanel(
@@ -298,6 +313,8 @@ def build_null_panel(
         control_baselines=tuple(control_baselines),
         control_values=tuple(control_values),
         control_norms=tuple(control_norms),
+        hostile_deltas=tuple(hostile_deltas),
+        control_deltas=tuple(control_deltas),
     )
 
 
@@ -438,6 +455,15 @@ def evaluate_feature_null(
         "panel_n": len(panel.cases),
         "objective": panel.objective,
         "observed_mean_delta": observed,
+        "mean_hostile_delta": (
+            sum(panel.hostile_deltas) / len(panel.hostile_deltas)
+            if panel.hostile_deltas
+            else observed
+        ),
+        "mean_control_delta": (
+            sum(panel.control_deltas) / len(panel.control_deltas) if panel.control_deltas else None
+        ),
+        "n_controls_active": sum(1 for value in panel.control_values if abs(value) > 0.0),
         "gaussian_draws": len(gaussian),
         "gaussian_mean": (sum(gaussian) / len(gaussian)) if gaussian else None,
         "gaussian_percentile": empirical_percentile(observed, gaussian),
@@ -449,6 +475,11 @@ def evaluate_feature_null(
         "top_peers_beating": beaten[:10],
         "selection_adjusted_percentile": adjusted.get("percentile"),
         "selection_adjusted_p": adjusted.get("p_value"),
+        # The percentile saturates at 1.0 whenever no single null draw beats the
+        # observation, so these two carry the information: what a search this wide
+        # buys you for free.
+        "selection_max_mean": adjusted.get("max_mean"),
+        "selection_max_p95": adjusted.get("max_p95"),
         "selection_adjusted": adjusted,
         "panel": panel.rows(),
         "gaussian_values": gaussian,

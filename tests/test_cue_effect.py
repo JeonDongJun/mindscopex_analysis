@@ -38,19 +38,31 @@ class PairWithControlsTests(unittest.TestCase):
                 control.case_id.removesuffix("_neutral"),
             )
 
-    def test_counterfactual_twin_swaps_the_answers(self) -> None:
-        # Guards the direction of the pairing: neutral keeps the hostile answer
-        # mapping, the counterfactual inverts it.
+    def test_neutral_twin_keeps_the_answer_mapping(self) -> None:
         case = self._hostile(1)[0]
         _, neutral = _pair_with_controls([case], self.CONFIG, "neutral")
-        _, counterfactual = _pair_with_controls([case], self.CONFIG, "counterfactual")
 
         self.assertEqual(neutral[0].correct_answer, case.correct_answer)
-        self.assertEqual(counterfactual[0].correct_answer, case.lure_answer)
+        self.assertEqual(neutral[0].lure_answer, case.lure_answer)
+
+    def test_counterfactual_is_rejected_as_a_discovery_control(self) -> None:
+        # The counterfactual twin swaps correct and lure, so differencing against it
+        # ADDS the two magnitudes instead of cancelling the shared baseline. It is the
+        # specificity gate, not a control -- using it here would make the check
+        # circular and inflate every candidate, so pairing must refuse it outright.
+        case = self._hostile(1)[0]
+        with self.assertRaises(ValueError) as caught:
+            _pair_with_controls([case], self.CONFIG, "counterfactual")
+        self.assertIn("answer mapping", str(caught.exception))
 
     def test_missing_twin_raises_rather_than_silently_scoring_nothing(self) -> None:
         with self.assertRaises(ValueError):
             _pair_with_controls(self._hostile(1), self.CONFIG, "no_such_condition")
+
+    def test_empty_conditions_is_rejected(self) -> None:
+        config = {"data": {**self.CONFIG["data"], "conditions": []}}
+        with self.assertRaises(ValueError):
+            _pair_with_controls(self._hostile(1), config, "neutral")
 
 
 class NullPanelObjectiveTests(unittest.TestCase):
