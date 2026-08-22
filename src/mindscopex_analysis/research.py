@@ -349,6 +349,7 @@ def discover_generalizing_feature(
     max_candidates: int = 40,
     coefficient: float = 1.0,
     intervention_mode: InterventionMode = "remove_activation",
+    control_cases: Sequence[LureCase] | None = None,
     block_path_template: str = DEFAULT_BLOCK_PATH_TEMPLATE,
     progress: Callable[[str], None] | None = None,
 ) -> list[dict[str, Any]]:
@@ -357,7 +358,19 @@ def discover_generalizing_feature(
     Candidate features are those active (top-``candidate_top_n``) in at least
     ``min_active_cases`` discovery items, capped at ``max_candidates`` by
     activation frequency. Returns aggregate rows sorted by ``mean_margin_delta``.
+
+    With ``control_cases`` -- one control item per case, in the same order -- the
+    ranked quantity becomes the *cue effect*, ``delta(case) - delta(control)``,
+    rather than the raw margin delta. A hostile item's margin is its control's
+    margin plus whatever the salient cue added, so ranking on the raw delta also
+    rewards features that merely weaken the model's baseline judgement; taking the
+    paired difference cancels that shared component and scores only the part the
+    cue carries. Candidate *selection* still uses the hostile items, because that
+    is where the trap's representation has to be active in the first place.
     """
+
+    if control_cases is not None and len(control_cases) != len(cases):
+        raise ValueError("control_cases must be aligned one-to-one with cases")
 
     # Precompute each case's residual + baseline margin once; both are
     # candidate-independent, so recomputing them per candidate would ~double cost.
@@ -382,6 +395,26 @@ def discover_generalizing_feature(
         for feature_id, _value in active_prompt_features(residual, sae, top_n=candidate_top_n):
             frequency[int(feature_id)] += 1
 
+    # Control baselines and activations, when scoring the cue effect. The control
+    # shares the answer pair, so its activation is read with its own residual.
+    control_contexts: list[tuple[LureCase, torch.Tensor, float]] = []
+    for control in control_cases or ():
+        control_residual = capture_layer_residuals(
+            lm,
+            [control.prompt],
+            int(layer),
+            token_position="last",
+            block_path_template=block_path_template,
+        )
+        control_baseline = answer_logprob_margin(
+            lm,
+            control.prompt,
+            correct_answer=control.correct_answer,
+            lure_answer=control.lure_answer,
+            block_path_template=block_path_template,
+        ).margin
+        control_contexts.append((control, control_residual, control_baseline))
+
     candidates = [fid for fid, count in frequency.most_common() if count >= min_active_cases]
     candidates = candidates[: int(max_candidates)]
     if progress is not None:
@@ -391,10 +424,15 @@ def discover_generalizing_feature(
         qwen_scope_sparse_feature_values(residual, sae, candidates)[0].detach().float().cpu()
         for _case, residual, _baseline in contexts
     ]
+    control_activation_rows = [
+        qwen_scope_sparse_feature_values(residual, sae, candidates)[0].detach().float().cpu()
+        for _control, residual, _baseline in control_contexts
+    ]
     rows: list[dict[str, Any]] = []
     for candidate_index, feature_id in enumerate(candidates):
         direction = sae_decoder_direction(sae, [int(feature_id)])
         deltas: list[float] = []
+        control_deltas: list[float] = []
         for case_index, (case, _residual, baseline_margin) in enumerate(contexts):
             value = float(activation_rows[case_index][candidate_index])
             ablated = answer_logprob_margin(
@@ -409,13 +447,37 @@ def discover_generalizing_feature(
                 intervention_mode=intervention_mode,
                 block_path_template=block_path_template,
             ).margin
-            deltas.append(baseline_margin - ablated)
+            delta = baseline_margin - ablated
+            if control_contexts:
+                control, _control_residual, control_baseline = control_contexts[case_index]
+                control_value = float(control_activation_rows[case_index][candidate_index])
+                control_ablated = answer_logprob_margin(
+                    lm,
+                    control.prompt,
+                    correct_answer=control.correct_answer,
+                    lure_answer=control.lure_answer,
+                    layer=int(layer),
+                    direction=direction,
+                    feature_value=control_value,
+                    coefficient=coefficient,
+                    intervention_mode=intervention_mode,
+                    block_path_template=block_path_template,
+                ).margin
+                control_deltas.append(control_baseline - control_ablated)
+                # The cue effect: what the ablation removed from the hostile item
+                # beyond what it removed from the same item without the cue.
+                delta = delta - control_deltas[-1]
+            deltas.append(delta)
         n = len(deltas)
         rows.append(
             {
                 "feature_id": int(feature_id),
                 "layer": int(layer),
                 "n_cases": n,
+                "objective": "cue_effect" if control_contexts else "margin_delta",
+                "mean_control_delta": (
+                    statistics.fmean(control_deltas) if control_deltas else None
+                ),
                 "mean_margin_delta": statistics.fmean(deltas) if n else 0.0,
                 "std_margin_delta": statistics.pstdev(deltas) if n > 1 else 0.0,
                 "frac_positive": (sum(1 for d in deltas if d > 0) / n) if n else 0.0,

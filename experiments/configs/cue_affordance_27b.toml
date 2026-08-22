@@ -1,0 +1,59 @@
+# SAE causal study on goal_affordance_traps_v1 — 27B. Scientifically the most
+# interesting scale: unlike CRT, the affordance trap survives here (~43% lure), so
+# there is a real phenomenon left to localize. Fits the 96GB G4; SAEs on CPU.
+[run]
+name = "cue_affordance_27b"
+job = "research_experiments"
+
+[experiment]
+kind = "study_affordance"
+
+[model]
+profile = "27b"
+dtype = "auto"
+device_map = "auto"
+sae_device = "cpu"
+sae_dtype = "auto"
+
+[data]
+dataset = "goal_affordance_traps_v1"
+conditions = ["hostile"]   # paired with their neutral twins by the cue_effect objective
+limit_per_family = 0
+train_frac = 0.6
+split_seed = 0
+instruction = true
+
+[discover]
+objective = "cue_effect"     # rank on what the cue added, not the raw margin
+control_condition = "neutral"  # same scenario, cue removed, same answer mapping
+candidate_top_n = 10
+min_active_cases = 3
+max_candidates = 16        # 27B forward passes are expensive
+max_cases = 16
+coefficient = 1.0
+intervention_mode = "remove_activation"
+null_samples = 16
+null_seed = 0
+
+[condition_specificity]
+base_condition = "hostile"
+twin_condition = "counterfactual"
+
+# Strong-null stage (P0-2): re-score the surviving candidates against matched-norm
+# peer features that fire at the same site, and against the size of the search.
+# Sized for 27B -- top_m x (gaussian+peer) x panel x 2 forwards is the dominant cost.
+[null]
+selection_adjusted = true
+top_m = 3
+panel_cases = 6
+gaussian_draws = 60
+peer_draws = 60
+bootstrap = 20000
+
+[colab]
+gpu = "G4"
+
+[remote]
+source = "archive"
+repo_dir = "/content/mindscopex_analysis"
+output_root = "/content/mindscopex_artifacts"

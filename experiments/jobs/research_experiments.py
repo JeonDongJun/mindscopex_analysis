@@ -260,6 +260,44 @@ def _load_splits(config: dict[str, Any]) -> dict[str, Any]:
 # ------------------------------------------------------------------- feature
 
 
+def _pair_with_controls(
+    cases: Sequence[Any],
+    config: dict[str, Any],
+    control_condition: str,
+) -> tuple[list[Any], list[Any]]:
+    """Pair each case with its same-scenario twin in ``control_condition``.
+
+    Multi-condition sets encode the condition as a case_id suffix, so the twin is
+    the same pair_id under a different suffix. Cases without a twin are dropped --
+    a cue effect is undefined without the no-cue comparison.
+    """
+
+    data_cfg = table(config, "data")
+    dataset = str(data_cfg.get("dataset", "hagendorff_crt"))
+    everything = lure_dataset_cases(dataset)
+    if bool(data_cfg.get("instruction", True)):
+        everything = instruct_lure_cases(everything)
+    by_id = {case.case_id: case for case in everything}
+
+    conditions = data_cfg.get("conditions") or ()
+    paired: list[Any] = []
+    controls: list[Any] = []
+    for case in cases:
+        suffix = next(
+            (f"_{name}" for name in conditions if case.case_id.endswith(f"_{name}")),
+            None,
+        )
+        if suffix is None:
+            continue
+        twin = by_id.get(f"{case.case_id[: -len(suffix)]}_{control_condition}")
+        if twin is not None:
+            paired.append(case)
+            controls.append(twin)
+    if not paired:
+        raise ValueError(f"no case had a {control_condition!r} twin; cannot score the cue effect")
+    return paired, controls
+
+
 def _null_rank_key(report: dict[str, Any]) -> tuple[float, float, float]:
     """Rank candidates by how well they survive the strict nulls, not by raw size.
 
@@ -304,6 +342,11 @@ def _discover_study_feature(
     # Strong-null stage: the per-layer null above is a cheap screen. This one scores
     # the surviving candidates against matched-norm peer features and corrects for
     # the size of the search, which is what the winner is actually reported on.
+    objective = str(dcfg.get("objective", "hostile_margin"))
+    if objective not in {"hostile_margin", "cue_effect"}:
+        raise ValueError(f"Unknown [discover].objective={objective!r}")
+    control_condition = str(dcfg.get("control_condition", "neutral"))
+
     ncfg = table(config, "null")
     strong_null = bool(ncfg.get("selection_adjusted", select_by == "selection_adjusted"))
     null_top_m = int(ncfg.get("top_m", 3))
@@ -313,6 +356,14 @@ def _discover_study_feature(
     null_bootstrap = int(ncfg.get("bootstrap", 20000))
 
     subset = family_balanced_subset(train_cases, max_cases=max_cases)
+    subset_controls: list[Any] | None = None
+    if objective == "cue_effect":
+        # Rank on what the cue added, not on the raw hostile margin: the hostile
+        # margin also contains the model's baseline preference, and a feature that
+        # only weakens that scores just as well while explaining nothing about the
+        # trap. Pairing each item with its own no-cue twin cancels the shared part.
+        subset, subset_controls = _pair_with_controls(subset, config, control_condition)
+        _log(f"objective=cue_effect: {len(subset)} hostile/{control_condition} pairs")
     localization: list[dict[str, Any]] = []
     all_candidates: list[dict[str, Any]] = []
     best: dict[str, Any] | None = None
@@ -333,6 +384,7 @@ def _discover_study_feature(
             max_candidates=max_candidates,
             coefficient=coefficient,
             intervention_mode=intervention_mode,
+            control_cases=subset_controls,
             progress=_log,
         )
         if not rows:
@@ -429,6 +481,9 @@ def _discover_study_feature(
         # features that fire at the same site, and against the size of the search.
         ranked = sorted(all_candidates, key=lambda r: -float(r["mean_margin_delta"]))[:null_top_m]
         panel = family_balanced_subset(train_cases, max_cases=null_panel_cases)
+        panel_controls: list[Any] | None = None
+        if objective == "cue_effect":
+            panel, panel_controls = _pair_with_controls(panel, config, control_condition)
         selection_k = max(1, len(all_candidates))
         _log(
             f"strong null: {len(ranked)} candidates x {len(panel)} items "
@@ -444,6 +499,7 @@ def _discover_study_feature(
                 layer=layer,
                 sae=candidate_sae,
                 feature_id=int(candidate["feature_id"]),
+                control_cases=panel_controls,
                 gaussian_draws=gaussian_draws,
                 peer_draws=peer_draws,
                 selection_k=selection_k,
@@ -489,6 +545,7 @@ def _discover_study_feature(
         "null_reports": null_reports,
         "coefficient": coefficient,
         "intervention_mode": intervention_mode,
+        "objective": objective,
         "select_by": "selection_adjusted" if null_reports else select_by,
     }
 

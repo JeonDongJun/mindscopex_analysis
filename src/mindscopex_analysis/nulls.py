@@ -126,6 +126,16 @@ class NullPanel:
     target_norms: tuple[float, ...]
     feature_values: tuple[float, ...]
     peer_pool: tuple[int, ...] = field(default=())
+    # Present only when the panel scores the cue effect. Each entry pairs with the
+    # case at the same index; null draws are then scored on the same difference.
+    controls: tuple[LureCase, ...] = field(default=())
+    control_baselines: tuple[float, ...] = field(default=())
+    control_values: tuple[float, ...] = field(default=())
+    control_norms: tuple[float, ...] = field(default=())
+
+    @property
+    def objective(self) -> str:
+        return "cue_effect" if self.controls else "margin_delta"
 
     @property
     def observed_mean(self) -> float:
@@ -162,10 +172,19 @@ def build_null_panel(
     feature_id: int,
     coefficient: float = 1.0,
     intervention_mode: InterventionMode = "remove_activation",
+    control_cases: Sequence[LureCase] | None = None,
     collect_peers: bool = True,
     block_path_template: str = DEFAULT_BLOCK_PATH_TEMPLATE,
 ) -> NullPanel:
-    """Measure the feature's own effect and the perturbation norm it removes."""
+    """Measure the feature's own effect and the perturbation norm it removes.
+
+    With ``control_cases`` the observed statistic becomes the cue effect,
+    ``delta(case) - delta(control)``, so the null is scored on the same quantity
+    the study selects on.
+    """
+
+    if control_cases is not None and len(control_cases) != len(cases):
+        raise ValueError("control_cases must be aligned one-to-one with cases")
 
     direction = sae_decoder_direction(sae, [int(feature_id)]).detach()
     direction_norm = float(direction.to(torch.float32).norm())
@@ -221,6 +240,52 @@ def build_null_panel(
         values.append(value)
         norms.append(abs(value) * abs(coefficient) * direction_norm)
 
+    control_baselines: list[float] = []
+    control_values: list[float] = []
+    control_norms: list[float] = []
+    for index, control in enumerate(control_cases or ()):
+        control_residual = capture_layer_residuals(
+            lm,
+            [control.prompt],
+            int(layer),
+            token_position="last",
+            block_path_template=block_path_template,
+        )
+        control_value = float(
+            qwen_scope_sparse_feature_values(control_residual, sae, [int(feature_id)])
+            .detach()
+            .to(torch.float32)
+            .reshape(-1)[0]
+        )
+        control_baseline = float(
+            answer_logprob_margin(
+                lm,
+                control.prompt,
+                correct_answer=control.correct_answer,
+                lure_answer=control.lure_answer,
+                block_path_template=block_path_template,
+            ).margin
+        )
+        control_ablated = float(
+            answer_logprob_margin(
+                lm,
+                control.prompt,
+                correct_answer=control.correct_answer,
+                lure_answer=control.lure_answer,
+                layer=int(layer),
+                direction=direction,
+                feature_value=control_value,
+                coefficient=coefficient,
+                intervention_mode=intervention_mode,
+                block_path_template=block_path_template,
+            ).margin
+        )
+        control_baselines.append(control_baseline)
+        control_values.append(control_value)
+        control_norms.append(abs(control_value) * abs(coefficient) * direction_norm)
+        # Observed statistic becomes the paired difference.
+        deltas[index] = deltas[index] - (control_baseline - control_ablated)
+
     peers.discard(int(feature_id))
     return NullPanel(
         cases=tuple(cases),
@@ -229,6 +294,10 @@ def build_null_panel(
         target_norms=tuple(norms),
         feature_values=tuple(values),
         peer_pool=tuple(sorted(peers)),
+        controls=tuple(control_cases or ()),
+        control_baselines=tuple(control_baselines),
+        control_values=tuple(control_values),
+        control_norms=tuple(control_norms),
     )
 
 
@@ -250,29 +319,45 @@ def null_panel_means(
 
     if directions.numel() == 0:
         return []
-    sums = [0.0] * int(directions.shape[0])
-    for index, (case, baseline, norm) in enumerate(
-        zip(panel.cases, panel.baseline_margins, panel.target_norms, strict=True), start=1
-    ):
-        for draw in range(int(directions.shape[0])):
-            vector = directions[draw] * float(norm)
-            ablated = float(
-                answer_logprob_margin(
-                    lm,
-                    case.prompt,
-                    correct_answer=case.correct_answer,
-                    lure_answer=case.lure_answer,
-                    layer=int(layer),
-                    direction=vector,
-                    feature_value=1.0,
-                    coefficient=-1.0,  # add_vector with -1 subtracts the vector
-                    intervention_mode="add_vector",
-                    block_path_template=block_path_template,
-                ).margin
-            )
-            sums[draw] += float(baseline) - ablated
+    n_draws = int(directions.shape[0])
+    sums = [0.0] * n_draws
+
+    def _delta(case: LureCase, baseline: float, norm: float, draw: int) -> float:
+        vector = directions[draw] * float(norm)
+        ablated = float(
+            answer_logprob_margin(
+                lm,
+                case.prompt,
+                correct_answer=case.correct_answer,
+                lure_answer=case.lure_answer,
+                layer=int(layer),
+                direction=vector,
+                feature_value=1.0,
+                coefficient=-1.0,  # add_vector with -1 subtracts the vector
+                intervention_mode="add_vector",
+                block_path_template=block_path_template,
+            ).margin
+        )
+        return float(baseline) - ablated
+
+    for index in range(len(panel.cases)):
+        case = panel.cases[index]
+        baseline = panel.baseline_margins[index]
+        norm = panel.target_norms[index]
+        for draw in range(n_draws):
+            value = _delta(case, baseline, norm, draw)
+            if panel.controls:
+                # Same paired difference the observation was scored on, otherwise
+                # the null answers a different question than the statistic.
+                value -= _delta(
+                    panel.controls[index],
+                    panel.control_baselines[index],
+                    panel.control_norms[index],
+                    draw,
+                )
+            sums[draw] += value
         if progress is not None:
-            progress(f"null: case {index}/{len(panel.cases)} ({directions.shape[0]} draws)")
+            progress(f"null: case {index + 1}/{len(panel.cases)} ({n_draws} draws)")
     return [total / len(panel.cases) for total in sums]
 
 
@@ -283,6 +368,7 @@ def evaluate_feature_null(
     layer: int,
     sae: QwenScopeSAE,
     feature_id: int,
+    control_cases: Sequence[LureCase] | None = None,
     gaussian_draws: int = 200,
     peer_draws: int = 200,
     selection_k: int = 0,
@@ -303,6 +389,7 @@ def evaluate_feature_null(
         feature_id=feature_id,
         coefficient=coefficient,
         intervention_mode=intervention_mode,
+        control_cases=control_cases,
         collect_peers=peer_draws > 0,
         block_path_template=block_path_template,
     )
@@ -349,6 +436,7 @@ def evaluate_feature_null(
         "feature_id": int(feature_id),
         "layer": int(layer),
         "panel_n": len(panel.cases),
+        "objective": panel.objective,
         "observed_mean_delta": observed,
         "gaussian_draws": len(gaussian),
         "gaussian_mean": (sum(gaussian) / len(gaussian)) if gaussian else None,
