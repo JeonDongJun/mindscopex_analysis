@@ -431,7 +431,25 @@ def _discover_study_feature(
         # every case (scaled to each case's matched norm); averaging column-wise
         # therefore gives the null distribution of the mean delta -- the statistic
         # we actually rank features by. A single-case null is far too noisy for that.
-        null_subset = subset[: max(1, null_cases)]
+        # ...and it must not be scored on the DISCOVERY items. `top` was chosen to
+        # maximise the delta over `subset`, so measuring it on a prefix of `subset`
+        # reports its overfit maximum, while the random directions it is compared
+        # against were never selected for anything. The z is inflated by exactly the
+        # search, which is the bias the whole screen exists to control for. This is
+        # the same defect that was fixed for the strong-null panel; the screen kept
+        # it until it was caught by an audit of the run artifacts.
+        screen_pool = [case for case in train_cases if case.case_id not in discovery_ids]
+        if len(screen_pool) < max(1, null_cases):
+            _log(
+                f"screen null: only {len(screen_pool)} train items sit outside the discovery "
+                "subset; falling back to the discovery items (screen_null_z is IN-SAMPLE "
+                "and must not be quoted as evidence)"
+            )
+            screen_pool = list(subset)
+            screen_in_sample = True
+        else:
+            screen_in_sample = False
+        null_subset = family_balanced_subset(screen_pool, max_cases=max(1, null_cases))
         observed_deltas: list[float] = []
         null_by_case: list[list[float]] = []
         for case in null_subset:
@@ -481,6 +499,10 @@ def _discover_study_feature(
             "frac_positive": top["frac_positive"],
             "active_in_cases": top["active_in_cases"],
             "screen_n_cases": len(null_subset),
+            # False is the honest case: the screen was scored on items the candidate
+            # was NOT selected on. True means the fallback fired and the number is
+            # selection-inflated -- a reader has to be able to tell them apart.
+            "screen_in_sample": screen_in_sample,
             "screen_hostile_delta": observed_mean,
             "screen_null_mean": summary["null_mean"],
             "screen_null_z": summary["z"],
@@ -800,6 +822,7 @@ def run_discover(
             "frac_positive",
             "active_in_cases",
             "screen_n_cases",
+            "screen_in_sample",
             "screen_hostile_delta",
             "screen_null_mean",
             "screen_null_z",

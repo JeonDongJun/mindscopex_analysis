@@ -174,8 +174,13 @@ def _margin_row(margin: Any, baseline: Any) -> dict[str, float]:
     return {
         "margin": float(margin.margin),
         "margin_delta": float(baseline.margin) - float(margin.margin),
-        "correct_logprob_delta": float(baseline.correct.logprob) - float(margin.correct.logprob),
-        "lure_logprob_delta": float(baseline.lure.logprob) - float(margin.lure.logprob),
+        # Sign convention is effects.py's, NOT margin_delta's: the logprob deltas are
+        # ablated - baseline, so `correct > 0` means the edit RAISED the correct answer
+        # and `lure < 0` means it LOWERED the lure. margin_delta stays baseline - ablated.
+        # docs/metrics_guide.md documents this pair; writing them the other way round
+        # silently inverts every reader's conclusion.
+        "correct_logprob_delta": float(margin.correct.logprob) - float(baseline.correct.logprob),
+        "lure_logprob_delta": float(margin.lure.logprob) - float(baseline.lure.logprob),
     }
 
 

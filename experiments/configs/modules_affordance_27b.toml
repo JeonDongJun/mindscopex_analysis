@@ -1,6 +1,19 @@
 # Phase D: does a coactivating SET of features mediate the affordance lure where no
 # single feature did? Layer 15 is where every single-feature winner has landed, so
 # the module search starts there. Held-out items only for the interventions.
+#
+# Rewritten after run 20260822-154406 crashed with "no module survived jaccard >= 0.5".
+# That crash was NOT the threshold being too high. Read off that run's
+# coactivation_edges.csv: 40 features and 780 edges is the COMPLETE graph, the
+# smallest Jaccard in it is 0.686, and 25 of the 40 features fired on all 35
+# discovery items. Binary co-firing was constant, so every pair passed, the graph was
+# one 40-node component, and max_size = 8 threw it away. Raising the Jaccard
+# threshold cannot fix that -- nothing below 1.0 splits a graph whose weakest edge is
+# 0.686. The metric had to change, not the number.
+#
+# What this run can and cannot claim is now written into the artifacts themselves:
+# module_search.json carries `caveats`, and module_summary.json carries
+# `random_module_null.caveat`. Read those before quoting any number out of this job.
 [run]
 name = "modules_affordance_27b"
 job = "feature_modules"
@@ -12,25 +25,132 @@ device_map = "auto"
 sae_device = "cpu"
 sae_dtype = "auto"
 
+# `counterfactual` is the control the specificity term needs: same scenario, same
+# efficiency cue, but the stated goal no longer requires the affordance, so a feature
+# that tracks the trap should drop there while a feature that tracks the surface
+# story should not. Only its activations are read -- the counterfactual condition
+# swaps which answer is correct, so its margins are not comparable to the hostile
+# ones. `neutral` (cue removed) is the alternative control if the counterfactual
+# rewrite turns out to move too much of the prompt text.
+#
+# Known weakness, not fixable from this file: goal_affordance_traps_v1 has no
+# minimal-edit control (control_prompt is empty on all 240 cases), so the
+# counterfactual arm rewrites the whole goal sentence. Part of the specificity
+# contrast is therefore prompt length and topic, not the trap.
 [data]
 dataset = "goal_affordance_traps_v1"
 conditions = ["hostile"]
 train_frac = 0.6
 split_seed = 0
+graph_frac = 0.75        # of the 35-item discovery split: 23 build the graph, 12 score
+graph_seed = 101         # MUST differ from split_seed or the val slice comes out empty
+control_condition = "counterfactual"
 instruction = true
-max_test_items = 12     # each item costs (1 + size + 1 + n_random) margins
+max_test_items = 12      # each item costs (1 + size + 1 + n_random) margins
 
 [module]
 layer = 15
-min_active_cases = 3    # a feature must fire on 3+ discovery items to enter the graph
-max_features = 40       # graph size; pairs grow quadratically
-edge_threshold = 0.5    # Jaccard: fire together on most of the items they fire on
-metric = "jaccard"
+min_active_cases = 3     # a feature must fire on 3+ graph items to enter the graph
+max_features = 40        # graph size; pairs grow quadratically
+
+# activation_corr, not jaccard. Same CSV, same run: correlation spans -0.82..+0.85
+# with a median of +0.04, i.e. it still discriminates where co-firing is constant.
+#
+# 0.55 is a PREFERENCE inside a band the data does not resolve, and this comment used
+# to claim otherwise. The old justification was that the count of pairs at r <= -t
+# estimates the false positives among the pairs at r >= +t, and that the resulting
+# ratio "bottoms out at 0.55". Both halves are wrong:
+#
+#   * the ratio is not a false-discovery rate. 21 of 780 pairs sit at r <= -0.55,
+#     while an iid-noise floor at n = 35 expects 0.24 (Monte Carlo, 400k draws,
+#     P(r >= 0.55) = 3.1e-4). The negative tail is ~90x too heavy to be noise, so it
+#     is measuring real anti-correlation and dividing by it estimates nothing. The
+#     artifact key is now `negative_tail_ratio`, which is what it always was.
+#   * the "minimum" is not resolvable. The swept curve is 0.505, 0.388, 0.396, 0.372,
+#     0.344, 0.419, 0.367, 0.500 -- non-monotone, and the three low points are
+#     0.344 +/- 0.075 (t=0.55), 0.372 +/- 0.066 (0.50) and 0.367 +/- 0.111 (0.65).
+#     Nothing separates them. And 0.50, 0.55, 0.60 and 0.65 ALL yield exactly three
+#     components inside min_size..max_size ([21,6,4,3], [19,4,3,2], [18,3,2,2],
+#     [17,3,2,2]), so the module count does not separate them either. The old comment
+#     named only 0.50 as "the nearest alternative"; there are three.
+#
+# So: 0.55 keeps 61 of 780 pairs and gives candidates [4,3,2], and it is kept because
+# it is what the previous config carried, not because it won a test. The column that
+# can settle this is `permutation_p`, which is computed from this run's own
+# activation matrix (see permutation_null_draws) -- shuffle each feature across items,
+# keep its marginal, destroy only the cross-feature alignment, and count surviving
+# edges. The next run should set edge_threshold from that at a stated level.
+metric = "activation_corr"
+edge_threshold = 0.55
+sweep_thresholds = [0.30, 0.40, 0.45, 0.50, 0.55, 0.60, 0.65, 0.70]
+
+# The real null for "these features do not coactivate", attached to every row of the
+# sweep. Cheap (two matmuls per draw on a 23 x 40 matrix), and it would have told the
+# crashed run what was wrong before it crashed: when every feature fires on every
+# item, a column permutation cannot change who fires where, so the Jaccard null
+# returns the complete graph too and permutation_p comes back at 1.0. 0 disables it
+# and leaves the permutation_* fields null, i.e. "not measured".
+permutation_null_draws = 500
+
+# 1.0 = keep the always-on features. Deliberate: on a hostile-only discovery split
+# "fires on every item" is what a real affordance mediator should look like, so
+# excluding those 25 features would delete the best candidates and keep the noise.
+#
+# It does not make them harmless. Their hostile-vs-control selectivity is tested in
+# exactly one term (specificity, 1.5 of 5.0), while hostile_frequency is a firing
+# count and generalization multiplies by a co-firing rate -- and frequency is also
+# what put these features in the graph, since sparse_activation_matrix keeps the top
+# max_features sorted by firing count. A feature firing on 60% of hostile items and
+# 0% of controls cannot become eligible at all. hostile_frequency is down-weighted to
+# 0.5 below in response; the rest is an upstream limit this file cannot reach.
+# Set to ~0.95 only to run the opposite arm on purpose.
+max_active_frac = 1.0
+
 min_size = 2
 max_size = 8
-max_modules = 2         # test the two largest components
-random_modules = 8      # frequency- and norm-matched module nulls
+max_modules = 2          # intervene on the two best-SCORING modules, not the largest
+
+# Candidate scoring costs (n_val + n_control) activation passes plus
+# score_probe_items x n_union ablated margin pairs -- around 100 forwards at these
+# settings, against a session that has already paid to load a 27B.
+max_score_candidates = 6
+score_probe_items = 4
+causal_scale = 0.2       # nats; the mean held-out single-feature margin delta already
+                         # measured at this layer (study_affordance_27b, n=25, +0.195)
+
+# false: record "no module found" and exit 0 rather than dying with the model still
+# resident. That now covers every pre-intervention exit -- no features cleared
+# min_active_cases, fewer than two survived max_active_frac, or nothing grouped --
+# and any other exception stamps `status: failed` with a reason instead of leaving
+# the manifest reading `running`. The graph CSV, the threshold sweep, an empty
+# feature_modules.json in the SAME shape as a successful one, and ARTIFACT_DIR on
+# stdout are written on all of those paths, plus NO_MODULE_FOUND for the three
+# recorded ones.
+fail_on_empty = false
+
+random_modules = 8       # frequency- and norm-matched module nulls
 seed = 0
+
+# Weighted geometric mean, so a module that is huge on one axis and dead on another
+# cannot win. Causal and specificity are up-weighted because they are the two things
+# the single-feature arm never had. Both 0.5s are discounted for the same reason:
+# they restate the selection that produced the candidate. coherence is what built the
+# module; hostile_frequency is what put its members in the graph.
+#
+# Unknown keys and negative weights are now rejected before the model loads -- a
+# `casual = 3.0` typo used to run to completion on the default 1.5.
+#
+# Note what this weighting does NOT buy: `causal` is measured from real single-feature
+# margin deltas on the val slice, so the intervened module is chosen partly for its
+# causal strength, while the random_module nulls are matched on size, firing frequency
+# and removed norm only. joint_minus_random is therefore a norm-matched contrast, not
+# a selection-corrected test. module_summary.json says so in random_module_null.
+[module.score_weights]
+hostile_frequency = 0.5
+generalization = 1.0
+causal = 1.5
+specificity = 1.5
+coherence = 0.5
 
 [colab]
 gpu = "G4"

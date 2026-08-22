@@ -83,6 +83,22 @@ lure_logprob_delta    = ablated_lure_logprob    - baseline_lure_logprob
 | `lure_logprob_delta` | `< 0` | 제거 후 함정 logprob **하락** → feature가 함정 답을 끌어올리고 있었음 |
 | `lure_logprob_delta` | `> 0` | 제거 후 함정 logprob **상승** → feature가 함정 답을 억눌렀음 |
 
+> ⚠️ **부호 방향이 `margin_delta`와 반대입니다.** 이건 실수가 아니라 규약입니다.
+>
+> ```
+> margin_delta          = baseline - ablated
+> correct_logprob_delta = ablated  - baseline
+> lure_logprob_delta    = ablated  - baseline
+> ```
+>
+> 함정을 밀어올리던 feature를 지우면 **`margin_delta > 0`, `correct > 0`, `lure < 0`** 이 됩니다.
+> 세 개가 한 세트로 이 패턴이어야 합니다.
+>
+> 실제로 이 규약이 한 번 어긋난 적이 있습니다 — `feature_modules` / `multisite_ablation` /
+> `cross_layer_siblings`가 logprob delta를 `baseline - ablated`로 쓰고 있었습니다. **같은 컬럼 이름,
+> 반대 부호**라 이 표대로 읽으면 정확히 거꾸로 된 결론이 나옵니다. 지금은 세 job 모두 수정됐고
+> `tests/test_delta_conventions.py`가 규약을 고정합니다. 새 job을 만들면 그 테스트에 등록하세요.
+
 ---
 
 ### cue_effect
@@ -121,6 +137,18 @@ n이 25 내외이고 per-item 분포가 heavy-tailed이므로 정규 가정에 �
 - **sign-flip randomization** — 짝지은 per-item 통계의 평균에 대한 정확 검정
 - **bootstrap CI** — 백분위수법, 시드 고정
 - **empirical percentile** — null 대비 순위
+
+정본 구현은 `src/mindscopex_analysis/stats.py`(`sign_flip_p`, `bootstrap_ci`, `paired_summary`)입니다.
+
+> **p값은 `(b+1)/(draws+1)`로 계산합니다.** draw는 전수가 아니라 표본이므로 `b/draws`는 어떤 draw도
+> 관측에 못 미치면 **정확히 0.0**을 냅니다. n=25에서 실제 p가 1e-8인데 draw가 2만 개면 일상적으로
+> 벌어지는 일이고, randomization test가 뒷받침할 수 없는 주장입니다. 하한 `1/(draws+1)`이 이 검정의
+> 실제 분해능입니다.
+
+> **p값 하나로 판단하지 마세요.** sign-flip은 **한 항목이 지배하는 경우에 강건하지 않습니다** —
+> 작은 값 24개가 같은 부호이고 큰 값 1개가 붙으면 부호 패턴 자체가 희귀해서 p가 아주 작게 나옵니다.
+> 이걸 잡아내는 건 **bootstrap CI 폭**입니다(재표집이 그 한 항목을 떨어뜨리므로 CI가 벌어짐).
+> 그래서 `paired_summary`가 p·CI·`n_positive`를 한 줄로 함께 냅니다.
 
 ### combined_score (sibling 순위)
 
@@ -234,6 +262,7 @@ A를 지운 forward에서 B의 **활동값 자체**를 다시 읽어 `b_after �
 | `src/mindscopex_analysis/effects.py` | `AnswerMargin`, `FeatureAblationResult`, `EditSite`, `rank_lure_feature_effects()` |
 | `src/mindscopex_analysis/nulls.py` | percentile·selection 보정·peer null |
 | `src/mindscopex_analysis/modules.py` | coactivation 모듈과 모듈 null |
+| `src/mindscopex_analysis/stats.py` | sign-flip 검정·bootstrap CI·`paired_summary` (모든 p값의 정본) |
 | `src/mindscopex_analysis/siblings.py` | sibling 점수·순위·difference-in-differences |
 | `src/mindscopex_analysis/trajectory.py` | 샘플링 위치와 phase 라벨 |
 | `docs/study_design.md` | claim level과 각 실험이 지지하는 주장 |

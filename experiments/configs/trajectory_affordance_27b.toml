@@ -30,10 +30,19 @@ instruction = true
 max_items = 10          # each item is generated twice and read once per trace
 
 [trajectory]
-phases = 5              # prompt_last + 5 reasoning quantiles + pre_answer
+# 5 reasoning quantiles, plus cue and prompt_last; see trajectory_affordance_2b.toml
+# for why pre_answer is a labelled repeat in the thinking arm and absent in the other.
+phases = 5
 max_new_tokens = 512
 thinking_modes = [false, true]
 seed = 42               # greedy decoding, so this only pins the fallback RNG
+# Two extra forwards per *distinct* sampled position (one per answer string). At 27B
+# that is the expensive half of the job, so drop it to false if the run has to fit a
+# short session: reasoning_drift and drift_difference are computed from activations
+# alone and survive it. What is lost is the readout side -- margin_means and
+# activation_margin_pearson are then not emitted at all, and summary.not_measured says
+# so -- meaning the run cannot show whether the answer moved as the activation moved.
+measure_margin = true
 
 [colab]
 gpu = "G4"

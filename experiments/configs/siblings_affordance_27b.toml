@@ -1,10 +1,19 @@
 # Phase F: multisite_ablation transplants one direction to neighbouring layers, which
 # is a fair diagnostic but is NOT "the feature at that layer" -- each layer has its own
 # SAE and its own numbering. This job identifies the actual counterpart first (decoder
-# cosine AND same-item firing AND same-item effect, so a geometric coincidence cannot
-# win alone), then co-ablates the pair against a norm-matched random pair and reports
-# the difference-in-differences. That is the only way to tell a genuine cross-layer
-# circuit from the superadditivity you get for free by removing more norm.
+# cosine AND same-item firing AND same-item effect AND same-item hostile-vs-control
+# specificity, so a geometric coincidence cannot win alone), then co-ablates the pair
+# against a norm-matched random pair and reports the difference-in-differences. That is
+# the only way to tell a genuine cross-layer circuit from the superadditivity you get
+# for free by removing more norm.
+#
+# The fourth signal is a CORRELATION between two hostile-minus-control gap vectors, so it
+# says the two features move the gap together, not which way. Its direction comes from
+# the levels, which the job gates on: a candidate is only scored on four signals when its
+# own hostile arm (`mean_effect`) and its own gap (`mean_specificity`) are both positive,
+# and when the source's are too. Every rejected candidate still appears in
+# cross_layer_siblings.csv with an empty combined_score and the verdict that rejected it,
+# and both levels are published next to the correlation in coablation_summary.json.
 [run]
 name = "siblings_affordance_27b"
 job = "cross_layer_siblings"
@@ -23,18 +32,69 @@ sae_dtype = "auto"
 [data]
 dataset = "goal_affordance_traps_v1"
 conditions = ["hostile"]
+# The no-cue twin of each hostile item: same scenario, cue removed, same answer
+# mapping. It is deliberately NOT listed in `conditions` -- that would make neutral
+# prompts first-class match/test items and the co-ablation would then run on prompts
+# with no trap in them. It is a second measurement of the same item, paired by scenario
+# exactly as research_experiments._pair_with_controls pairs them, and it is what makes
+# the specificity signal (hostile effect minus control effect) computable at all.
+# It is opt-in: `control_condition` defaults to "" (the fourth signal dropped, and the
+# job says so loudly in its log), because `_neutral` twins exist in only three datasets
+# in src/mindscopex_analysis/data/ -- v1, v2 and v2_micro -- so a "neutral" default would
+# hard-fail every other multi-condition config before the model even loads.
+# Do not set it to "counterfactual": that twin swaps correct and lure, so differencing
+# against it adds the two magnitudes instead of cancelling the shared baseline.
+control_condition = "neutral"
 train_frac = 0.6
 split_seed = 0
 instruction = true
-max_match_items = 12    # items used to measure firing/effect correlation
+max_match_items = 12    # items used to measure firing/effect/specificity correlation
 max_test_items = 12     # held-out items for the co-ablation itself
 
 [match]
 # 27B scan layers are 15/31/47/63; L31 is the next one with a real SAE, so the
 # sibling search runs there rather than at a transplanted neighbour.
 layers = [31]
-candidate_top_n = 20    # decoder-cosine shortlist before the expensive effect pass
+#
+# Forward-pass budget. One residual capture = 1 forward; one margin = 2, because the
+# correct and lure continuations are scored in separate passes. With M = max_match_items,
+# T = max_test_items, C = candidate_top_n, L = len(layers), D = random_draws and
+# n_conditions = 2 (hostile + its neutral twin):
+#
+#   source profile   M * (2 captures + 2 baselines*2 + 2 ablations*2)  = 10*M        =  120
+#   candidate match  L * (M*n_conditions + M*C*n_conditions*2)         = L*(2M+4CM)  =  600
+#   co-ablation      L * T * (2 captures + baseline*2 + 3 real*2
+#                             + 3D random*2 + 1 repair trace)          = L*T*(11+6D) =  564
+#                                                                        total       = 1284
+#
+# candidate_top_n was 20 while only three signals existed. The control condition doubles
+# the M*C term -- items x candidates x conditions -- so keeping 20 would cost 1668
+# forwards, +50% over the 1116 the three-signal version used, on a 27B model held on one
+# GPU. 12 buys the entire fourth signal for +15% instead. What that trades away is depth
+# in a shortlist that is *only* ordered by decoder cosine: a candidate entering at rank
+# 13-20 is by construction a weak-cosine candidate, so it could only win on the other
+# three signals -- and this job exists precisely because cosine rank is not the evidence
+# it looks like, in either direction. Depth 20 is a guess; the fourth signal is required
+# by the work order, so the budget goes to the signal. This is NOT the depth the discovery
+# job shortlists at: both 27B discovery configs set candidate_top_n = 10
+# (study_affordance_27b.toml, cue_affordance_27b.toml). 12 is research_experiments.py's
+# code default, which neither of them takes.
+candidate_top_n = 12
+#
+# min_score is compared against a geometric MEAN, which is scale-comparable across three
+# and four terms -- four terms of 0.6 and three terms of 0.6 both score 0.6 -- so 0.05
+# needs no rescaling for the fourth signal, and the fallback is what keeps it safe. The
+# real hazard was never the threshold: `sibling_score_with_specificity` returns exactly
+# 0.0 on any non-positive specificity correlation, and the 12 candidates are the
+# cosine-nearest neighbours of ONE direction, so their gap vectors are near-duplicates --
+# effectively one draw. At a true correlation near zero that draw lands negative about
+# half the time and every candidate would score 0.0, which under the four-signal rule
+# alone would end the run with no co-ablation, no DiD and no repair measurement after the
+# match phase had been paid for. The job now falls back to the three-signal ranking in
+# that case and stamps selection_rule / specificity_signal_used on the artifact, so a
+# noisy fourth signal degrades the claim instead of cancelling the experiment.
 min_score = 0.05        # below this, report "no sibling found" rather than a poor one
+specificity_weight = 1.0  # weight of the 4th signal in the geometric mean (3 others = 1.0 each)
 random_draws = 6        # norm-matched random pairs for the DiD baseline
 seed = 0
 

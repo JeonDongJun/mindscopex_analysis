@@ -6,6 +6,22 @@
 # *format*? A cue feature fires on hostile and not on neutral, survives paraphrase,
 # and does not simply read answer length. A template feature fails all three while
 # still passing an ablation test.
+#
+# On this dataset exactly one of the five criteria comes back `tested`, and the job
+# says so in `acceptance` rather than printing a number under a name it has not earned:
+#   * F1 lexical injection  NOT tested -- no lexical-only arm exists anywhere in the
+#     repo, and the stand-in below is under the overlap bar on v1.
+#   * F2 template control   proxy -- the only trap-free arm on this answer template
+#     comes from a different TASK, so it is capped there whatever it measures.
+#   * F3 paraphrase         NOT tested -- no scenario here has a second wording.
+#   * F4 matched control    proxy -- the neutral arm DELETES the cue sentence instead of
+#     replacing it, so it is not length-matched.
+#   * F5 error audit        tested only while the discovery threshold is above zero; a
+#     feature that is silent on a quarter of the positive arm drives the 25th percentile
+#     to 0.0 and the criterion self-downgrades to proxy.
+# Every published contrast (neutral, counterfactual, reference_control, reference_lure)
+# carries its own token means, length-matched subset and caveat, because all four are
+# confounded with prompt length and they are not confounded in the same direction.
 [run]
 name = "falsify_affordance_27b"
 job = "feature_falsification"
@@ -27,8 +43,18 @@ dataset = "goal_affordance_traps_v1"
 conditions = ["hostile", "explicit", "neutral", "counterfactual"]
 positive_condition = "hostile"      # feature is claimed to fire here
 negative_condition = "neutral"      # ...and not here; the discriminating pair
+# Chosen for STRUCTURE, not for lexical overlap: it is the only arm that keeps the cue
+# sentence verbatim while changing the goal, so the words stay and the lure relation
+# goes. It is NOT the most lexically matched arm, and the job's own
+# per_condition_lexical_overlap says so: counterfactual 0.57 against explicit 0.79 and
+# neutral 0.76 on v1. That is below min_lexical_overlap, so v1 reports F1 as not_tested
+# rather than as a proxy -- see acceptance.F1 in the artifact.
+lexical_condition = "counterfactual"
 train_frac = 0.6
 split_seed = 0
+# Split on the scenario, not the case: hostile_X and neutral_X belong to the same
+# scenario, and a case_id split puts one in discovery and the other in held-out.
+split_unit = "pair_id"
 instruction = true
 
 [reference]
@@ -36,6 +62,34 @@ instruction = true
 # "fires on the affordance cue".
 dataset = "hagendorff_crt"
 limit_per_family = 10
+# Score the matched *control* rewrites too. They are the only trap-free arm that shares
+# this answer template -- but they are a different TASK, so F2 is capped at `proxy` no
+# matter how many control rows ship: "quiet on CRT controls" is not the same claim as
+# "does not read this template", and on v1 hostile runs +26 words longer than they do.
+# hagendorff_crt's hostile items are themselves lure items, so equal activation there is
+# transfer, reported separately as crt_lure_transfer.
+use_matched_control = true
+
+[audit]
+# Criteria that must be genuinely tested or the run aborts before the model loads.
+# Left empty on purpose: on this dataset only F5 can reach `tested` (F1/F3 have no arm,
+# F2 is capped at proxy because the arm is a different task, F4 is not length-matched),
+# and the point of this run is to publish that fact, not to refuse to run. Set e.g.
+# strict_arms = ["F3_paraphrase_invariance"] once a paraphrase arm is built.
+strict_arms = []
+min_lexical_overlap = 0.80        # below this the F1 proxy is not even a proxy
+max_length_gap_words = 2.0        # above this the F4 match is declared incomplete
+length_caliper_tokens = 4         # hostile/neutral pairing tolerance, in tokens
+# Rank among the kept TopK, per case. Setting this false does NOT publish "outside the
+# TopK": in_topk and condition_in_topk_rate come back null, and the artifact says NOT
+# TESTED. Costs one extra encoder matmul next to a full forward.
+record_topk_rank = true
+margin_for_errors = true          # answer margin on every FP/FN case (2 forwards each)
+margin_for_all_cases = false      # 480 extra forwards on the 27B; off by default
+# Truncation is round-robin over family, not case_id order -- case_ids are
+# family-prefixed, so alphabetical truncation would measure whole families and skip the
+# rest. summary.margin_families_measured records what the cap actually covered.
+margin_limit = 80
 
 [colab]
 gpu = "G4"

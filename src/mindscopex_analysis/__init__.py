@@ -153,6 +153,12 @@ _MODULE_EXPORTS = {
         "rank_siblings",
         "sibling_score",
     ),
+    "stats": (
+        "bootstrap_ci",
+        "mean_or_none",
+        "paired_summary",
+        "sign_flip_p",
+    ),
     "trajectory": (
         "TokenPhase",
         "cue_span",

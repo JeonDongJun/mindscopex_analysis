@@ -12,6 +12,15 @@ name = "trajectory_affordance_2b"
 job = "reasoning_trajectory"
 
 [feature]
+# ⚠️ RUN 2B DISCOVERY AT HEAD BEFORE SPENDING A SESSION ON THIS.
+# #2144 was selected on 2026-08-09 (run 20260809-182535, commit 88f3714) by a ranking
+# that scored candidates with the RAW PRE-ACTIVATION -- the P0-1 bug (fixed in b61668e).
+# For a feature inside TopK the two values coincide, which is why the 27B winner's
+# artifacts are bit-identical across that commit; at 2B there is no post-P0-1 run to
+# check against, so #2144's selection has never been reproduced. A selection change is
+# the one class that cannot be repaired offline, and pointing a trajectory run at the
+# wrong feature wastes the session AND produces a plausible-looking trajectory for a
+# feature nothing else in the study is about.
 feature_id = 2144
 layer = 17
 
@@ -31,10 +40,21 @@ instruction = true
 max_items = 10          # each item is generated twice and read once per trace
 
 [trajectory]
-phases = 5              # prompt_last + 5 reasoning quantiles + pre_answer
+# 5 reasoning quantiles, plus cue and prompt_last. The thinking arm also gets a
+# pre_answer row, on the </think> token -- which is the token reasoning_100 already
+# lands on, so it is a labelled repeat, not an eighth position. The no-thinking arm
+# gets none: with no </think> the answer starts at the first generated token, so its
+# answer position IS prompt_last, and that read is identical in both arms. Both arms
+# therefore sample 7 distinct positions per trace.
+phases = 5
 max_new_tokens = 512
 thinking_modes = [false, true]
 seed = 42               # greedy decoding, so this only pins the fallback RNG
+# The readout at every sampled position, so the CSV can say whether the answer moved
+# as the activation moved instead of leaving that to a second run. Two forwards per
+# *distinct* position (one per answer string) -- roughly 7 x 20 x 2 here, over
+# prompt-length sequences. Set false when only the activation trajectory is wanted.
+measure_margin = true
 
 [colab]
 gpu = "G4"
