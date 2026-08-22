@@ -85,13 +85,56 @@ lure_logprob_delta    = ablated_lure_logprob    - baseline_lure_logprob
 
 ---
 
+### cue_effect
+
+```
+cue_effect = margin_delta(hostile) - margin_delta(neutral)
+```
+
+`hostile`은 단서가 있고 `neutral`은 같은 시나리오에서 단서만 없앤 쌍둥이다(답과 정답은 동일).
+hostile margin에는 *모델의 기저 선호*가 섞여 있으므로, 그것만 흔드는 feature도 `margin_delta`를
+키운다. 차분은 그 공통 성분을 상쇄하고 **단서가 만든 몫만** 남긴다.
+
+> 반드시 `mean_hostile_delta`와 함께 읽는다. 차분은 통제군을 망가뜨려도 커지므로, hostile 팔이
+> 0 이하인데 cue_effect가 양수라면 그것은 통제군 효과이지 함정 효과가 아니다.
+
+### percentile / p (null 대비)
+
+| 컬럼 | 의미 |
+|---|---|
+| `gaussian_percentile` | 같은 norm의 **난수 방향**들 대비 순위 (쉬운 기준) |
+| `peer_feature_percentile` | 같은 자리에서 켜지는 **다른 SAE feature**들 대비 순위 (적절한 기준) |
+| `selection_adjusted_p` | 같은 방식으로 뽑은 **best-of-k** 대비 p값 (검색 규모 보정) |
+| `selection_max_mean` / `selection_max_p95` | 그만큼 검색하면 **공짜로 얻는** 점수 |
+
+z-score가 아니라 **경험적 percentile**을 headline으로 쓴다. delta 분포는 heavy-tailed라서
+소수 draw에 가우시안을 맞추면 관측된 적 없는 꼬리를 외삽한다.
+
+> `percentile = 1.0`을 "완벽한 결과"로 읽지 않는다. 부트스트랩 최댓값은 표본 최댓값을 넘을 수
+> 없으므로, 어떤 draw도 관측을 못 이기면 1.0이 **구조적으로** 나온다. 실제 정보는
+> `selection_max_mean`과의 거리다.
+
+### 검정 방법
+
+n이 25 내외이고 per-item 분포가 heavy-tailed이므로 정규 가정에 의존하지 않는다.
+
+- **sign-flip randomization** — 짝지은 per-item 통계의 평균에 대한 정확 검정
+- **bootstrap CI** — 백분위수법, 시드 고정
+- **empirical percentile** — null 대비 순위
+
 ## 결과 읽기 순서
 
 1. **`margin_delta` 부호** 확인 — 양수여야 lure 기여 feature
 2. **`margin_delta` 크기** 확인 — `|baseline_margin|` 대비 얼마나 큰가?
 3. **`lure_logprob_delta < 0`** 확인 — 함정 답 자체의 logprob이 내려갔는가?
 4. **`correct_logprob_delta > 0`** 확인 — 정답 logprob이 올라갔는가?
-5. 3·4 둘 다 충족하는 feature → **함정 메커니즘 핵심 후보**
+5. 3·4 둘 다 충족 → **lure-sensitive 후보** (여기까지는 claim level 1~2)
+6. **null 통과 확인** — `peer_feature_percentile`과 `selection_adjusted_p`
+7. **held-out 재현 확인** — 신뢰구간이 0을 제외하는가 (claim level 3)
+8. **특이성 확인** — `cue_effect`, counterfactual 부호 뒤집힘 (claim level 4)
+
+> 1~5만 보고 "함정 메커니즘"이라 부르지 않는다. 단계별 허용 표현은
+> [study_design.md](study_design.md) §6을 따른다.
 
 ---
 
@@ -104,6 +147,16 @@ lure_logprob_delta    = ablated_lure_logprob    - baseline_lure_logprob
   `"10 cents"`는 `"5 cents"`보다 토큰이 많아 단순 logprob 합산이 불리합니다.  
   길이 효과를 제거하려면 `mean_margin_delta`를 참고하세요.
 
+- **답이 문장이면 길이 교란이 실제로 큽니다.**
+  `goal_affordance_traps`처럼 답이 행동 문구인 세트에서는 길이와 margin의 상관이 r=-0.56
+  (분산의 31%)까지 갑니다. **현상 크기**를 보고할 때는 반드시 이 교란을 언급하세요.
+  다만 **개입 효과(delta)** 는 같은 답 문자열끼리의 차분이라 길이가 상쇄됩니다.
+
+- **SAE 활성은 pre-activation이 아닙니다.**
+  Qwen-Scope는 TopK SAE라 TopK 밖 feature의 실제 기여는 0입니다. 개입 스케일에는
+  `qwen_scope_sparse_feature_values()`를 쓰고, `qwen_scope_feature_preactivations()`는
+  진단용으로만 쓰세요.
+
 - **baseline_margin은 모든 feature에 동일합니다.**  
   개입 없이 측정한 단일 값이므로 feature별로 달라지지 않습니다.
 
@@ -113,7 +166,10 @@ lure_logprob_delta    = ablated_lure_logprob    - baseline_lure_logprob
 
 | 파일 | 내용 |
 |------|------|
-| `src/mindscopex_analysis/effects.py` | `AnswerMargin`, `FeatureAblationResult`, `rank_lure_feature_effects()` 정의 |
+| `src/mindscopex_analysis/effects.py` | `AnswerMargin`, `FeatureAblationResult`, `EditSite`, `rank_lure_feature_effects()` |
+| `src/mindscopex_analysis/nulls.py` | percentile·selection 보정·peer null |
+| `src/mindscopex_analysis/modules.py` | coactivation 모듈과 모듈 null |
+| `docs/study_design.md` | claim level과 각 실험이 지지하는 주장 |
 | `notebooks/02_bat_ball_lure_feature_ablation.ipynb` | bat-and-ball 실험 전체 흐름 |
 | `outputs/` | Colab runtime에서 생성되는 JSON, Markdown, feature handle (git 미추적) |
 | `results/` | Colab CLI로 로컬에 회수한 output notebook, log, archive (git 미추적) |

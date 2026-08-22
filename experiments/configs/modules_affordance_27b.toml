@@ -1,0 +1,41 @@
+# Phase D: does a coactivating SET of features mediate the affordance lure where no
+# single feature did? Layer 15 is where every single-feature winner has landed, so
+# the module search starts there. Held-out items only for the interventions.
+[run]
+name = "modules_affordance_27b"
+job = "feature_modules"
+
+[model]
+profile = "27b"
+dtype = "auto"
+device_map = "auto"
+sae_device = "cpu"
+sae_dtype = "auto"
+
+[data]
+dataset = "goal_affordance_traps_v1"
+conditions = ["hostile"]
+train_frac = 0.6
+split_seed = 0
+instruction = true
+max_test_items = 12     # each item costs (1 + size + 1 + n_random) margins
+
+[module]
+layer = 15
+min_active_cases = 3    # a feature must fire on 3+ discovery items to enter the graph
+max_features = 40       # graph size; pairs grow quadratically
+edge_threshold = 0.5    # Jaccard: fire together on most of the items they fire on
+metric = "jaccard"
+min_size = 2
+max_size = 8
+max_modules = 2         # test the two largest components
+random_modules = 8      # frequency- and norm-matched module nulls
+seed = 0
+
+[colab]
+gpu = "G4"
+
+[remote]
+source = "archive"
+repo_dir = "/content/mindscopex_analysis"
+output_root = "/content/mindscopex_artifacts"

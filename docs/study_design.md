@@ -11,12 +11,14 @@
 기존 파이프라인(bat-and-ball 한 문항에서 `margin_delta` 최대 feature를 고르고 그 값을 효과로
 보고)에는 네 가지 구멍이 있다. 통제 연구는 각각을 정면으로 막는다.
 
-| 약점 | 문제 | 보강 |
+| 약점 | 문제 | 보강 (구현됨) |
 |------|------|------|
-| **순환성(selection-on-outcome)** | top-N에서 최댓값을 고르면 항상 뭔가 나온다 | 현재 null z는 진단값; 확인 실험은 **selection-adjusted max null** |
-| **logprob ≠ 행동** | 2개 고정 문자열 margin은 "정답 회복" 주장을 직접 못 함 | **free-generation 정답률** readout |
+| **순환성(selection-on-outcome)** | top-N에서 최댓값을 고르면 항상 뭔가 나온다 | **peer-feature null + selection-adjusted best-of-k** (`nulls.py`) |
+| **logprob ≠ 행동** | 2개 고정 문자열 margin은 "정답 회복" 주장을 직접 못 함 | constrained **correct-vs-lure 생성** readout |
 | **n=1 발견** | 한 문항 발견을 4문항에 적용 | **train/test 분할**, train에서만 발견·계수 선택 |
-| **control 미활용** | 특이성의 최강 증거가 각주 | **matched-control** hostile vs control 대조를 headline으로 |
+| **control 미활용** | 특이성의 최강 증거가 각주 | **cue effect**를 목적함수로 승격 (§3.5) |
+| **SAE 활성 오독** | TopK 밖 feature를 pre-activation으로 ablation | **sparse activation** 사용 (`qwen_scope_sparse_feature_values`) |
+| **단일 레이어·단일 feature** | 최신 MI 기준에서 가장 약한 인과 주장 | **multi-site ablation**과 **coactivation module** 경로 추가 |
 
 ## 2. 데이터 (docs/datasets.md 원칙 4·2·3)
 
@@ -92,6 +94,70 @@
 - **해석.** `mean_specificity_gap`(= hostile − control)이 크게 양수면 특이성 충족. gap이 ≈0이면
   feature는 lure가 아니라 문제 형식 전반에 반응하는 것.
 
+### E5 `condition_specificity` — 단서 특이성 (multi-condition 세트)
+
+`goal_affordance_traps`처럼 matched `control_prompt`가 없고 조건이 case_id 접미사로 인코딩된
+세트용. 같은 시나리오의 세 쌍둥이에 같은 개입을 적용한다.
+
+- `hostile` (단서 있음) vs `neutral` (답·정답 동일, 단서만 제거) → **cue effect** = 두 delta의 차
+- `counterfactual` (목표를 바꿔 correct/lure 스왑) → 진짜 단서 feature라면 **부호가 뒤집혀야** 함
+
+> **주의.** `counterfactual`은 답 매핑이 뒤바뀌므로 **discovery control로 쓰면 안 된다**.
+> 차분이 상쇄가 아니라 합산이 되어 검증이 순환한다. `_pair_with_controls`가 답 매핑이
+> 다른 쌍둥이를 거부한다.
+
+## 3.5 Discovery 목적함수 — hostile margin vs cue effect
+
+`[discover].objective`로 고른다.
+
+| 값 | 순위 기준 | 언제 |
+|---|---|---|
+| `hostile_margin` (기본) | `baseline − ablated` (hostile) | matched control이 없는 세트 |
+| `cue_effect` | `delta(hostile) − delta(neutral)` | 조건 쌍둥이가 있는 세트 |
+
+**왜 필요한가.** hostile margin은 *모델의 기저 선호* + *단서가 밀어올린 양*이다. 전자를 흔들기만
+하는 feature도 똑같이 높은 점수를 받으므로, 특이성 게이트가 구조적으로 실패한다. 차분을 순위
+기준으로 삼으면 게이트가 곧 목적함수가 된다.
+
+**두 개의 안전장치**(둘 다 실제 실패에서 유래했다):
+
+1. **부호 게이트.** 차분은 통제군을 망가뜨려도 최대화된다. hostile 팔이 claimed 방향으로
+   움직이는 후보만 경쟁한다. 없으면 실행이 실패한다 — 통제군이 만든 cue effect는 증거가 아니다.
+2. **강한 null 필수.** 값싼 per-layer 스크린은 여전히 raw hostile margin을 채점하므로,
+   `objective="cue_effect"`는 `[null].selection_adjusted=true`를 요구한다. 아니면 winner가
+   이 목적함수가 대체하려던 바로 그 통계로 뽑힌다.
+
+## 3.6 Null 모델 — 무엇과 비교하는가
+
+`margin_delta`는 단독으로 의미가 없다. "**무엇을 대신 지웠을 때보다** 큰가"가 질문이다.
+`src/mindscopex_analysis/nulls.py`가 세 층위를 제공한다.
+
+| null | 방향의 출처 | 답하는 질문 | 난이도 |
+|---|---|---|---|
+| Gaussian | 등방 난수, norm 매칭 | "같은 길이 아무 벡터보다 나은가" | 매우 쉬움 |
+| **peer feature** | **같은 자리에서 함께 켜지는 다른 feature의 decoder** | "여기서 켜지는 실제 feature보다 나은가" | 적절 |
+| **selection-adjusted** | 위 분포에서 **best-of-k**를 부트스트랩 | "같은 방식으로 뽑은 챔피언보다 나은가" | 정확 |
+
+고차원에서 등방 난수는 어떤 의미 방향과도 거의 직교하므로(기대 |cos| ≈ √(2/πd)), Gaussian을
+이기는 것은 정보량이 적다. **headline 통계는 z가 아니라 경험적 percentile**을 쓴다 — 이 delta
+분포는 heavy-tailed라 소수 draw에 가우시안을 맞추면 관측된 적 없는 꼬리를 외삽한다.
+
+> **percentile 1.0의 함정.** 부트스트랩 최댓값은 표본 최댓값을 넘을 수 없으므로, 어떤 draw도
+> 관측을 못 이기면 percentile은 **구조적으로 1.0**이다. 정보는 `selection_max_mean` /
+> `selection_max_p95`(그만큼 검색하면 공짜로 얻는 점수)에 있다.
+
+## 3.7 단일 feature를 넘어서
+
+| job | 질문 |
+|---|---|
+| `feature_diagnostics` | 이 feature가 positional/dense/token-identity **artifact인가?** |
+| `multisite_ablation` | 단일 레이어가 효과를 **과소평가**하는가? (인접 레이어 윈도우 + self-repair) |
+| `feature_modules` | 단일 feature가 아니라 **coactivating 집합**이 매개하는가? |
+
+`feature_modules`의 두 함정 회피: 모듈은 단일 feature보다 **필연적으로 더 많은 norm을 제거**하므로
+null도 **모듈**이어야 한다(같은 크기·발화빈도·제거 norm). 그리고 모든 margin을 correct/lure
+logprob으로 분해해 "함정 억제"와 "모델 손상"을 구분한다.
+
 ## 4. 실행
 
 사전 준비는 [colab_cli_workflow.md](colab_cli_workflow.md)와 동일하다.
@@ -141,12 +207,51 @@ figure는 초안이므로 아래 통제 연구 산출로 교체하면 훨씬 강
 `paper/_analysis.py`의 placeholder)은 그대로 두어도 빌드되지만, 논문 headline은 위 통제 산출로
 교체하길 권한다.
 
-## 6. 관련 파일
+## 6. Claim level — 각 실험이 무엇을 지지하는가
+
+주장 강도를 네 단계로 구분한다. 근거 없이 상위 단계 표현을 쓰지 않는다.
+
+| Level | 주장 | 필요한 증거 | 지지하는 실험 |
+|---|---|---|---|
+| **1** Activation association | feature가 lure 조건과 연관됨 | 활성 빈도·상관 | `discover` |
+| **2** Generalizing representation | held-out lure 문항으로 일반화되고 falsification을 통과 | held-out 재현 + artifact 배제 | `causal_heldout`, `feature_diagnostics` |
+| **3** Causal feature | 개입이 held-out lure 선호를 바꿈 | held-out CI가 0 제외 | `causal_heldout` + peer/selection null |
+| **4** Lure mechanism/module | lexical·template 통제, counterfactual 부호 뒤집힘, cross-layer, 행동 지표까지 통과 | 전 게이트 | 전체 |
+
+**허용 표현**: `lure-associated` → `lure-sensitive` → `causally lure-supporting` → `lure-related module`.
+**금지**: "the reasoning feature", "the model's intuition neuron", "the feature responsible for reasoning".
+
+### 현재 도달 수준 (2026-08, goal_affordance_traps_v1 · 27B)
+
+| Level | 상태 |
+|---|---|
+| 1 | ✅ |
+| 2 | ⚠️ 부분 — token-identity는 배제됐지만 **positional 성분이 큼**(무관 과제에서도 92% 세기로 발화) |
+| 3 | ❌ — held-out cue effect가 **0과 구별 안 됨** (최선 +0.092, p=.295, 양수 14/25) |
+| 4 | ❌ — 단서 특이성 실패 |
+
+**요약**: 27B L15에서 goal-affordance 단서 효과(≈5.28 nat)의 유의미한 몫을 설명하는 **단일 SAE
+feature는 없다**. 최선 추정치도 2% 미만이고 0과 구별되지 않는다. 목적함수를 cue effect로 바꿔도
+결과는 나아지지 않았고(오히려 통제군이 만든 효과가 뽑혔다), 2B/9B CRT의 결론과 일치한다.
+
+**검정력 한계**: 현재 설계(held-out n=25, per-item sd 0.18~0.43)는 단서의 **1.4~3.4% 이상만**
+탐지 가능하다. 그 미만을 주장하려면 문항 수를 늘려야 한다.
+
+> 이것은 유효한 연구 결과다. 목표는 lure feature를 찾아내는 것이 아니라, 발견한 표상이 실제
+> 인과 기제인지 artifact인지 **구별할 수 있는 시스템**을 만드는 것이다.
+
+## 7. 관련 파일
 
 | 경로 | 내용 |
 |------|------|
-| `src/mindscopex_analysis/research.py` | 분할·null·일반화 발견·특이성·생성 steering primitive |
-| `tests/test_research.py` | 순수 로직 단위 테스트(분할 결정성·null 통계·block finder) |
+| `src/mindscopex_analysis/research.py` | 분할·일반화 발견(cue effect 포함)·특이성·생성 steering |
+| `src/mindscopex_analysis/nulls.py` | peer-feature null, selection-adjusted best-of-k, null 패널 |
+| `src/mindscopex_analysis/modules.py` | coactivation 그래프·모듈·frequency-matched 모듈 null |
+| `src/mindscopex_analysis/effects.py` | margin, 단일/다중 지점 개입(`EditSite`) |
+| `src/mindscopex_analysis/qwen_scope.py` | SAE 로드, **sparse activation vs pre-activation** |
 | `experiments/jobs/research_experiments.py` | 통제 연구 job(모든 kind) |
-| `experiments/configs/study_*.toml` | 전체/단계별/smoke config |
-| `experiments/suites/study.toml` | 통제 연구 실행 묶음 |
+| `experiments/jobs/feature_diagnostics.py` | degeneracy 진단(위치·logit lens·밀도·null) |
+| `experiments/jobs/multisite_ablation.py` | 다층 윈도우 ablation + self-repair 감사 |
+| `experiments/jobs/feature_modules.py` | coactivation 모듈 발견 + joint ablation |
+| `tests/test_research.py`, `test_nulls.py`, `test_modules.py`, `test_cue_effect.py`, `test_qwen_scope.py` | 모델 없이 도는 순수 로직 테스트 |
+| `experiments/configs/study_*.toml`, `cue_*.toml`, `diag_*.toml`, `modules_*.toml` | 단계별 config |
