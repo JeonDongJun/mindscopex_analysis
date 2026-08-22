@@ -34,6 +34,10 @@ flowchart LR
 | 행동 생성 | `generation.py` | Qwen 응답 생성·분류·retry·요약 |
 | 탐색 workflow | `workflows.py` | notebook 수준의 feature search/sweep/transfer loop |
 | 통제 연구 | `research.py` | split, null, held-out aggregation, specificity, behavioral readout |
+| 귀무 모형 | `nulls.py` | Gaussian/peer 방향, selection-adjusted best-of-k, null 패널 |
+| 집합 개입 | `modules.py` | coactivation 그래프, 모듈, frequency-matched 모듈 null |
+| 궤적 샘플링 | `trajectory.py` | 추론 trace 위 phase 라벨과 cue span (순수 함수) |
+| 교차 레이어 | `siblings.py` | sibling 점수·순위·difference-in-differences (순수 함수) |
 | 배치 실행 | `experiments/jobs`, `experiments/runners` | config 해석, Colab 실행, 산출물 회수 |
 
 ## 의존 방향

@@ -151,12 +151,78 @@
 | job | 질문 |
 |---|---|
 | `feature_diagnostics` | 이 feature가 positional/dense/token-identity **artifact인가?** |
+| `feature_falsification` | 이 feature는 **cue를 읽는가, 형식을 읽는가?** (반증 프로파일) |
 | `multisite_ablation` | 단일 레이어가 효과를 **과소평가**하는가? (인접 레이어 윈도우 + self-repair) |
+| `cross_layer_siblings` | 다른 레이어의 **진짜 대응 feature**를 찾아 공동 ablation하면 달라지는가? |
 | `feature_modules` | 단일 feature가 아니라 **coactivating 집합**이 매개하는가? |
+| `reasoning_trajectory` | 이 표상은 **추론 과정 중** 어떻게 변하는가? (마지막 토큰 밖) |
 
 `feature_modules`의 두 함정 회피: 모듈은 단일 feature보다 **필연적으로 더 많은 norm을 제거**하므로
 null도 **모듈**이어야 한다(같은 크기·발화빈도·제거 norm). 그리고 모든 margin을 correct/lure
 logprob으로 분해해 "함정 억제"와 "모델 손상"을 구분한다.
+
+### `feature_falsification` — 인과 테스트가 못 하는 질문
+
+ablation은 "이 방향을 지우면 margin이 움직이는가"만 답한다. 형식(template)을 읽는 feature도
+그 테스트를 통과할 수 있다. 이 job은 **통과하면 안 되는 조건**을 명시적으로 건다.
+
+| 반증 축 | cue feature라면 | template feature라면 |
+|---|---|---|
+| 조건 프로파일 (hostile vs neutral) | hostile에서만 발화 | 둘 다 동일하게 발화 |
+| paraphrase (`template_id` 교차) | 표현이 바뀌어도 유지 | 템플릿 따라 흔들림 |
+| 다른 과제 (`hagendorff_crt`) | 거의 발화 안 함 | 어디서나 발화 |
+| 답 길이 상관 | 무관 | 길이를 읽고 있음 (v1에서 r=−0.56 관측) |
+| FP/FN 감사 | 두 오류 모두 낮음 | 임계값을 어디에 둬도 한쪽이 폭발 |
+
+임계값은 **discovery split에서만** 정하고 held-out에 적용한다 — 아니면 감사 자체가 순환이다.
+
+### `cross_layer_siblings` — transplant는 "그 레이어의 feature"가 아니다
+
+`multisite_ablation`은 한 레이어의 decoder direction을 이웃 레이어에 그대로 옮긴다. residual
+stream이 basis를 공유하므로 유효한 진단이지만, **레이어마다 SAE와 번호가 다르므로** "L31의 그
+feature"라는 주장은 아니다. 이 job은 대응 feature를 먼저 **식별**한다.
+
+세 신호의 **가중 기하평균**으로 순위를 매기고, 어느 항이든 0 이하이면 점수를 0으로 만든다 —
+사전이 overcomplete라 decoder cosine 하나만으로는 기하학적 우연이 1등을 할 수 있다.
+
+| 신호 | 묻는 것 |
+|---|---|
+| decoder cosine | 같은 방향을 가리키는가 |
+| activation corr | **같은 항목에서** 같은 세기로 켜지는가 |
+| effect corr | 각각 지웠을 때 **항목별로** margin이 같은 방향으로 움직이는가 |
+
+그다음 공동 ablation(clean / A / B / A+B)을 **norm-matched 무작위 쌍**과 함께 돌리고
+**difference-in-differences**를 본다. joint 조건은 어느 한쪽보다 반드시 더 많은 norm을 제거하고
+네트워크는 비선형이므로, `joint − ΣA,B`를 0과 비교하면 **아무 방향 쌍에서나 superadditive**가
+나온다. null 쌍의 상호작용을 빼는 것이 이 숫자를 의미 있게 만든다. null 쌍은 **서로 독립인 두
+방향**을 쓴다 — 진짜 sibling 쌍은 정렬되어 있는 것이 본질이므로, 그 정렬을 null에 넣으면 검출
+대상을 미리 빼버리는 셈이다.
+
+부수적으로 **sibling repair**를 활동값 자체에서 측정한다: A를 지운 뒤 B가 *더 세게* 켜지면
+보상(self-repair)이다. margin에서 역산하지 않는다.
+
+### `reasoning_trajectory` — 마지막 토큰 밖을 보는 유일한 job
+
+이 연구의 모든 인과 측정은 **마지막 프롬프트 토큰** 하나를 읽는다. 그것은 "답하기 직전"의
+표상이지 추론 자체가 아니다. 그런데 행동 결과는 정확히 추론에서 함정이 해소된다고 말한다
+(2B: thinking off 55% → on 21%).
+
+이 job은 생성된 trace를 따라 feature를 샘플링한다. 위치는 **항목 상대 분위수**로 잡는다 —
+trace 길이가 제각각이라 절대 오프셋은 비교 불가능하다.
+
+| phase | 위치 |
+|---|---|
+| `prompt_last` | 다른 모든 실험이 읽는 지점 (기준점) |
+| `reasoning_0…100` | 생성 trace를 가로지르는 분위수 |
+| `pre_answer` | 답이 실제로 나오는 토큰 (thinking arm만) |
+
+**반증 가능한 예측**: lure 표상을 숙고가 억제하는 것이라면 thinking arm은 하강 궤적을 보이고
+non-thinking arm은 그렇지 않아야 한다. 단순 위치 feature라면 두 조건에서 **똑같이** 흐른다.
+그래서 2B(행동이 바뀜)와 27B(안 바뀜)를 **짝으로** 읽어야 한다 — 어느 한쪽만으로는 해석되지 않는다.
+
+> **명시된 근사.** trace는 chat template으로 생성하지만 읽기는 template 없는 `prompt + trace`
+> 문자열에서 한다. SAE가 학습된 Base 체크포인트에 chat template이 없기 때문이다. 두 조건을
+> 같은 방식으로 읽으므로 **조건 간 비교는 유효**하지만, 절대 위치는 behavior 모델이 본 것과 다르다.
 
 ## 4. 실행
 
@@ -177,7 +243,19 @@ cd ~/dev/colab
 
 # (C) 가장 싼 점검 (T4): 18문항·단일 layer 발견 경로만
 ./experiments/run_colab.sh experiments/configs/study_smoke.toml -s mindscopex-smoke --gpu T4
+
+# (D) 후속 검증. 발견된 feature(27B L15 #81663 / 2B L17 #2144)를 config에 박아 두고 돌린다.
+./experiments/run_colab.sh experiments/configs/diag_affordance_27b.toml       -s mindscopex  # degeneracy
+./experiments/run_colab.sh experiments/configs/falsify_affordance_27b.toml    -s mindscopex  # 반증 프로파일
+./experiments/run_colab.sh experiments/configs/multisite_affordance_27b.toml  -s mindscopex  # 인접 레이어
+./experiments/run_colab.sh experiments/configs/siblings_affordance_27b.toml   -s mindscopex  # 대응 feature + DiD
+./experiments/run_colab.sh experiments/configs/modules_affordance_27b.toml    -s mindscopex  # 모듈
+./experiments/run_colab.sh experiments/configs/trajectory_affordance_2b.toml  -s mindscopex  # 궤적 (행동이 바뀌는 쪽)
+./experiments/run_colab.sh experiments/configs/trajectory_affordance_27b.toml -s mindscopex  # 궤적 (대조군)
 ```
+
+> `trajectory_*`는 **둘 다** 돌려야 한다. 2B만 보면 "궤적이 다르다"가 함정 해소인지 형식 차이인지
+> 구분되지 않는다.
 
 운영 노트:
 
@@ -251,7 +329,12 @@ feature는 없다**. 최선 추정치도 2% 미만이고 0과 구별되지 않�
 | `src/mindscopex_analysis/qwen_scope.py` | SAE 로드, **sparse activation vs pre-activation** |
 | `experiments/jobs/research_experiments.py` | 통제 연구 job(모든 kind) |
 | `experiments/jobs/feature_diagnostics.py` | degeneracy 진단(위치·logit lens·밀도·null) |
+| `experiments/jobs/feature_falsification.py` | 반증 프로파일(조건·paraphrase·답 길이·FP/FN) |
 | `experiments/jobs/multisite_ablation.py` | 다층 윈도우 ablation + self-repair 감사 |
+| `experiments/jobs/cross_layer_siblings.py` | 대응 feature 식별 + 조건부 공동 ablation(DiD) |
 | `experiments/jobs/feature_modules.py` | coactivation 모듈 발견 + joint ablation |
-| `tests/test_research.py`, `test_nulls.py`, `test_modules.py`, `test_cue_effect.py`, `test_qwen_scope.py` | 모델 없이 도는 순수 로직 테스트 |
-| `experiments/configs/study_*.toml`, `cue_*.toml`, `diag_*.toml`, `modules_*.toml` | 단계별 config |
+| `experiments/jobs/reasoning_trajectory.py` | 추론 trace를 따라간 feature 궤적(thinking on/off) |
+| `src/mindscopex_analysis/trajectory.py` | 샘플링 위치·phase 라벨·cue span (모델 불필요) |
+| `src/mindscopex_analysis/siblings.py` | sibling 점수·순위·difference-in-differences |
+| `tests/test_research.py`, `test_nulls.py`, `test_modules.py`, `test_cue_effect.py`, `test_qwen_scope.py`, `test_trajectory_siblings.py` | 모델 없이 도는 순수 로직 테스트 |
+| `experiments/configs/study_*.toml`, `cue_*.toml`, `diag_*.toml`, `modules_*.toml`, `falsify_*.toml`, `siblings_*.toml`, `trajectory_*.toml` | 단계별 config |

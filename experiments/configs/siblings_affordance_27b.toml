@@ -1,0 +1,47 @@
+# Phase F: multisite_ablation transplants one direction to neighbouring layers, which
+# is a fair diagnostic but is NOT "the feature at that layer" -- each layer has its own
+# SAE and its own numbering. This job identifies the actual counterpart first (decoder
+# cosine AND same-item firing AND same-item effect, so a geometric coincidence cannot
+# win alone), then co-ablates the pair against a norm-matched random pair and reports
+# the difference-in-differences. That is the only way to tell a genuine cross-layer
+# circuit from the superadditivity you get for free by removing more norm.
+[run]
+name = "siblings_affordance_27b"
+job = "cross_layer_siblings"
+
+[feature]
+feature_id = 81663
+layer = 15
+
+[model]
+profile = "27b"
+dtype = "auto"
+device_map = "auto"
+sae_device = "cpu"
+sae_dtype = "auto"
+
+[data]
+dataset = "goal_affordance_traps_v1"
+conditions = ["hostile"]
+train_frac = 0.6
+split_seed = 0
+instruction = true
+max_match_items = 12    # items used to measure firing/effect correlation
+max_test_items = 12     # held-out items for the co-ablation itself
+
+[match]
+# 27B scan layers are 15/31/47/63; L31 is the next one with a real SAE, so the
+# sibling search runs there rather than at a transplanted neighbour.
+layers = [31]
+candidate_top_n = 20    # decoder-cosine shortlist before the expensive effect pass
+min_score = 0.05        # below this, report "no sibling found" rather than a poor one
+random_draws = 6        # norm-matched random pairs for the DiD baseline
+seed = 0
+
+[colab]
+gpu = "G4"
+
+[remote]
+source = "archive"
+repo_dir = "/content/mindscopex_analysis"
+output_root = "/content/mindscopex_artifacts"

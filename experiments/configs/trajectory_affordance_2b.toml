@@ -1,0 +1,45 @@
+# Phase E: every causal measurement in this study reads the last prompt token -- the
+# representation just before answering, which cannot say anything about the reasoning.
+# 2B is where that matters most: the lure rate drops 55% -> 21% when thinking is on,
+# so whatever resolves the lure happens inside the trace, at positions nothing has
+# looked at yet.
+#
+# The falsifiable prediction: if #2144 is a lure representation that deliberation
+# suppresses, the thinking arm should show a falling trajectory the non-thinking arm
+# does not have. A merely positional feature drifts the same way in both.
+[run]
+name = "trajectory_affordance_2b"
+job = "reasoning_trajectory"
+
+[feature]
+feature_id = 2144
+layer = 17
+
+[model]
+profile = "2b"
+dtype = "auto"
+device_map = "auto"
+sae_device = "auto"
+sae_dtype = "auto"
+
+[data]
+dataset = "goal_affordance_traps_v1"
+conditions = ["hostile"]
+train_frac = 0.6
+split_seed = 0
+instruction = true
+max_items = 10          # each item is generated twice and read once per trace
+
+[trajectory]
+phases = 5              # prompt_last + 5 reasoning quantiles + pre_answer
+max_new_tokens = 512
+thinking_modes = [false, true]
+seed = 42               # greedy decoding, so this only pins the fallback RNG
+
+[colab]
+gpu = "G4"
+
+[remote]
+source = "archive"
+repo_dir = "/content/mindscopex_analysis"
+output_root = "/content/mindscopex_artifacts"

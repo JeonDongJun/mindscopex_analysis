@@ -1,0 +1,46 @@
+# Phase C: what would make 27B L15 #81663 NOT the lure feature?
+#
+# The degeneracy screen said its activation is near-constant across held-out items
+# (CV 4.3%), which is what a positional/template feature looks like. This job asks
+# the question the causal test cannot: does the feature track the *cue* or the
+# *format*? A cue feature fires on hostile and not on neutral, survives paraphrase,
+# and does not simply read answer length. A template feature fails all three while
+# still passing an ablation test.
+[run]
+name = "falsify_affordance_27b"
+job = "feature_falsification"
+
+[feature]
+feature_id = 81663
+layer = 15
+
+[model]
+profile = "27b"
+dtype = "auto"
+device_map = "auto"
+sae_device = "cpu"       # 27B SAEs are large; keep them off the GPU
+sae_dtype = "auto"
+
+[data]
+dataset = "goal_affordance_traps_v1"
+# All four arms: the profile is only informative if the contrast is in it.
+conditions = ["hostile", "explicit", "neutral", "counterfactual"]
+positive_condition = "hostile"      # feature is claimed to fire here
+negative_condition = "neutral"      # ...and not here; the discriminating pair
+train_frac = 0.6
+split_seed = 0
+instruction = true
+
+[reference]
+# A different task entirely, so "fires on everything" is separable from
+# "fires on the affordance cue".
+dataset = "hagendorff_crt"
+limit_per_family = 10
+
+[colab]
+gpu = "G4"
+
+[remote]
+source = "archive"
+repo_dir = "/content/mindscopex_analysis"
+output_root = "/content/mindscopex_artifacts"

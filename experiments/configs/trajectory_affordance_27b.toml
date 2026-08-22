@@ -1,0 +1,44 @@
+# Phase E at 27B: the same trajectory question on the model the causal work was done
+# on. Here thinking barely moves the behaviour (the affordance lure survives at 43%
+# either way), so this arm is the control for the 2B one -- if #81663's trajectory
+# also differs sharply between the two conditions while the behaviour does not, the
+# trajectory is tracking format, not the resolution of the lure.
+#
+# Read this together with trajectory_affordance_2b.toml; neither is interpretable
+# alone.
+[run]
+name = "trajectory_affordance_27b"
+job = "reasoning_trajectory"
+
+[feature]
+feature_id = 81663
+layer = 15
+
+[model]
+profile = "27b"
+dtype = "auto"
+device_map = "auto"
+sae_device = "cpu"
+sae_dtype = "auto"
+
+[data]
+dataset = "goal_affordance_traps_v1"
+conditions = ["hostile"]
+train_frac = 0.6
+split_seed = 0
+instruction = true
+max_items = 10          # each item is generated twice and read once per trace
+
+[trajectory]
+phases = 5              # prompt_last + 5 reasoning quantiles + pre_answer
+max_new_tokens = 512
+thinking_modes = [false, true]
+seed = 42               # greedy decoding, so this only pins the fallback RNG
+
+[colab]
+gpu = "G4"
+
+[remote]
+source = "archive"
+repo_dir = "/content/mindscopex_analysis"
+output_root = "/content/mindscopex_artifacts"

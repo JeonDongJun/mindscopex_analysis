@@ -122,6 +122,68 @@ n이 25 내외이고 per-item 분포가 heavy-tailed이므로 정규 가정에 �
 - **bootstrap CI** — 백분위수법, 시드 고정
 - **empirical percentile** — null 대비 순위
 
+### combined_score (sibling 순위)
+
+`cross_layer_siblings`가 다른 레이어의 대응 feature를 고를 때 쓰는 점수. 세 신호의 **가중
+기하평균**이고, 어느 항이든 0 이하면 점수는 **0**이다.
+
+| 컬럼 | 의미 |
+|---|---|
+| `decoder_cosine` | 두 decoder 방향이 같은 쪽을 가리키는가 |
+| `activation_corr` | **같은 항목에서** 같은 세기로 켜지는가 |
+| `effect_corr` | 각각 지웠을 때 **항목별로** margin이 같이 움직이는가 |
+| `combined_score` | 위 셋의 가중 기하평균 (0이면 "sibling 아님") |
+
+곱 형태를 쓰는 이유: 평균이면 `cosine=0.95`짜리 기하학적 우연이 나머지 둘이 0에 가까워도 1등을
+한다. 사전이 overcomplete라 이 실패는 이론적 가능성이 아니라 기본값에 가깝다.
+`min_score` 미만은 순위에 넣지 않고 **버린다** — "sibling이 없었다"와 "제일 나은 게 나빴다"를
+구분하기 위해서다.
+
+### difference_in_differences (공동 ablation)
+
+```
+DiD = (joint − A − B)real − (joint − A − B)null
+```
+
+joint 조건은 어느 한쪽보다 **반드시 더 많은 norm을 제거**하고 네트워크는 비선형이므로,
+`joint − ΣA,B`를 그냥 0과 비교하면 **아무 방향 쌍에서나 superadditive**가 나온다. norm을 맞춘
+무작위 쌍의 상호작용을 빼야 숫자가 의미를 갖는다. null 쌍은 **서로 독립인 두 방향**이다 —
+진짜 sibling 쌍의 정렬을 null에 넣으면 검출 대상을 미리 빼버리는 셈이다.
+
+### sibling_repair
+
+A를 지운 forward에서 B의 **활동값 자체**를 다시 읽어 `b_after − b_before`로 계산한다.
+양수면 A가 사라지자 B가 더 세게 켜진 것 — 보상(self-repair)이다. margin에서 역산하지 않는다.
+
+### 반증 프로파일 (`feature_falsification`)
+
+인과 테스트는 "지우면 움직이는가"만 답한다. 형식(template) feature도 그것을 통과한다.
+아래는 **통과하면 안 되는** 조건들이다.
+
+| 컬럼/축 | cue feature | template feature |
+|---|---|---|
+| 조건별 발화 (hostile vs neutral) | 차이 큼 | 차이 없음 |
+| `template_id` 간 분산 | 작음 | 큼 |
+| 다른 과제(`hagendorff_crt`) 발화율 | 낮음 | 높음 |
+| 답 길이 상관 | ~0 | 큼 |
+| FP/FN | 둘 다 낮음 | 임계값을 어디 둬도 한쪽 폭발 |
+
+임계값은 **discovery split에서만** 정해 held-out에 적용한다. held-out에서 임계값을 고르면
+감사 자체가 순환이 된다.
+
+### reasoning_drift / drift_difference
+
+`reasoning_trajectory`가 내는 궤적 요약.
+
+| 값 | 의미 |
+|---|---|
+| `phase_means` | phase별 평균 활동 (`prompt_last`, `reasoning_0…100`, `pre_answer`) |
+| `reasoning_drift` | 마지막 reasoning phase − 첫 reasoning phase. **음수 = 숙고하며 사그라듦** |
+| `drift_difference` | thinking − non-thinking. 위치 feature면 **0에 가깝다** |
+
+`drift_difference` 하나만으로는 해석하지 않는다. 행동이 바뀌는 2B와 바뀌지 않는 27B를 **짝으로**
+읽어야 "함정 해소"와 "형식 차이"가 갈린다.
+
 ## 결과 읽기 순서
 
 1. **`margin_delta` 부호** 확인 — 양수여야 lure 기여 feature
@@ -132,9 +194,12 @@ n이 25 내외이고 per-item 분포가 heavy-tailed이므로 정규 가정에 �
 6. **null 통과 확인** — `peer_feature_percentile`과 `selection_adjusted_p`
 7. **held-out 재현 확인** — 신뢰구간이 0을 제외하는가 (claim level 3)
 8. **특이성 확인** — `cue_effect`, counterfactual 부호 뒤집힘 (claim level 4)
+9. **반증 통과 확인** — 조건 프로파일·paraphrase·답 길이·FP/FN이 전부 cue 쪽인가
+10. **단일 feature 밖 확인** — `difference_in_differences`, 모듈, `drift_difference`
 
 > 1~5만 보고 "함정 메커니즘"이라 부르지 않는다. 단계별 허용 표현은
-> [study_design.md](study_design.md) §6을 따른다.
+> [study_design.md](study_design.md) §6을 따른다. 9~10은 claim level을 올리지는 않지만,
+> **떨어뜨릴 수는 있다** — 반증 축 하나만 걸려도 앞 단계의 결론이 무효가 된다.
 
 ---
 
@@ -169,6 +234,8 @@ n이 25 내외이고 per-item 분포가 heavy-tailed이므로 정규 가정에 �
 | `src/mindscopex_analysis/effects.py` | `AnswerMargin`, `FeatureAblationResult`, `EditSite`, `rank_lure_feature_effects()` |
 | `src/mindscopex_analysis/nulls.py` | percentile·selection 보정·peer null |
 | `src/mindscopex_analysis/modules.py` | coactivation 모듈과 모듈 null |
+| `src/mindscopex_analysis/siblings.py` | sibling 점수·순위·difference-in-differences |
+| `src/mindscopex_analysis/trajectory.py` | 샘플링 위치와 phase 라벨 |
 | `docs/study_design.md` | claim level과 각 실험이 지지하는 주장 |
 | `notebooks/02_bat_ball_lure_feature_ablation.ipynb` | bat-and-ball 실험 전체 흐름 |
 | `outputs/` | Colab runtime에서 생성되는 JSON, Markdown, feature handle (git 미추적) |

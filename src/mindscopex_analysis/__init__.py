@@ -147,6 +147,19 @@ _MODULE_EXPORTS = {
         "peer_null_directions",
         "selection_adjusted_percentile",
     ),
+    "siblings": (
+        "difference_in_differences",
+        "pearson",
+        "rank_siblings",
+        "sibling_score",
+    ),
+    "trajectory": (
+        "TokenPhase",
+        "cue_span",
+        "find_subsequence",
+        "quantile_indices",
+        "reasoning_phases",
+    ),
     "research": (
         "aggregate_feature_effect",
         "control_specificity_rows",
